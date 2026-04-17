@@ -35,10 +35,16 @@ console.log("🔗 Supabase Connection:", process.env.SUPABASE_URL ? "CONFIGURED 
 
 const require = createRequire(import.meta.url);
 
+// Ensure uploads directory exists (Railway doesn't deploy empty .gitignored folders)
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
+
 const upload = multer({ dest: "uploads/", limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
 
 // In-memory storage per user (scoped by userId to prevent data leaks between users)
 let latestAnalysis = null;
+
 
 /** @type {Map<string, object>} */
 const latestResultMap = new Map(); // userId → result (prevents cross-user data leaks)
