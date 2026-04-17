@@ -1,0 +1,24 @@
+# ⚠️ NEVER commit these — they contain live API keys
+.env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Uploaded files (temp storage)
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test/debug scripts (optional — not needed in prod)
+check_*.js
+test_*.js
+debug_*.js
+verify_fix.js
+import_output.txt

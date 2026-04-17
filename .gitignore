@@ -1,0 +1,10 @@
+# Root-level ignores
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Env files — NEVER commit these
+.env
+.env.*
+.env.local
