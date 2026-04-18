@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { SettingsModal } from './SettingsModal';
 
 interface NavItem {
   id: string;
@@ -35,7 +36,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 const bottomNavItems: NavItem[] = [
-  { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard' },
+  { id: 'settings', label: 'Settings', icon: Settings },
   { id: 'help', label: 'Help & Support', icon: HelpCircle, href: '/dashboard' },
 ];
 
@@ -54,6 +55,7 @@ interface SidebarProps {
 export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleClick = (id: string) => {
     onItemClick?.(id);
@@ -155,7 +157,15 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
             const isActive = activeItem === item.id;
             const Icon = item.icon;
             return (
-              <Link key={item.id} href={item.href || '#'} onClick={() => handleClick(item.id)}>
+              <Link key={item.id} href={item.href || '#'} onClick={(e) => {
+                if (item.id === 'settings') {
+                  e.preventDefault();
+                  setIsSettingsOpen(true);
+                  setIsOpen(false);
+                } else {
+                  handleClick(item.id);
+                }
+              }}>
                 <motion.button
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -229,6 +239,12 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
           </>
         )}
       </AnimatePresence>
+
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        user={user} 
+      />
     </>
   );
 }
