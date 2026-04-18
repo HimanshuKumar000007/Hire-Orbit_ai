@@ -454,7 +454,7 @@ export default function Dashboard() {
                 skills={data.skills || []}
                 role={data.role || 'Professional'}
                 matchScore={dashboardMatchScore.score}
-                topMissingSkills={data.improvements?.map((imp: any) => imp.title?.replace('Strengthen ', '').replace('Get ', '').split(' ')[0]).filter(Boolean) || []}
+                topMissingSkills={data.improvements?.map((imp) => imp.title?.replace('Strengthen ', '').replace('Get ', '').split(' ')[0]).filter(Boolean) || []}
               />
               <SkillsRadar skills={dashboardSkills.length > 0 ? dashboardSkills : mockDashboardData.skills} />
             </div>
