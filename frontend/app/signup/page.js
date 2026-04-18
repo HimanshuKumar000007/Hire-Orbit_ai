@@ -38,7 +38,14 @@ export default function Signup() {
     })
 
     if (error) {
-      toast.error(error.message)
+      // 422 = email already registered
+      if (error.message?.toLowerCase().includes("already") || error.status === 422) {
+        toast.error("This email is already registered. Please log in instead.", {
+          action: { label: "Go to Login", onClick: () => router.push("/login") }
+        });
+      } else {
+        toast.error(error.message || "Signup failed. Please try again.");
+      }
       setLoading(false)
     } else {
       // ✅ Step 1: Create profile immediately after signup
