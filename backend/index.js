@@ -1434,7 +1434,8 @@ app.post("/api/career-suggestions", authenticate, async (req, res) => {
       .single();
 
     if (error || !profile) {
-      return res.status(404).json({ error: "Profile not found" });
+      console.warn("career-suggestions: profile not found or Supabase error:", error?.message);
+      return res.json({ currentSkills: [], suggestions: [], averageMatch: 0 });
     }
 
     // Get matched jobs (Standardizing on fetchAndMatchAdzunaJobs)
