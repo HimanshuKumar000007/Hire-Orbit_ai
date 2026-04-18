@@ -1506,7 +1506,25 @@ Respond ONLY with a JSON object in this exact format:
 
 const PORT = process.env.PORT || 5001;
 
+// 🛡️ Global error handlers — prevent silent crashes on Railway
+process.on("uncaughtException", (err) => {
+  console.error("💥 UNCAUGHT EXCEPTION:", err.message, err.stack);
+  // Don't exit — keep server running
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("💥 UNHANDLED REJECTION:", reason);
+  // Don't exit — keep server running
+});
+
+// Health check endpoint (Railway uses this)
+app.get("/health", (req, res) => res.json({ status: "ok", port: PORT }));
+
 // Server startup
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🔑 DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? "SET ✅" : "MISSING ❌"}`);
+  console.log(`🔑 GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? "SET ✅" : "MISSING ❌"}`);
+  console.log(`🔑 JWT_SECRET: ${process.env.JWT_SECRET ? "SET ✅" : "MISSING ❌"}`);
+  console.log(`🔑 RESEND_API_KEY: ${process.env.RESEND_API_KEY ? "SET ✅" : "MISSING ❌"}`);
 });
