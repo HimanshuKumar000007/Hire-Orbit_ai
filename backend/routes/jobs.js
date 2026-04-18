@@ -121,6 +121,9 @@ function inferRoleFromSkills(skills = []) {
 
 // ─── GET /api/jobs ───────────────────────────────────────────────────────────
 
+const googleJobsCache = new Map();
+const JOBS_CACHE_TTL = 60 * 60 * 1000; // 1 Hour
+
 router.get("/jobs", async (req, res) => {
   try {
     const skillsParam = req.query.skills || "";
@@ -135,8 +138,24 @@ router.get("/jobs", async (req, res) => {
 
     console.log(`🎯 /api/jobs called — role: "${role}" | skills: [${userSkills.slice(0, 4).join(", ")}...]`);
 
-    // ── 1. Try SerpAPI Google Jobs first ──────────────────────────────────
-    let googleJobs = await fetchGoogleJobs(role);
+    // ── 1. Try SerpAPI Google Jobs first (with Smart Caching) ──────────────
+    const cacheKey = role.toLowerCase().trim();
+    let googleJobs = null;
+
+    if (googleJobsCache.has(cacheKey)) {
+      const cached = googleJobsCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < JOBS_CACHE_TTL) {
+        console.log(`📦 Premium Cache HIT (Saved 1 SerpAPI Credit) — role: "${role}"`);
+        googleJobs = cached.jobs;
+      }
+    }
+
+    if (!googleJobs) {
+      googleJobs = await fetchGoogleJobs(role);
+      if (googleJobs && googleJobs.length > 0) {
+        googleJobsCache.set(cacheKey, { jobs: googleJobs, timestamp: Date.now() });
+      }
+    }
 
     if (googleJobs && googleJobs.length > 0) {
       // Match each Google Job against the user's skills
