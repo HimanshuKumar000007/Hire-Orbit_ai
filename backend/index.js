@@ -584,25 +584,60 @@ async function calculateMatchWithAI(resumeData, jobDescription) {
 
 
 
-// 🔥 Supabase Indexed Jobs Helper
+// 🔥 Supabase Indexed Jobs Helper (with On-Demand Live Fetch Fallback)
 async function fetchAndMatchAdzunaJobs(resumeData, country = "in") {
   try {
     const roleKeyword = (resumeData.role || "Developer").split(" ")[0];
     
-    // 1. Fetch pre-filtered jobs from Supabase using ILIKE
-    const { data: jobs, error } = await supabase
+    // 1. Try to fetch pre-filtered jobs from Supabase
+    let { data: jobs, error } = await supabase
       .from('jobs')
       .select('*')
       .ilike('title', `%${roleKeyword}%`)
       .order('created_at', { ascending: false })
       .limit(50);
       
-    if (error) {
-      console.error("Supabase jobs fetch error:", error);
-      return [];
+    if (error) console.error("Supabase jobs fetch error:", error);
+
+    // 2. ON-DEMAND FETCH: If no relevant jobs in DB, call Adzuna API live
+    if (!jobs || jobs.length === 0) {
+      console.log(`🔍 [On-Demand] No ${roleKeyword} jobs in DB. Fetching live from Adzuna...`);
+      try {
+        const response = await axios.get(`https://api.adzuna.com/v1/api/jobs/${country}/search/1`, {
+          params: {
+            app_id: process.env.ADZUNA_APP_ID,
+            app_key: process.env.ADZUNA_APP_KEY,
+            results_per_page: 20,
+            what: resumeData.role
+          }
+        });
+
+        const liveJobs = response.data.results || [];
+        if (liveJobs.length > 0) {
+          // Format for Supabase
+          const mappedLiveJobs = liveJobs.map(j => ({
+            id: String(j.id || j.adref || Math.random().toString(36).substr(2, 9)),
+            title: j.title || j.job_title || "Unknown Title",
+            company: j.company?.display_name || j.employer_name || "Unknown Company",
+            location: j.location?.display_name || "Remote",
+            description: j.description || "",
+            redirect_url: j.redirect_url || j.job_apply_link || "",
+            salary: String(j.salary_max || j.salary_min ? `${j.salary_min || ''} - ${j.salary_max || ''}` : "Competitive"),
+            posted_at: String(j.created || new Date().toISOString()),
+            type: String(j.contract_type || "Full-time"),
+            source: "Adzuna_Live"
+          }));
+
+          // Cache them in DB for the next user
+          await supabase.from('jobs').upsert(mappedLiveJobs, { onConflict: 'id' });
+          jobs = mappedLiveJobs; // Use these for matching
+        }
+      } catch (apiErr) {
+        console.error("Live fallback fetch failed:", apiErr.message);
+      }
     }
 
-    // 2. Fallback to general jobs if none found for specific role
+    // 3. Fallback to general jobs if STILL none found (Extreme niche)
     let finalJobs = jobs || [];
     if (finalJobs.length === 0) {
       const { data: fallbackJobs } = await supabase
@@ -613,10 +648,10 @@ async function fetchAndMatchAdzunaJobs(resumeData, country = "in") {
       finalJobs = fallbackJobs || [];
     }
     
-    // 3. Match against resume skills properly
+    // 4. Match against resume skills properly
     const matchedJobs = matchJobs(resumeData.skills || [], finalJobs);
     
-    // 4. Format into our canonical shape
+    // 5. Format into our canonical shape
     const formattedJobs = matchedJobs.map(job => ({
       ...job,
       id: job.id,
@@ -637,6 +672,7 @@ async function fetchAndMatchAdzunaJobs(resumeData, country = "in") {
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
+    // 6. Last resort: Simulated Match (links to Adzuna search)
     if (filteredJobs.length === 0) {
       return [
         {
