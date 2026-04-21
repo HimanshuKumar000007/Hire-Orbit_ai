@@ -7,9 +7,9 @@ import { getSupabaseClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 const navLinks = [
-  { label: 'Features', href: '#features' },
+  { label: 'Features', href: '/features' },
   { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'About', href: '#about' },
 ];
 

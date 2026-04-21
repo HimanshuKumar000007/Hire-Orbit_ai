@@ -68,7 +68,7 @@ export function Footer() {
                 {links.map((link) => (
                   <li key={link}>
                     <a
-                      href="#"
+                      href={link === 'Features' ? '/features' : link === 'Pricing' ? '/pricing' : '#'}
                       className="text-sm text-zinc-400 hover:text-white transition-colors"
                     >
                       {link}
