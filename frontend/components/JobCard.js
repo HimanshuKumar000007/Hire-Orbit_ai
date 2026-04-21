@@ -7,8 +7,8 @@ export default function JobCard({ job }) {
 
   const getBadge = (score) => {
     if (score > 75) return "🔥 Strong Match";
-    if (score > 50) return "👍 Good Match";
-    return "⚠️ Weak Match";
+    if (score > 50) return "⚡ Growing Match";
+    return "🚀 Growth Opportunity";
   };
 
   return (

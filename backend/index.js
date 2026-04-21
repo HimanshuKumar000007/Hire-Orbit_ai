@@ -475,13 +475,62 @@ function generateImprovement(missingSkills) {
 }
 
 
-// 🔥 Skill synonyms (VERY IMPORTANT)
+// 🔥 Skill synonyms — comprehensive map across all role categories
 const skillMap = {
-  matlab: ["matlab"],
-  autocad: ["autocad"],
-  plc: ["plc", "programmable logic controller"],
-  "power systems": ["power systems", "electrical power"],
-  "embedded systems": ["embedded systems", "microcontroller", "arduino", "raspberry pi"],
+  // ── Engineering ──────────────────────────────────────────────────────────
+  matlab:              ["matlab"],
+  autocad:             ["autocad", "cad", "drafting"],
+  plc:                 ["plc", "programmable logic controller", "ladder logic"],
+  "power systems":     ["power systems", "electrical power", "power grid"],
+  "embedded systems":  ["embedded systems", "microcontroller", "arduino", "raspberry pi", "stm32", "rtos"],
+  scada:               ["scada", "hmi", "dcs"],
+
+  // ── Software / Web ────────────────────────────────────────────────────────
+  python:              ["python", "py", "django", "flask", "fastapi", "pandas", "numpy"],
+  javascript:          ["javascript", "js", "es6", "es2015", "node", "nodejs"],
+  typescript:          ["typescript", "ts"],
+  react:               ["react", "reactjs", "react.js", "hooks", "next.js", "nextjs"],
+  vue:                 ["vue", "vuejs", "vue.js", "nuxt"],
+  angular:             ["angular", "angularjs", "ng"],
+  sql:                 ["sql", "mysql", "postgresql", "postgres", "sqlite", "database", "rdbms"],
+  mongodb:             ["mongodb", "mongo", "nosql"],
+  "machine learning":  ["machine learning", "ml", "deep learning", "neural network", "sklearn", "tensorflow", "pytorch", "ai"],
+  "data analysis":     ["data analysis", "data analytics", "data science", "bi", "tableau", "power bi"],
+  git:                 ["git", "github", "gitlab", "version control", "source control"],
+  docker:              ["docker", "containerization", "kubernetes", "k8s", "devops"],
+  aws:                 ["aws", "amazon web services", "cloud", "azure", "gcp", "google cloud"],
+  java:                ["java", "spring", "spring boot", "jvm"],
+  "c++":               ["c++", "cpp", "c/c++"],
+  linux:               ["linux", "unix", "bash", "shell scripting", "command line"],
+
+  // ── Teaching / Education ─────────────────────────────────────────────────
+  teaching:            ["teaching", "tutoring", "mentoring", "instruction", "pedagogy", "classroom", "lesson plan", "curriculum", "training"],
+  communication:       ["communication", "presentation", "public speaking", "storytelling", "interpersonal", "verbal", "written communication"],
+  "classroom management": ["classroom management", "student management", "behaviour management", "discipline"],
+  "curriculum design": ["curriculum design", "course development", "instructional design", "e-learning", "lms"],
+  assessment:          ["assessment", "grading", "evaluation", "testing", "examination"],
+
+  // ── Marketing / Sales ────────────────────────────────────────────────────
+  marketing:           ["marketing", "digital marketing", "brand", "campaigns"],
+  "social media":      ["social media", "instagram", "facebook", "twitter", "linkedin", "content creation"],
+  seo:                 ["seo", "search engine optimization", "sem", "keywords", "google analytics"],
+  "content writing":   ["content writing", "copywriting", "blogging", "article writing", "technical writing"],
+  sales:               ["sales", "business development", "lead generation", "crm", "salesforce"],
+
+  // ── Finance / Accounting ─────────────────────────────────────────────────
+  accounting:          ["accounting", "bookkeeping", "tally", "gst", "taxation", "auditing", "accounts"],
+  excel:               ["excel", "spreadsheet", "google sheets", "vlookup", "pivot table", "ms excel"],
+  finance:             ["finance", "financial analysis", "budgeting", "forecasting", "investment"],
+  tally:               ["tally", "tally erp", "tally prime"],
+
+  // ── HR / Operations ──────────────────────────────────────────────────────
+  recruitment:         ["recruitment", "hiring", "talent acquisition", "hr", "human resources", "staffing"],
+  "project management": ["project management", "pmp", "agile", "scrum", "jira", "kanban", "waterfall"],
+  leadership:          ["leadership", "team lead", "management", "supervisory", "people management"],
+
+  // ── Healthcare ───────────────────────────────────────────────────────────
+  nursing:             ["nursing", "patient care", "clinical", "ward", "medical", "care management"],
+  pharmacy:            ["pharmacy", "pharmacology", "dispensing", "drug", "medicines"],
 };
 
 // 🔥 Check skill match (fuzzy + synonyms)
@@ -568,8 +617,8 @@ async function calculateMatchWithAI(resumeData, jobDescription) {
 
   const matchLabel =
     score > 75 ? "🔥 Strong Match" :
-      score > 50 ? "👍 Good Match" :
-        "⚠️ Weak Match";
+      score > 50 ? "⚡ Growing Match" :
+        "🚀 Growth Opportunity";
 
   const gapFixPlan = await generateAIGapFix(missing, resumeData.role);
 

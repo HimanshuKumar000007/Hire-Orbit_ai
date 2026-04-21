@@ -160,10 +160,27 @@ export function AIInsightCard({ insight, skills = [], role = 'Professional', mat
             </motion.div>
           )}
 
-          {/* Preview message */}
-          <p className="text-zinc-400 text-sm leading-relaxed mb-5 line-clamp-2">
-            {insight?.message || 'Get your personalised AI-powered career analysis with strengths, skill gaps, quick wins, and salary insights.'}
-          </p>
+          {/* Preview message — specific career path tease */}
+          <div className="mb-5 space-y-2">
+            <p className="text-zinc-300 text-sm font-medium">
+              🗺️ In ~21 days, you could be job-ready for <span className="text-emerald-400 font-semibold">{role}</span>
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { step: '1', text: 'Identify your top skill gap', color: 'border-violet-400 text-violet-400' },
+                { step: '2', text: 'Complete 1 quick-win action', color: 'border-amber-400 text-amber-400' },
+                { step: '3', text: 'Apply to your top matched jobs', color: 'border-emerald-400 text-emerald-400' },
+              ].map(({ step, text, color }) => (
+                <div key={step} className="flex items-center gap-2 text-xs text-zinc-400">
+                  <span className={`w-5 h-5 rounded-full bg-white/5 border ${color} flex items-center justify-center text-[10px] font-bold flex-shrink-0`}>
+                    {step}
+                  </span>
+                  {text}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-600 pt-1">Click below for your full personalised roadmap →</p>
+          </div>
 
           {/* Mini stats row */}
           <div className="flex gap-2 mb-5">

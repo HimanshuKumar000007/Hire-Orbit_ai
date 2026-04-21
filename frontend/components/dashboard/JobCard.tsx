@@ -137,11 +137,28 @@ export function JobCard({ job, index }: JobCardProps) {
           </motion.div>
         </div>
 
-        {/* Match Label */}
-        <div className="mb-4">
+
+        {/* Match Label + Demand Signals */}
+        <div className="mb-4 flex flex-wrap gap-2">
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${matchBgColor}/10 ${matchColor} border border-current border-opacity-20`}>
             {matchLabel}
           </span>
+          {/* Dynamic demand signals */}
+          {job.matchScore >= 75 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20">
+              🔥 High demand
+            </span>
+          )}
+          {job.matchScore >= 50 && job.matchScore < 75 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              ⭐ Growing role
+            </span>
+          )}
+          {job.matchScore < 50 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              🚀 Fast growth path
+            </span>
+          )}
         </div>
 
         {/* Job Details */}
@@ -188,11 +205,11 @@ export function JobCard({ job, index }: JobCardProps) {
             </div>
           </div>
 
-          {/* Missing Skills */}
+          {/* Missing / to-unlock Skills */}
           {(job.missingSkills || []).length > 0 && (
             <div>
               <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
-                Missing Skills
+                Skills to Unlock 🔓
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {(job.missingSkills || []).slice(0, 2).map((skill, i) => (
@@ -201,14 +218,13 @@ export function JobCard({ job, index }: JobCardProps) {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.05 + 0.4 }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-medium border border-rose-500/20"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-400 text-xs font-medium border border-violet-500/20"
                   >
-                    <X className="w-3 h-3" />
-                    {skill}
+                    🔓 {skill}
                   </motion.span>
                 ))}
                 {(job.missingSkills || []).length > 2 && (
-                  <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 text-xs font-medium">
+                  <span className="px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-400 text-xs font-medium">
                     +{(job.missingSkills || []).length - 2}
                   </span>
                 )}
@@ -298,6 +314,19 @@ export function JobCard({ job, index }: JobCardProps) {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Urgency nudge for low-score jobs */}
+        {job.matchScore < 50 && (job.missingSkills || []).length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/8 border border-violet-500/20 text-xs text-violet-300"
+          >
+            <span className="text-base">💡</span>
+            <span>Unlock <strong className="text-white">{(job.missingSkills || [])[0]}</strong> → this job becomes reachable</span>
+          </motion.div>
+        )}
 
         {/* External link indicator */}
         <motion.div

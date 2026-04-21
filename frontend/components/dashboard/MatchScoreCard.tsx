@@ -8,9 +8,10 @@ import { getMatchColor, getMatchBgColor } from '@/lib/mock-data';
 
 interface MatchScoreCardProps {
   matchScore: MatchScore;
+  topMissingSkills?: string[];
 }
 
-export function MatchScoreCard({ matchScore }: MatchScoreCardProps) {
+export function MatchScoreCard({ matchScore, topMissingSkills = [] }: MatchScoreCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [displayScore, setDisplayScore] = useState(0);
 
@@ -142,6 +143,23 @@ export function MatchScoreCard({ matchScore }: MatchScoreCardProps) {
               +{matchScore?.improvement}% possible improvement
             </span>
           </motion.div>
+
+          {/* Urgency: skills-away nudge */}
+          {topMissingSkills.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.0 }}
+              className="mt-3 px-4 py-2.5 rounded-2xl bg-violet-500/8 border border-violet-500/20 text-center"
+            >
+              <p className="text-xs text-violet-300 leading-relaxed">
+                🔓 You&apos;re <strong className="text-white">{topMissingSkills.length} skill{topMissingSkills.length > 1 ? 's' : ''}</strong> away from unlocking more jobs
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-0.5">
+                Start with: {topMissingSkills.slice(0, 2).join(', ')}
+              </p>
+            </motion.div>
+          )}
         </div>
 
         {/* Score breakdown */}

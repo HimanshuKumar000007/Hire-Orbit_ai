@@ -79,28 +79,28 @@ export const getGreeting = (): string => {
 };
 
 export const getMatchLabel = (score: number): 'strong' | 'good' | 'weak' => {
-  if (score >= 85) return 'strong';
-  if (score >= 70) return 'good';
+  if (score >= 75) return 'strong';
+  if (score >= 50) return 'good';
   return 'weak';
 };
 
 export const getMatchColor = (score: number): string => {
-  if (score >= 85) return 'text-emerald-400';
-  if (score >= 70) return 'text-amber-400';
-  return 'text-rose-400';
+  if (score >= 75) return 'text-emerald-400';
+  if (score >= 50) return 'text-amber-400';
+  return 'text-violet-400';
 };
 
 export const getMatchBgColor = (score: number): string => {
-  if (score >= 85) return 'bg-emerald-500';
-  if (score >= 70) return 'bg-amber-500';
-  return 'bg-rose-500';
+  if (score >= 75) return 'bg-emerald-500';
+  if (score >= 50) return 'bg-amber-500';
+  return 'bg-violet-500';
 };
 
 export const getMatchLabelText = (label: 'strong' | 'good' | 'weak'): string => {
   const labels = {
     strong: '🔥 Strong Match',
-    good: '👍 Good Match',
-    weak: '⚠️ Weak Match',
+    good: '⚡ Growing Match',
+    weak: '🚀 Growth Opportunity',
   };
   return labels[label];
 };

@@ -432,8 +432,19 @@ export default function Dashboard() {
 
   const dashboardJobMatches = (data.jobs || []).map(j => ({
     ...j,
-    matchLabel: j.matchScore >= 85 ? 'strong' : (j.matchScore >= 70 ? 'good' : 'weak')
+    matchLabel: j.matchScore >= 75 ? 'strong' : (j.matchScore >= 50 ? 'good' : 'weak')
   }));
+
+  // Derive top missing skills from all jobs (for urgency widgets)
+  const topMissingSkillsGlobal = (() => {
+    const freq = {};
+    (data.jobs || []).forEach(job => {
+      (job.missingSkills || []).forEach(skill => {
+        freq[skill] = (freq[skill] || 0) + 1;
+      });
+    });
+    return Object.entries(freq).sort((a, b) => b[1] - a[1]).map(([s]) => s).slice(0, 3);
+  })();
 
   const dashboardSkills = (data.skills || []).map(s => ({
     name: s,
@@ -457,7 +468,7 @@ export default function Dashboard() {
             <CareerSuggestions suggestions={suggestions} />
 
             <div id="analytics" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 scroll-mt-24">
-              <MatchScoreCard matchScore={dashboardMatchScore} />
+              <MatchScoreCard matchScore={dashboardMatchScore} topMissingSkills={topMissingSkillsGlobal} />
               <AIInsightCard
                 insight={data.aiInsight}
                 skills={data.skills || []}
