@@ -68,7 +68,26 @@ export function Footer() {
                 {links.map((link) => (
                   <li key={link}>
                     <a
-                      href={link === 'Features' ? '/features' : link === 'Pricing' ? '/pricing' : '#'}
+                      href={
+                        link === 'Features' ? '/features' : 
+                        link === 'Pricing' ? '/pricing' : 
+                        link === 'Integrations' ? '/integrations' : 
+                        link === 'Roadmap' ? '/roadmap' : 
+                        link === 'About' ? '/about' : 
+                        link === 'Blog' ? '/blog' : 
+                        link === 'Careers' ? '/careers' : 
+                        link === 'Press' ? '/press' : 
+                        link === 'Partners' ? '/partners' : 
+                        link === 'Documentation' ? '/docs' : 
+                        link === 'Help Center' ? '/help' : 
+                        link === 'Community' ? '/community' : 
+                        link === 'Templates' ? '/templates' : 
+                        link === 'Privacy' ? '/privacy' : 
+                        link === 'Terms' ? '/terms' : 
+                        link === 'Security' ? '/security' : 
+                        link === 'Cookies' ? '/cookies' : 
+                        '#'
+                      }
                       className="text-sm text-zinc-400 hover:text-white transition-colors"
                     >
                       {link}
