@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { FinalCTA } from "@/components/sections/FinalCTA";
@@ -25,7 +26,8 @@ const detailedFeatures = [
     icon: Brain,
     stats: "92% Match Accuracy",
     color: "from-violet-500/20 to-purple-500/20",
-    iconColor: "text-violet-400"
+    iconColor: "text-violet-400",
+    slug: "semantic-matching"
   },
   {
     title: "Real-time Skill Gap Analysis",
@@ -33,7 +35,8 @@ const detailedFeatures = [
     icon: BarChart3,
     stats: "15+ Skills Tracked",
     color: "from-emerald-500/20 to-teal-500/20",
-    iconColor: "text-emerald-400"
+    iconColor: "text-emerald-400",
+    slug: "skill-gap"
   },
   {
     title: "Intelligent Resume Scoring",
@@ -41,7 +44,8 @@ const detailedFeatures = [
     icon: FileText,
     stats: "Instant Feedback",
     color: "from-amber-500/20 to-orange-500/20",
-    iconColor: "text-amber-400"
+    iconColor: "text-amber-400",
+    slug: "resume-scoring"
   },
   {
     title: "Hyper-Personalized Alerts",
@@ -49,7 +53,8 @@ const detailedFeatures = [
     icon: Bell,
     stats: "24/7 Monitoring",
     color: "from-rose-500/20 to-pink-500/20",
-    iconColor: "text-rose-400"
+    iconColor: "text-rose-400",
+    slug: "personalized-alerts"
   }
 ];
 
@@ -131,10 +136,13 @@ export default function FeaturesPage() {
                     {feature.description}
                   </p>
 
-                  <div className="mt-8 flex items-center gap-2 text-emerald-400 font-medium text-sm group/link cursor-pointer">
+                  <Link 
+                    href={`/features/${feature.slug}`}
+                    className="mt-8 flex items-center gap-2 text-emerald-400 font-medium text-sm group/link cursor-pointer w-fit"
+                  >
                     <span>Explore Technology</span>
                     <TrendingUp className="w-4 h-4 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
-                  </div>
+                  </Link>
                 </div>
               </motion.div>
             ))}
