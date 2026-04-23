@@ -4,13 +4,11 @@ import { motion } from 'framer-motion';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { 
-  Bell, 
   Smartphone, 
   Mail, 
   Settings, 
   Filter, 
   Clock,
-  CheckCircle2,
   ArrowRight,
   Zap,
   MessageSquare
