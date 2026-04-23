@@ -13,7 +13,8 @@ import {
   Rocket, 
   Users, 
   ArrowRight,
-  GraduationCap
+  GraduationCap,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 
