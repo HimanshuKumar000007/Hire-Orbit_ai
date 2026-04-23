@@ -15,7 +15,8 @@ import {
   Newspaper,
   TrendingUp,
   Brain,
-  Rocket
+  Rocket,
+  Star
 } from 'lucide-react';
 import Link from 'next/link';
 
