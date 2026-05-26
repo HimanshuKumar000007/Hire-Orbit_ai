@@ -94,12 +94,61 @@ function validateResume(resumeData) {
 }
 
 function safeJSONParse(text, fallback = []) {
+  if (typeof text !== "string") return fallback;
+  let cleanText = text.replace(/```json|```/g, "").trim();
   try {
-    return JSON.parse(text);
-  } catch {
+    return JSON.parse(cleanText);
+  } catch (err) {
+    console.warn("⚠️ safeJSONParse failed to parse JSON:", err.message, "Original text snippet:", text.substring(0, 150));
     return fallback;
   }
 }
+
+async function callGemini({ systemPrompt, messages, jsonMode }) {
+  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_KEY) {
+    throw new Error("GEMINI_API_KEY is missing from environment variables");
+  }
+
+  const contents = [];
+  
+  for (const msg of messages) {
+    if (msg.role === "system") {
+      continue;
+    }
+    contents.push({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }]
+    });
+  }
+
+  const payload = {
+    contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 8192
+    }
+  };
+
+  if (systemPrompt) {
+    payload.systemInstruction = {
+      parts: [{ text: systemPrompt }]
+    };
+  }
+
+  if (jsonMode) {
+    payload.generationConfig.responseMimeType = "application/json";
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+  const response = await axios.post(url, payload, {
+    headers: { "Content-Type": "application/json" },
+    timeout: 30000
+  });
+
+  return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
 
 function detectRole(text, aiRole) {
   const t = text.toLowerCase();
@@ -1700,16 +1749,8 @@ app.post("/api/ai/tailor-resume", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User profile not found. Please upload a resume first." });
     }
 
-    const response = await ai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional ATS resume optimizer and career expert. Given a candidate's resume/profile and a job description, tailor their resume bullet points and write a cover letter. Identify key skills/keywords from the job description and whether they match or are missing in the candidate's profile."
-        },
-        {
-          role: "user",
-          content: `Candidate Role: ${profile.role || "Professional"}
+    const systemPrompt = "You are a professional ATS resume optimizer and career expert. Given a candidate's resume/profile and a job description, tailor their resume bullet points and write a cover letter. Identify key skills/keywords from the job description and whether they match or are missing in the candidate's profile.";
+    const userPrompt = `Candidate Role: ${profile.role || "Professional"}
 Candidate Skills: ${(profile.skills || []).join(", ")}
 Candidate Experience: ${profile.experience || "Not provided"}
 
@@ -1724,13 +1765,13 @@ Return ONLY a JSON object in this exact format:
     { "keyword": "Keyword1", "status": "matched" },
     { "keyword": "Keyword2", "status": "missing" }
   ]
-}`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
+}`;
 
-    let aiText = response.choices[0].message.content;
+    const aiText = await callGemini({
+      systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      jsonMode: true
+    });
     const parsed = safeJSONParse(aiText, {
       tailoredBullets: [],
       coverLetter: "Failed to generate cover letter.",
@@ -1747,16 +1788,8 @@ Return ONLY a JSON object in this exact format:
 app.post("/api/ai/interview-questions", authenticate, async (req, res) => {
   try {
     const { jobDescription, role } = req.body;
-    const response = await ai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content: "You are an elite technical interviewer. Generate 5 behavioral or technical interview questions tailored to the candidate's target role and/or job description."
-        },
-        {
-          role: "user",
-          content: `Target Role: ${role || "Professional"}
+    const systemPrompt = "You are an elite technical interviewer. Generate 5 behavioral or technical interview questions tailored to the candidate's target role and/or job description.";
+    const userPrompt = `Target Role: ${role || "Professional"}
 Job Description: ${jobDescription || "Standard industry job description"}
 
 Return ONLY a JSON object in this exact format:
@@ -1768,13 +1801,13 @@ Return ONLY a JSON object in this exact format:
     { "id": 4, "question": "Question text here..." },
     { "id": 5, "question": "Question text here..." }
   ]
-}`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
+}`;
 
-    let aiText = response.choices[0].message.content;
+    const aiText = await callGemini({
+      systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      jsonMode: true
+    });
     const parsed = safeJSONParse(aiText, { questions: [] });
     res.json(parsed);
   } catch (err) {
@@ -1790,16 +1823,8 @@ app.post("/api/ai/grade-answer", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Question and answer are required" });
     }
 
-    const response = await ai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: [
-        {
-          role: "system",
-          content: "You are an AI interviewer grading a candidate's answer. Assess the answer's quality, structure (e.g. STAR method), technical accuracy, and provide a score between 0 and 100, constructive feedback, and an improved model version of their response."
-        },
-        {
-          role: "user",
-          content: `Question: ${question}
+    const systemPrompt = "You are an AI interviewer grading a candidate's answer. Assess the answer's quality, structure (e.g. STAR method), technical accuracy, and provide a score between 0 and 100, constructive feedback, and an improved model version of their response.";
+    const userPrompt = `Question: ${question}
 Candidate's Answer: ${answer}
 
 Return ONLY a JSON object in this exact format:
@@ -1807,13 +1832,13 @@ Return ONLY a JSON object in this exact format:
   "score": 85,
   "feedback": "Feedback details...",
   "improvedAnswer": "STAR structured answer..."
-}`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
+}`;
 
-    let aiText = response.choices[0].message.content;
+    const aiText = await callGemini({
+      systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+      jsonMode: true
+    });
     const parsed = safeJSONParse(aiText, {
       score: 70,
       feedback: "Error grading answer. Please try again.",
@@ -1851,20 +1876,18 @@ app.post("/api/ai/copilot-chat", authenticate, async (req, res) => {
 Using the following user context, answer their career queries professionally, with actionable, bulleted advice:
 ${profileContext}`;
 
-    const formattedMessages = [
-      { role: "system", content: systemPrompt },
-      ...messages.map(m => ({
-        role: m.role === "user" ? "user" : "assistant",
-        content: m.content
-      })).slice(-10) // Limit to last 10 messages for token context efficiency
-    ];
+    const userAndAssistantMessages = messages.map(m => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: m.content
+    })).slice(-10); // Limit to last 10 messages for token context efficiency
 
-    const response = await ai.chat.completions.create({
-      model: "deepseek-chat",
-      messages: formattedMessages
+    const responseText = await callGemini({
+      systemPrompt: systemPrompt,
+      messages: userAndAssistantMessages,
+      jsonMode: false
     });
 
-    res.json({ message: response.choices[0].message.content });
+    res.json({ message: responseText });
   } catch (err) {
     console.error("Copilot chat error:", err);
     res.status(500).json({ error: err.message });
