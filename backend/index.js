@@ -1644,10 +1644,10 @@ Respond ONLY with a JSON object in this exact format:
     if (GEMINI_KEY) {
       console.log("🌐 Calling Gemini for AI insight...");
       const geminiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${GEMINI_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
         {
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
         },
         { headers: { "Content-Type": "application/json" }, timeout: 30000 }
       );
