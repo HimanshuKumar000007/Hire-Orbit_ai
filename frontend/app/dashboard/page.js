@@ -417,6 +417,7 @@ export default function Dashboard() {
 
   // Transform internal state to component props
   const dashboardUser = {
+    id: data?.user_id || data?.id,
     name: data?.name || data?.full_name || "User",
     email: data?.email || "No email provided",
     role: data?.role || "Unknown",

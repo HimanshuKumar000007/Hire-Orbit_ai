@@ -14,6 +14,9 @@ import {
   Menu,
   X,
   Building2,
+  MessageSquareCode,
+  SlidersHorizontal,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -29,6 +32,9 @@ interface NavItem {
 
 const mainNavItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { id: 'copilot', label: 'AI Copilot', icon: MessageSquareCode, href: '/copilot' },
+  { id: 'tailor', label: 'Resume Tailor', icon: SlidersHorizontal, href: '/tailor' },
+  { id: 'interview', label: 'Interview Prep', icon: UserCheck, href: '/interview' },
   { id: 'resume', label: 'Resume', icon: FileText, href: '/onboarding' },
   { id: 'jobs', label: 'Jobs', icon: Briefcase, badge: 4, href: '/dashboard#jobs' },
   { id: 'companies', label: 'Companies', icon: Building2, href: '/companies' },

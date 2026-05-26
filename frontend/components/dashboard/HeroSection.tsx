@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, Sparkles, Target } from 'lucide-react';
+import { TrendingUp, Sparkles, Target, Globe } from 'lucide-react';
 import { getGreeting } from '@/lib/mock-data';
 import type { User, MatchScore } from '@/lib/types';
 
@@ -71,6 +71,17 @@ export function HeroSection({ profile, matchScore, jobCount = 0 }: HeroSectionPr
                   +{matchScore.improvement}% growth possible
                 </span>
               </div>
+              {profile.id && (
+                <a
+                  href={`/portfolio/${profile.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-xs transition-all shadow-glow hover:shadow-glow-lg uppercase tracking-wider cursor-pointer"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>View Public Portfolio</span>
+                </a>
+              )}
               
               {/* 🔥 Dynamic Skills Tags */}
               <div className="flex items-center gap-2 flex-wrap ml-2">

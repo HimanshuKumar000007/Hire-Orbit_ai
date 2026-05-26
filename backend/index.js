@@ -1671,6 +1671,195 @@ Respond ONLY with a JSON object in this exact format:
   }
 });
 
+app.post("/api/ai/tailor-resume", authenticate, async (req, res) => {
+  try {
+    const { jobDescription } = req.body;
+    if (!jobDescription) {
+      return res.status(400).json({ error: "Job description is required" });
+    }
+
+    const userId = req.user.id;
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (error || !profile) {
+      return res.status(404).json({ error: "User profile not found. Please upload a resume first." });
+    }
+
+    const response = await ai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional ATS resume optimizer and career expert. Given a candidate's resume/profile and a job description, tailor their resume bullet points and write a cover letter. Identify key skills/keywords from the job description and whether they match or are missing in the candidate's profile."
+        },
+        {
+          role: "user",
+          content: `Candidate Role: ${profile.role || "Professional"}
+Candidate Skills: ${(profile.skills || []).join(", ")}
+Candidate Experience: ${profile.experience || "Not provided"}
+
+Job Description:
+${jobDescription}
+
+Return ONLY a JSON object in this exact format:
+{
+  "tailoredBullets": ["tailored bullet point 1", "tailored bullet point 2", "tailored bullet point 3"],
+  "coverLetter": "A complete professional cover letter tailored to the job description and candidate profile.",
+  "atsKeywords": [
+    { "keyword": "Keyword1", "status": "matched" },
+    { "keyword": "Keyword2", "status": "missing" }
+  ]
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    let aiText = response.choices[0].message.content;
+    const parsed = safeJSONParse(aiText, {
+      tailoredBullets: [],
+      coverLetter: "Failed to generate cover letter.",
+      atsKeywords: []
+    });
+
+    res.json(parsed);
+  } catch (err) {
+    console.error("Tailor resume error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/ai/interview-questions", authenticate, async (req, res) => {
+  try {
+    const { jobDescription, role } = req.body;
+    const response = await ai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: "You are an elite technical interviewer. Generate 5 behavioral or technical interview questions tailored to the candidate's target role and/or job description."
+        },
+        {
+          role: "user",
+          content: `Target Role: ${role || "Professional"}
+Job Description: ${jobDescription || "Standard industry job description"}
+
+Return ONLY a JSON object in this exact format:
+{
+  "questions": [
+    { "id": 1, "question": "Question text here..." },
+    { "id": 2, "question": "Question text here..." },
+    { "id": 3, "question": "Question text here..." },
+    { "id": 4, "question": "Question text here..." },
+    { "id": 5, "question": "Question text here..." }
+  ]
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    let aiText = response.choices[0].message.content;
+    const parsed = safeJSONParse(aiText, { questions: [] });
+    res.json(parsed);
+  } catch (err) {
+    console.error("Interview questions error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/ai/grade-answer", authenticate, async (req, res) => {
+  try {
+    const { question, answer } = req.body;
+    if (!question || !answer) {
+      return res.status(400).json({ error: "Question and answer are required" });
+    }
+
+    const response = await ai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI interviewer grading a candidate's answer. Assess the answer's quality, structure (e.g. STAR method), technical accuracy, and provide a score between 0 and 100, constructive feedback, and an improved model version of their response."
+        },
+        {
+          role: "user",
+          content: `Question: ${question}
+Candidate's Answer: ${answer}
+
+Return ONLY a JSON object in this exact format:
+{
+  "score": 85,
+  "feedback": "Feedback details...",
+  "improvedAnswer": "STAR structured answer..."
+}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    let aiText = response.choices[0].message.content;
+    const parsed = safeJSONParse(aiText, {
+      score: 70,
+      feedback: "Error grading answer. Please try again.",
+      improvedAnswer: ""
+    });
+
+    res.json(parsed);
+  } catch (err) {
+    console.error("Grade answer error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/ai/copilot-chat", authenticate, async (req, res) => {
+  try {
+    const { messages = [] } = req.body;
+    const userId = req.user.id;
+
+    // Fetch user profile to feed context to the chat
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    const profileContext = profile 
+      ? `Candidate Profile Context:
+- Name: ${profile.full_name || "User"}
+- Role: ${profile.role || "Unknown"}
+- Skills: ${(profile.skills || []).join(", ")}
+- Experience: ${profile.experience || "Not provided"}`
+      : "No profile context available.";
+
+    const systemPrompt = `You are "Orbit Copilot", an elite AI Career Advisor and Coach. You help candidates land their dream jobs, optimize their resumes, negotiate salaries, prep for interviews, and level up their technical skills.
+Using the following user context, answer their career queries professionally, with actionable, bulleted advice:
+${profileContext}`;
+
+    const formattedMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.role === "user" ? "user" : "assistant",
+        content: m.content
+      })).slice(-10) // Limit to last 10 messages for token context efficiency
+    ];
+
+    const response = await ai.chat.completions.create({
+      model: "deepseek-chat",
+      messages: formattedMessages
+    });
+
+    res.json({ message: response.choices[0].message.content });
+  } catch (err) {
+    console.error("Copilot chat error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 
 // 🛡️ Global error handlers — prevent silent crashes on Railway
