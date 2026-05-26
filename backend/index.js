@@ -1618,10 +1618,6 @@ app.post("/api/ai-insight", authenticate, async (req, res) => {
     const { skills = [], role = "Professional", topMissingSkills = [], matchScore = 0 } = req.body;
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_KEY) {
-      return res.status(500).json({ error: "Gemini API key not configured" });
-    }
-
     const prompt = `You are an expert career coach AI. Analyze this professional profile and provide highly personalized, actionable career insights.
 
 Profile:
@@ -1643,16 +1639,31 @@ Respond ONLY with a JSON object in this exact format:
   "salaryInsight": "salary range insight for their role in India"
 }`;
 
-    const geminiRes = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${GEMINI_KEY}`,
-      {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
-      },
-      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
-    );
+    let rawText = "";
 
-    let rawText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (GEMINI_KEY) {
+      console.log("🌐 Calling Gemini for AI insight...");
+      const geminiRes = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent?key=${GEMINI_KEY}`,
+        {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+        },
+        { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+      );
+      rawText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } else if (process.env.DEEPSEEK_API_KEY) {
+      console.log("🌐 Gemini key missing. Calling DeepSeek for AI insight...");
+      const response = await ai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" }
+      });
+      rawText = response.choices[0].message.content;
+    } else {
+      return res.status(500).json({ error: "No AI API key configured" });
+    }
+
     rawText = rawText.replace(/```json|```/g, "").trim();
 
     const insight = safeJSONParse(rawText, {
@@ -1666,7 +1677,7 @@ Respond ONLY with a JSON object in this exact format:
 
     res.json({ success: true, insight });
   } catch (err) {
-    console.error("Gemma AI Insight error:", err.response?.data || err.message);
+    console.error("AI Insight error:", err.response?.data || err.message);
     res.status(500).json({ error: "AI insight generation failed" });
   }
 });
