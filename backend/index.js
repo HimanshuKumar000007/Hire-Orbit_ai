@@ -106,47 +106,84 @@ function safeJSONParse(text, fallback = []) {
 
 async function callGemini({ systemPrompt, messages, jsonMode }) {
   const GEMINI_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_KEY) {
-    throw new Error("GEMINI_API_KEY is missing from environment variables");
-  }
 
-  const contents = [];
-  
-  for (const msg of messages) {
-    if (msg.role === "system") {
-      continue;
+  if (GEMINI_KEY) {
+    try {
+      const contents = [];
+      
+      for (const msg of messages) {
+        if (msg.role === "system") {
+          continue;
+        }
+        contents.push({
+          role: msg.role === "assistant" ? "model" : "user",
+          parts: [{ text: msg.content }]
+        });
+      }
+
+      const payload = {
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192
+        }
+      };
+
+      if (systemPrompt) {
+        payload.systemInstruction = {
+          parts: [{ text: systemPrompt }]
+        };
+      }
+
+      if (jsonMode) {
+        payload.generationConfig.responseMimeType = "application/json";
+      }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+      const response = await axios.post(url, payload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 30000
+      });
+
+      return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (geminiErr) {
+      console.warn("⚠️ Gemini API call failed, falling back to DeepSeek:", geminiErr.response?.data || geminiErr.message);
     }
-    contents.push({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
-    });
   }
 
-  const payload = {
-    contents,
-    generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 8192
+  // Fallback to DeepSeek if Gemini is missing or failed
+  if (process.env.DEEPSEEK_API_KEY) {
+    console.log("🌐 Calling DeepSeek as fallback LLM...");
+    try {
+      const deepseekMessages = [];
+      if (systemPrompt) {
+        deepseekMessages.push({ role: "system", content: systemPrompt });
+      }
+      for (const msg of messages) {
+        deepseekMessages.push({
+          role: msg.role === "system" ? "system" : msg.role === "assistant" ? "assistant" : "user",
+          content: msg.content
+        });
+      }
+
+      const options = {
+        model: "deepseek-chat",
+        messages: deepseekMessages
+      };
+
+      if (jsonMode) {
+        options.response_format = { type: "json_object" };
+      }
+
+      const response = await ai.chat.completions.create(options);
+      return response.choices[0].message.content || "";
+    } catch (deepseekErr) {
+      console.error("❌ DeepSeek fallback API also failed:", deepseekErr.message);
+      throw deepseekErr;
     }
-  };
-
-  if (systemPrompt) {
-    payload.systemInstruction = {
-      parts: [{ text: systemPrompt }]
-    };
   }
 
-  if (jsonMode) {
-    payload.generationConfig.responseMimeType = "application/json";
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
-  const response = await axios.post(url, payload, {
-    headers: { "Content-Type": "application/json" },
-    timeout: 30000
-  });
-
-  return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  throw new Error("No AI API keys configured or active");
 }
 
 
