@@ -1786,7 +1786,7 @@ app.post("/api/ai/tailor-resume", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User profile not found. Please upload a resume first." });
     }
 
-    const systemPrompt = "You are a professional ATS resume optimizer and career expert. Given a candidate's resume/profile and a job description, tailor their resume bullet points and write a cover letter. Identify key skills/keywords from the job description and whether they match or are missing in the candidate's profile.";
+    const systemPrompt = "You are a professional ATS resume optimizer, LinkedIn branding expert, and career advisor. Given a candidate's resume/profile and a job description, tailor their resume bullet points, write a custom cover letter, and optimize their LinkedIn profile elements (headline, about summary, and outreach template). Identify key skills/keywords from the job description and whether they match or are missing in the candidate's profile.";
     const userPrompt = `Candidate Role: ${profile.role || "Professional"}
 Candidate Skills: ${(profile.skills || []).join(", ")}
 Candidate Experience: ${profile.experience || "Not provided"}
@@ -1801,7 +1801,12 @@ Return ONLY a JSON object in this exact format:
   "atsKeywords": [
     { "keyword": "Keyword1", "status": "matched" },
     { "keyword": "Keyword2", "status": "missing" }
-  ]
+  ],
+  "linkedIn": {
+    "headline": "A highly optimized LinkedIn headline (max 220 characters) featuring key matching skills & job titles",
+    "about": "A professional 3-paragraph LinkedIn 'About' summary incorporating keywords, background, achievements, and call to action.",
+    "outreachMessage": "A short, high-conversion outreach template (max 300 characters) to connect with recruiters or hiring managers."
+  }
 }`;
 
     const aiText = await callGemini({
@@ -1812,7 +1817,12 @@ Return ONLY a JSON object in this exact format:
     const parsed = safeJSONParse(aiText, {
       tailoredBullets: [],
       coverLetter: "Failed to generate cover letter.",
-      atsKeywords: []
+      atsKeywords: [],
+      linkedIn: {
+        headline: `${profile.role || "Professional"} | React | Node.js | SQL`,
+        about: `Passionate ${profile.role || "Professional"} skilled in ${(profile.skills || []).slice(0, 5).join(", ")}.`,
+        outreachMessage: "Hi, I saw your job opening and would love to connect to discuss how my skills align with your team's needs."
+      }
     });
 
     res.json(parsed);

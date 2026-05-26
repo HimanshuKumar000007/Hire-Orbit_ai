@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, SlidersHorizontal, Loader2, Check, Copy, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
+import { Sparkles, SlidersHorizontal, Loader2, Check, Copy, AlertTriangle, FileText, CheckCircle2, Linkedin } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
@@ -245,6 +245,15 @@ export default function TailorPage() {
                           <FileText className="w-4 h-4" />
                           Custom Cover Letter
                         </button>
+                        <button
+                          onClick={() => setActiveTab("linkedin")}
+                          className={`flex-1 py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                            activeTab === "linkedin" ? "bg-white/5 text-white" : "text-zinc-500 hover:text-white"
+                          }`}
+                        >
+                          <Linkedin className="w-4 h-4" />
+                          LinkedIn Optimizer
+                        </button>
                       </div>
 
                       {/* Tab Content */}
@@ -286,7 +295,7 @@ export default function TailorPage() {
                               ))}
                             </div>
                           </div>
-                        ) : (
+                        ) : activeTab === "cover-letter" ? (
                           <div className="space-y-6">
                             <div className="flex items-center justify-between">
                               <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Custom Cover Letter Draft</p>
@@ -309,6 +318,114 @@ export default function TailorPage() {
                             </div>
                             <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5 whitespace-pre-wrap text-sm text-zinc-300 leading-relaxed font-sans">
                               {result.coverLetter}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-8">
+                            {/* Section Header */}
+                            <div>
+                              <h4 className="text-white font-bold text-lg">LinkedIn Profile Optimizer</h4>
+                              <p className="text-zinc-500 text-xs mt-1">
+                                Elevate your professional brand with these personalized, keyword-dense sections tailored to your target job.
+                              </p>
+                            </div>
+
+                            {/* Headline Section */}
+                            <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5 space-y-4 hover:border-emerald-500/20 transition-all duration-300">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    Headline
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Recruiter Optimized
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => copyToClipboard(result.linkedIn?.headline || "", "linkedin-headline")}
+                                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                                >
+                                  {copiedText === "linkedin-headline" ? (
+                                    <>
+                                      <Check className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4" />
+                                      <span>Copy Headline</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-sm font-semibold text-zinc-200 font-sans leading-relaxed">
+                                {result.linkedIn?.headline || "Not available"}
+                              </p>
+                              <div className="flex justify-between items-center text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                                <span>Aim for 120-220 characters</span>
+                                <span>{(result.linkedIn?.headline || "").length} / 220 chars</span>
+                              </div>
+                            </div>
+
+                            {/* About Section */}
+                            <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5 space-y-4 hover:border-emerald-500/20 transition-all duration-300">
+                              <div className="flex items-center justify-between">
+                                <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  About / Summary
+                                </span>
+                                <button
+                                  onClick={() => copyToClipboard(result.linkedIn?.about || "", "linkedin-about")}
+                                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                                >
+                                  {copiedText === "linkedin-about" ? (
+                                    <>
+                                      <Check className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4" />
+                                      <span>Copy Summary</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <div className="text-sm text-zinc-300 leading-relaxed font-sans whitespace-pre-wrap space-y-3">
+                                {result.linkedIn?.about || "Not available"}
+                              </div>
+                            </div>
+
+                            {/* Outreach Section */}
+                            <div className="p-6 rounded-2xl bg-zinc-900/40 border border-white/5 space-y-4 hover:border-emerald-500/20 transition-all duration-300">
+                              <div className="flex items-center justify-between">
+                                <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                  Recruiter Outreach Template
+                                </span>
+                                <button
+                                  onClick={() => copyToClipboard(result.linkedIn?.outreachMessage || "", "linkedin-outreach")}
+                                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+                                >
+                                  {copiedText === "linkedin-outreach" ? (
+                                    <>
+                                      <Check className="w-4 h-4 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-4 h-4" />
+                                      <span>Copy Template</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-sm text-zinc-300 leading-relaxed font-sans italic bg-zinc-950/40 p-4 rounded-xl border border-white/5">
+                                &ldquo;{result.linkedIn?.outreachMessage || "Not available"}&rdquo;
+                              </p>
+                              <div className="flex justify-between items-center text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                                <span>Ideal for connection requests (max 300 chars)</span>
+                                <span>{(result.linkedIn?.outreachMessage || "").length} / 300 chars</span>
+                              </div>
                             </div>
                           </div>
                         )}
