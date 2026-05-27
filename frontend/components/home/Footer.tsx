@@ -28,7 +28,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2">
             <motion.a
-              href="#"
+              href="/"
               className="inline-flex items-center gap-2 group mb-4"
               whileHover={{ scale: 1.02 }}
             >
@@ -105,13 +105,13 @@ export function Footer() {
             © 2024 HireOrbitAI. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-zinc-500 hover:text-white transition-colors">
+            <a href="/privacy" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Privacy Policy
             </a>
-            <a href="#" className="text-sm text-zinc-500 hover:text-white transition-colors">
+            <a href="/terms" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Terms of Service
             </a>
-            <a href="#" className="text-sm text-zinc-500 hover:text-white transition-colors">
+            <a href="/cookies" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Cookie Settings
             </a>
           </div>

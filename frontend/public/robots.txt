@@ -1,0 +1,18 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /onboarding
+Disallow: /onboarding/*
+
+# Host
+Host: https://hireorbitai.in
+
+# Sitemaps
+Sitemap: https://hireorbitai.in/sitemap.xml
