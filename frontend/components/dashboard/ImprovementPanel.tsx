@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Rocket, 
@@ -24,8 +25,28 @@ interface ImprovementPanelProps {
 }
 
 export function ImprovementPanel({ improvements, weeklyPlan }: ImprovementPanelProps) {
+  const router = useRouter();
   const [expandedAction, setExpandedAction] = useState<string | null>(null);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
+
+  const handleStartLearning = (action: ImprovementAction) => {
+    // Extract the raw skill term from title (e.g. "Strengthen communication" -> "communication", "Get AWS Certification" -> "AWS")
+    const cleanSkill = action.title
+      .replace(/^(Strengthen|Learn|Master|Get|Build|Practice)\s+/i, '')
+      .replace(/\s+(experience|certification|certificate|skills|knowledge)$/i, '')
+      .trim();
+
+    router.push(`/copilot?mode=learn&skill=${encodeURIComponent(cleanSkill)}&title=${encodeURIComponent(action.title)}&impact=${encodeURIComponent(action.impact || '')}`);
+  };
+
+  const handleFindCourse = (action: ImprovementAction) => {
+    const cleanSkill = action.title
+      .replace(/^(Strengthen|Learn|Master|Get|Build|Practice)\s+/i, '')
+      .replace(/\s+(experience|certification|certificate|skills|knowledge)$/i, '')
+      .trim();
+
+    router.push(`/copilot?mode=courses&skill=${encodeURIComponent(cleanSkill)}&title=${encodeURIComponent(action.title)}`);
+  };
 
   const toggleTask = (dayId: string) => {
     setCompletedTasks((prev) => {
@@ -106,7 +127,7 @@ export function ImprovementPanel({ improvements, weeklyPlan }: ImprovementPanelP
                     </p>
 
                     {/* Meta */}
-                    <div className="flex items-center gap-3 mt-3">
+                    <div className="flex items-center gap-3 mt-3 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium">
                         <TrendingUp className="w-3 h-3" />
                         {action.impact}
@@ -115,6 +136,17 @@ export function ImprovementPanel({ improvements, weeklyPlan }: ImprovementPanelP
                         <Clock className="w-3 h-3" />
                         {action.timeEstimate}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartLearning(action);
+                        }}
+                        className="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 text-xs font-semibold border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        Start Learning →
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -133,18 +165,26 @@ export function ImprovementPanel({ improvements, weeklyPlan }: ImprovementPanelP
                         <div className="flex items-center gap-3">
                           <Button
                             size="sm"
-                            className="bg-emerald-500 hover:bg-emerald-400 text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStartLearning(action);
+                            }}
+                            className="bg-emerald-500 hover:bg-emerald-400 text-white cursor-pointer shadow-glow transition-all"
                           >
                             <BookOpen className="w-4 h-4 mr-2" />
-                            Start Learning
+                            Start Learning with Copilot
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFindCourse(action);
+                            }}
+                            className="bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 cursor-pointer transition-all"
                           >
                             <Award className="w-4 h-4 mr-2" />
-                            Find Course
+                            Find Courses
                           </Button>
                         </div>
                       </div>
@@ -207,7 +247,21 @@ export function ImprovementPanel({ improvements, weeklyPlan }: ImprovementPanelP
 
                   {/* Content */}
                   <div className="flex-1">
-                    <h4 className="font-semibold text-white">{day.title}</h4>
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="font-semibold text-white">{day.title}</h4>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const skill = day.title.replace(/^Week\s+\d+:\s*/i, '').trim();
+                          router.push(`/copilot?mode=learn&skill=${encodeURIComponent(skill)}&title=${encodeURIComponent(day.title)}`);
+                        }}
+                        className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 hover:underline cursor-pointer"
+                      >
+                        <BookOpen className="w-3 h-3" />
+                        Study Notes →
+                      </button>
+                    </div>
                     <ul className="mt-2 space-y-2">
                       {(day.tasks || []).map((task, taskIndex) => {
                         const taskId = `${day.day}-${taskIndex}`;

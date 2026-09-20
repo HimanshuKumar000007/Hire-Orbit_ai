@@ -1818,27 +1818,88 @@ Return ONLY a JSON object in this exact format:
 
 app.post("/api/ai/copilot-chat", authenticate, async (req, res) => {
   try {
-    const { messages = [] } = req.body;
+    const { messages = [], skill, mode, action } = req.body;
     const userId = req.user.id;
 
-    // Fetch user profile to feed context to the chat
+    // 1. Fetch user profile and comprehensive analysis data
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
       .single();
 
-    const profileContext = profile 
-      ? `Candidate Profile Context:
-- Name: ${profile.full_name || "User"}
-- Role: ${profile.role || "Unknown"}
-- Skills: ${(profile.skills || []).join(", ")}
-- Experience: ${profile.experience || "Not provided"}`
-      : "No profile context available.";
+    const cachedResult = latestResultMap.get(userId) || {};
+    let analysisData = profile?.analysis_data || cachedResult || {};
+    if (typeof analysisData === "string") {
+      analysisData = safeJSONParse(analysisData, {});
+    }
 
-    const systemPrompt = `You are "Orbit Copilot", an elite AI Career Advisor and Coach. You help candidates land their dream jobs, optimize their resumes, negotiate salaries, prep for interviews, and level up their technical skills.
-Using the following user context, answer their career queries professionally, with actionable, bulleted advice:
-${profileContext}`;
+    const resumeData = analysisData?.resumeData || {};
+    const candidateName = profile?.full_name || profile?.name || resumeData.name || "Candidate";
+    const candidateRole = profile?.role || resumeData.role || "Professional";
+    const candidateSkills = (profile?.skills?.length ? profile.skills : resumeData.skills) || [];
+    const candidateExp = profile?.experience || resumeData.experience || "Experience details from verified resume";
+    const candidateEducation = resumeData.education || profile?.education || "";
+    const candidateProjects = resumeData.projects || [];
+    const candidateStrengths = resumeData.strengths || [];
+    const candidateWeaknesses = resumeData.weaknesses || [];
+    const matchedSkills = analysisData?.matchedSkills || [];
+    const missingSkills = analysisData?.missingSkills || [];
+
+    // 2. Build complete, rich resume context for NVIDIA NIM AI
+    const profileContext = `=== CANDIDATE COMPLETE RESUME & CAREER INTELLIGENCE ===
+- Candidate Name: ${candidateName}
+- Target Career Role: ${candidateRole}
+- Verified Skills in Resume: ${candidateSkills.join(", ") || "General Professional Skills"}
+- Detailed Experience & Background:
+${typeof candidateExp === "string" ? candidateExp : JSON.stringify(candidateExp, null, 2)}
+- Education & Certifications: ${candidateEducation || "Higher Education"}
+- Projects Completed: ${Array.isArray(candidateProjects) ? candidateProjects.map(p => typeof p === "string" ? p : `${p.title || p.name || 'Project'}: ${p.description || ''}`).join("; ") : candidateProjects || "None listed"}
+- Identified Strengths: ${candidateStrengths.join(", ") || "Adaptability, Core Problem Solving"}
+- Identified Skill Gaps for Target Role: ${missingSkills.join(", ") || "None"}
+- Matched Skills in Current Market: ${matchedSkills.join(", ") || "Evaluated"}
+${skill ? `- Current Focused Skill To Master: ${skill}` : ""}`;
+
+    // 3. World-class specialized prompt for Career Coaching and Master Study Notes
+    const systemPrompt = `You are "Orbit Copilot", HireOrbitAI's elite AI Career Advisor, Technical Mentor, and Executive Learning Coach.
+You have direct, unrestricted access to the candidate's complete resume, background history, target role, and career gap analysis.
+
+${profileContext}
+
+CRITICAL INSTRUCTIONS FOR LEARNING STUDY NOTES & GUIDES:
+When the user asks to "Start Learning", learn a skill, or create study notes (e.g. for "${skill || 'a target skill'}"):
+1. Ground every single note in ${candidateName}'s actual background. Directly bridge their existing experience (${candidateRole} with skills like ${candidateSkills.slice(0, 4).join(", ")}) to master this new skill.
+2. Produce an EXHAUSTIVE, high-yield, structured MASTER STUDY GUIDE & NOTES using clear Markdown:
+   # 📘 Master Study Notes & Roadmap: ${skill || 'Target Skill'}
+   > Tailored for **${candidateName}** | Target Role: **${candidateRole}** | Gap-Closer for Higher Match Score
+
+   ### 1. 🎯 Why This Skill Matters for Your Target Role (${candidateRole})
+   Explain why hiring managers prioritize this, how it impacts ATS match scores, and how it complements the candidate's current experience.
+
+   ### 2. 🧠 Core Fundamentals & Concepts Cheat Sheet
+   Provide high-yield, technical deep-dive notes:
+   - Key terminology, core rules, and architecture
+   - Practical syntax, design patterns, or standard operating procedures (use code blocks or clear bullet lists)
+   - Common pitfalls and anti-patterns to avoid
+
+   ### 3. 🗓️ Accelerated Learning Roadmap (Actionable Phases)
+   Break down realistic milestones to reach job-readiness:
+   - **Phase 1 (Days 1–4): Foundation & Essential Setup**
+   - **Phase 2 (Days 5–10): Real-World Application & Core Patterns**
+   - **Phase 3 (Days 11–14): Production-Grade Best Practices & Optimization**
+
+   ### 4. 🛠️ Portfolio Project Spec (Resume Gap-Closer)
+   Describe a concrete, high-impact project that combines their existing background with this new skill. Include core features, architecture, and what makes it impressive to recruiters.
+
+   ### 5. 📝 Ready-to-Use Google XYZ Resume Bullets
+   Give 2–3 copy-paste ready bullet points following the Google formula ("Accomplished [X] as measured by [Y] by doing [Z]") that they can add to their resume upon completing this module.
+
+   ### 6. 🎤 Top Interview Questions & STAR Model Answers
+   Provide 2–3 realistic interview questions on this topic with senior-level answers demonstrating practical mastery.
+
+For general career questions, resume optimizations, or salary negotiation:
+- Give direct, highly personalized, actionable advice referencing their real resume data.
+- Keep the formatting clean, modern, and inspiring.`;
 
     const userAndAssistantMessages = messages.map(m => ({
       role: m.role === "user" ? "user" : "assistant",
