@@ -15,8 +15,12 @@ import { howAiIsRevolutionizingSemanticJobMatching } from "./blog-content/how-ai
 import { tenSkillsEveryFrontendDeveloperNeedsIn2024 } from "./blog-content/10-skills-every-frontend-developer-needs-in-2024";
 import { understandingAtsWhyYourResumeMightBeGettingFiltered } from "./blog-content/understanding-ats-why-your-resume-might-be-getting-filtered";
 import { thePowerOfNetworkingInTheAgeOfRemoteWork } from "./blog-content/the-power-of-networking-in-the-age-of-remote-work";
+import { howToUseChatGptToWriteAnAtsResumePrompts } from "./blog-content/how-to-use-chatgpt-to-write-an-ats-resume-prompts";
 
 export const BLOG_POSTS: BlogPost[] = [
+  // High-Volume Trending Viral Search Guides (Live Today)
+  howToUseChatGptToWriteAnAtsResumePrompts,
+
   // Scheduled 10-Day Series
   atsResumeOptimizationGuide2026,            // Day 1 - Live Today (Sep 20, 2026)
   masteringStarMethodTechInterviews,          // Day 2 - Sep 21, 2026
