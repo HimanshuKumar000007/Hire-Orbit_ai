@@ -67,3 +67,40 @@ export interface DashboardData {
   weeklyPlan: WeeklyPlan[];
   skills: Skill[];
 }
+
+export interface TableOfContentItem {
+  id: string;
+  title: string;
+}
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export interface BlogPost {
+  slug: string;
+  title: string;
+  excerpt: string;
+  metaDescription: string;
+  publishedAt: string;
+  readTime: string;
+  category: "Resume & ATS" | "Interview Prep" | "AI & Tech" | "Career Growth";
+  author: {
+    name: string;
+    role: string;
+  };
+  tags: string[];
+  seoKeywords: string[];
+  gradient: string;
+  tableOfContents: TableOfContentItem[];
+  faq: FAQItem[];
+  cta: {
+    headline: string;
+    subheadline: string;
+    buttonText: string;
+    buttonLink: string;
+  };
+  content: string;
+}
+
