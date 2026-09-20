@@ -16,7 +16,7 @@ import axios from "axios";
 import path from "path";
 import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
-import { ai } from "./lib/ai.js";
+import { ai, NVIDIA_DEFAULT_MODEL } from "./lib/ai.js";
 import { extractText } from "./utils/extractText.js";
 import jobsRoute from "./routes/jobs.js";
 import { getSmartSuggestions } from "./utils/suggestions.js";
@@ -104,87 +104,46 @@ function safeJSONParse(text, fallback = []) {
   }
 }
 
-async function callGemini({ systemPrompt, messages, jsonMode }) {
-  const GEMINI_KEY = process.env.GEMINI_API_KEY;
+async function callAI({ systemPrompt, messages, jsonMode }) {
+  const NVIDIA_KEY = process.env.NVIDIA_API_KEY;
 
-  if (GEMINI_KEY) {
-    try {
-      const contents = [];
-      
-      for (const msg of messages) {
-        if (msg.role === "system") {
-          continue;
-        }
-        contents.push({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content }]
-        });
-      }
+  if (!NVIDIA_KEY) {
+    throw new Error("NVIDIA_API_KEY is not configured in environment");
+  }
 
-      const payload = {
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192
-        }
-      };
-
-      if (systemPrompt) {
-        payload.systemInstruction = {
-          parts: [{ text: systemPrompt }]
-        };
-      }
-
-      if (jsonMode) {
-        payload.generationConfig.responseMimeType = "application/json";
-      }
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
-      const response = await axios.post(url, payload, {
-        headers: { "Content-Type": "application/json" },
-        timeout: 30000
+  try {
+    const aiMessages = [];
+    if (systemPrompt) {
+      aiMessages.push({ role: "system", content: systemPrompt });
+    }
+    for (const msg of messages) {
+      aiMessages.push({
+        role: msg.role === "system" ? "system" : msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content
       });
-
-      return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    } catch (geminiErr) {
-      console.warn("⚠️ Gemini API call failed, falling back to DeepSeek:", geminiErr.response?.data || geminiErr.message);
     }
-  }
 
-  // Fallback to DeepSeek if Gemini is missing or failed
-  if (process.env.DEEPSEEK_API_KEY) {
-    console.log("🌐 Calling DeepSeek as fallback LLM...");
-    try {
-      const deepseekMessages = [];
-      if (systemPrompt) {
-        deepseekMessages.push({ role: "system", content: systemPrompt });
-      }
-      for (const msg of messages) {
-        deepseekMessages.push({
-          role: msg.role === "system" ? "system" : msg.role === "assistant" ? "assistant" : "user",
-          content: msg.content
-        });
-      }
+    const options = {
+      model: NVIDIA_DEFAULT_MODEL,
+      messages: aiMessages,
+      temperature: 0.7,
+      max_tokens: 4096
+    };
 
-      const options = {
-        model: "deepseek-chat",
-        messages: deepseekMessages
-      };
-
-      if (jsonMode) {
-        options.response_format = { type: "json_object" };
-      }
-
-      const response = await ai.chat.completions.create(options);
-      return response.choices[0].message.content || "";
-    } catch (deepseekErr) {
-      console.error("❌ DeepSeek fallback API also failed:", deepseekErr.message);
-      throw deepseekErr;
+    if (jsonMode) {
+      options.response_format = { type: "json_object" };
     }
-  }
 
-  throw new Error("No AI API keys configured or active");
+    const response = await ai.chat.completions.create(options);
+    return response.choices[0].message.content || "";
+  } catch (err) {
+    console.error("❌ NVIDIA AI API call failed:", err.message);
+    throw err;
+  }
 }
+
+// Alias for backward compatibility
+const callGemini = callAI;
 
 
 function detectRole(text, aiRole) {
@@ -228,7 +187,7 @@ function detectRole(text, aiRole) {
 async function parseResumeWithAI(text) {
   try {
     const response = await ai.chat.completions.create({
-      model: "deepseek-chat",
+      model: NVIDIA_DEFAULT_MODEL,
       messages: [
         {
           role: "system",
@@ -297,7 +256,7 @@ async function parseResumeWithAI(text) {
       confidenceScore: parsed.confidenceScore || 85
     };
   } catch (err) {
-    console.error("DeepSeek AI parsing failed:", err.message);
+    console.error("NVIDIA AI parsing failed:", err.message);
     return {
       name: "User",
       fullName: "User",
@@ -315,31 +274,22 @@ async function parseResumeWithAI(text) {
 
 async function getMarketSkillsForRole(role) {
   try {
-    const aiResponse = await axios.post(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert HR analyst. Given a job role, return a JSON object where keys are essential skills and values are arrays of synonyms/related terms. Example: { \"javascript\": [\"js\", \"es6\"], \"react\": [\"reactjs\", \"hooks\"] }. Focus on TOP 7-10 essential skills."
-          },
-          {
-            role: "user",
-            content: `Career Role: ${role}`
-          }
-        ]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json"
+    const response = await ai.chat.completions.create({
+      model: NVIDIA_DEFAULT_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert HR analyst. Given a job role, return a JSON object where keys are essential skills and values are arrays of synonyms/related terms. Example: { \"javascript\": [\"js\", \"es6\"], \"react\": [\"reactjs\", \"hooks\"] }. Focus on TOP 7-10 essential skills."
         },
-        timeout: 60000
-      }
-    );
+        {
+          role: "user",
+          content: `Career Role: ${role}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-    let text = aiResponse.data.choices[0].message.content;
+    let text = response.choices[0].message.content;
     text = text.replace(/```json|```/g, "").trim();
     return safeJSONParse(text, {});
   } catch (err) {
@@ -372,14 +322,12 @@ async function extractSkillsFromJD_AI(jobDescription) {
   }
 
   try {
-    const aiResponse = await axios.post(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        model: "deepseek-chat",
-        messages: [
-          {
-            role: "user",
-            content: `
+    const response = await ai.chat.completions.create({
+      model: NVIDIA_DEFAULT_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: `
 Extract all skills (technical + soft) from this job description.
 
 Return ONLY JSON array:
@@ -388,26 +336,19 @@ Return ONLY JSON array:
 Job Description:
 ${jobDescription}
 `
-          }
-        ]
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 60000
-      }
-    );
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-    let text = aiResponse.data.choices[0].message.content;
+    let text = response.choices[0].message.content;
     text = text.replace(/```json|```/g, "").trim();
 
     const skills = safeJSONParse(text, []);
     skillCache.set(jobDescription, skills); // 🔥 UPDATE CACHE
     return skills;
   } catch (err) {
-    console.error("AI skill extraction failed, fallback used");
+    console.error("AI skill extraction failed, fallback used:", err.message);
 
     // ✅ fallback (VERY IMPORTANT)
     return extractSkillsFromJD(jobDescription);
@@ -504,10 +445,9 @@ async function calculateSemanticMatch(resumeData, jobDescription, precomputedRes
 async function generateAIGapFix(missingSkills, role) {
   if (missingSkills.length === 0) return [];
 
-  const aiResponse = await axios.post(
-    "https://api.deepseek.com/v1/chat/completions",
-    {
-      model: "deepseek-chat",
+  try {
+    const response = await ai.chat.completions.create({
+      model: NVIDIA_DEFAULT_MODEL,
       messages: [
         {
           role: "user",
@@ -532,20 +472,17 @@ Role: ${role}
 Missing Skills: ${missingSkills.join(", ")}
 `
         }
-      ]
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      timeout: 60000
-    }
-  );
+      ],
+      response_format: { type: "json_object" }
+    });
 
-  let text = aiResponse.data.choices[0].message.content;
-  text = text.replace(/```json|```/g, "").trim();
-  return safeJSONParse(text, []);
+    let text = response.choices[0].message.content;
+    text = text.replace(/```json|```/g, "").trim();
+    return safeJSONParse(text, []);
+  } catch (err) {
+    console.error("AI gap fix generation failed:", err.message);
+    return [];
+  }
 }
 
 
@@ -1703,7 +1640,6 @@ app.post("/api/ai-insight", authenticate, async (req, res) => {
   try {
     const { skills = [], role = "Professional", topMissingSkills = [], matchScore = 0 } = req.body;
 
-    const GEMINI_KEY = process.env.GEMINI_API_KEY;
     const prompt = `You are an expert career coach AI. Analyze this professional profile and provide highly personalized, actionable career insights.
 
 Profile:
@@ -1725,32 +1661,13 @@ Respond ONLY with a JSON object in this exact format:
   "salaryInsight": "salary range insight for their role in India"
 }`;
 
-    let rawText = "";
+    const rawResponse = await callAI({
+      systemPrompt: "You are an expert career coach AI. Return strictly valid JSON.",
+      messages: [{ role: "user", content: prompt }],
+      jsonMode: true
+    });
 
-    if (GEMINI_KEY) {
-      console.log("🌐 Calling Gemini for AI insight...");
-      const geminiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-        {
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-        },
-        { headers: { "Content-Type": "application/json" }, timeout: 30000 }
-      );
-      rawText = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    } else if (process.env.DEEPSEEK_API_KEY) {
-      console.log("🌐 Gemini key missing. Calling DeepSeek for AI insight...");
-      const response = await ai.chat.completions.create({
-        model: "deepseek-chat",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" }
-      });
-      rawText = response.choices[0].message.content;
-    } else {
-      return res.status(500).json({ error: "No AI API key configured" });
-    }
-
-    rawText = rawText.replace(/```json|```/g, "").trim();
+    const rawText = rawResponse.replace(/```json|```/g, "").trim();
 
     const insight = safeJSONParse(rawText, {
       summary: `You have strong ${skills[0] || "professional"} skills. Focus on ${topMissingSkills[0] || "expanding your skillset"} to unlock more opportunities.`,
@@ -2044,8 +1961,7 @@ app.get("/health", (req, res) => res.json({ status: "ok", port: PORT }));
 // Server startup
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`🔑 DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? "SET ✅" : "MISSING ❌"}`);
-  console.log(`🔑 GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? "SET ✅" : "MISSING ❌"}`);
+  console.log(`🔑 NVIDIA_API_KEY: ${process.env.NVIDIA_API_KEY ? "SET ✅" : "MISSING ❌"}`);
   console.log(`🔑 JWT_SECRET: ${process.env.JWT_SECRET ? "SET ✅" : "MISSING ❌"}`);
   console.log(`🔑 RESEND_API_KEY: ${process.env.RESEND_API_KEY ? "SET ✅" : "MISSING ❌"}`);
   console.log(`🔑 SUPABASE_URL: ${process.env.SUPABASE_URL ? "SET ✅" : "MISSING ❌"}`);
