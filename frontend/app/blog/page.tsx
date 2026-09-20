@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
@@ -38,6 +38,16 @@ export default function BlogPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [emailSubscribed, setEmailSubscribed] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  // Enable preview mode via URL query parameter (e.g., /blog?preview=true) for testing
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("preview") === "true") {
+        setPreviewMode(true);
+      }
+    }
+  }, []);
 
   // Categories list
   const categories = ["All", "Resume & ATS", "Interview Prep", "AI & Tech", "Career Growth"];
@@ -163,35 +173,22 @@ export default function BlogPage() {
               )}
             </motion.div>
 
-            {/* Quick Actions Bar (RSS & Admin Preview Toggle) */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-zinc-500">
+            {/* Quick RSS link & Admin preview notification */}
+            <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-500">
               <Link
                 href="/blog/rss.xml"
                 target="_blank"
-                className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-white/5 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400 transition-colors bg-white/[0.02]"
               >
                 <Rss className="w-3.5 h-3.5 text-emerald-400" />
-                RSS Feed
+                <span>RSS Feed</span>
               </Link>
-              <span>•</span>
-              <button
-                onClick={() => {
-                  setPreviewMode(!previewMode);
-                  toast(
-                    previewMode
-                      ? "Switched to Public View"
-                      : "Preview Mode: Showing all 10 scheduled articles!"
-                  );
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
-                  previewMode
-                    ? "bg-amber-500/10 border-amber-500/30 text-amber-400 font-semibold"
-                    : "border-white/5 hover:border-white/20 text-zinc-400 hover:text-white"
-                }`}
-              >
-                <SlidersHorizontal className="w-3 h-3" />
-                <span>{previewMode ? "Preview Mode (All 10 Active)" : "Toggle 10-Day Preview"}</span>
-              </button>
+              {previewMode && (
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-medium">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Preview Mode Active (?preview=true)
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -391,15 +388,10 @@ export default function BlogPage() {
                 </p>
               </div>
 
-              <button
-                onClick={() => {
-                  setPreviewMode(true);
-                  toast.success("Preview mode activated: You can read all 10 scheduled blogs ahead of time!");
-                }}
-                className="self-start sm:self-auto text-xs px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-all font-medium"
-              >
-                Preview Scheduled Drafts →
-              </button>
+              <div className="self-start sm:self-auto inline-flex items-center gap-2 text-xs px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Auto-Unlocks Daily at Midnight
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
