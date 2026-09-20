@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from 'framer-motion';
 import { Orbit, Twitter, Linkedin, Github, Mail } from 'lucide-react';
 
