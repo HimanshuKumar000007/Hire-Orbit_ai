@@ -17,9 +17,11 @@ import { understandingAtsWhyYourResumeMightBeGettingFiltered } from "./blog-cont
 import { thePowerOfNetworkingInTheAgeOfRemoteWork } from "./blog-content/the-power-of-networking-in-the-age-of-remote-work";
 import { howToUseChatGptToWriteAnAtsResumePrompts } from "./blog-content/how-to-use-chatgpt-to-write-an-ats-resume-prompts";
 import { whyFindingJobsOnLinkedinIsDeadHireorbitAi } from "./blog-content/why-finding-jobs-on-linkedin-is-dead-hireorbit-ai";
+import { latestGovtJobsIndia2026RecruitmentGuide } from "./blog-content/latest-govt-jobs-india-2026-recruitment-guide";
 
 export const BLOG_POSTS: BlogPost[] = [
   // High-Converting Growth & Search Guides (Live Today)
+  latestGovtJobsIndia2026RecruitmentGuide,
   whyFindingJobsOnLinkedinIsDeadHireorbitAi,
   howToUseChatGptToWriteAnAtsResumePrompts,
 
