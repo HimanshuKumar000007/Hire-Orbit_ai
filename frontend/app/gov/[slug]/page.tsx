@@ -8,6 +8,7 @@ import {
   GOV_JOB_NOTIFICATIONS, 
   GovJobNotification 
 } from "@/lib/gov-jobs-data";
+import { getEnrichedJobDetails } from "@/lib/gov-job-details";
 import { 
   Building2, 
   Calendar, 
@@ -31,7 +32,14 @@ import {
   MapPin,
   Flame,
   Check,
-  Send
+  Send,
+  HelpCircle,
+  Activity,
+  FileCheck,
+  ListOrdered,
+  Users,
+  BookOpen,
+  Info
 } from 'lucide-react';
 
 interface PageProps {
@@ -106,23 +114,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const enriched = getEnrichedJobDetails(job);
+
   return {
-    title: `${job.title} | HireOrbitAI Gov Desk`,
-    description: `${job.summary} Eligibility: ${job.qualification}. Age: ${job.ageLimit}. Vacancies: ${job.vacancies}. Apply online via official portal.`,
+    title: `${job.title} - Notification, Syllabus, Eligibility & Apply Online | HireOrbitAI`,
+    description: `${job.summary} Complete post-wise vacancy breakdown, category-wise reservation, eligibility criteria, exam pattern, syllabus, and official apply online link.`,
     keywords: [
       job.title,
       job.shortTitle,
       job.organization,
       "Sarkari Result 2026",
-      "Sarkari Naukri",
-      "Eligibility Criteria",
-      "Apply Online Link"
+      "Sarkari Naukri 2026",
+      `${job.shortTitle} syllabus`,
+      `${job.shortTitle} eligibility`,
+      `${job.shortTitle} post wise vacancy`,
+      `${job.shortTitle} apply online`,
+      "Official Gazette Notification PDF"
     ],
     openGraph: {
-      title: `${job.title} | HireOrbitAI`,
+      title: `${job.title} | HireOrbitAI Gov Newsroom`,
       description: job.summary,
       url: `https://hireorbitai.in/gov/${job.slug}`,
-      siteName: "HireOrbitAI Gov Desk",
+      siteName: "HireOrbitAI Government Careers",
       type: "article",
     },
     alternates: {
@@ -139,6 +152,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const enriched = getEnrichedJobDetails(job);
   const relatedJobs = GOV_JOB_NOTIFICATIONS.filter((j) => j.id !== job.id).slice(0, 3);
 
   const getBadgeStyle = (color: string) => {
@@ -157,10 +171,10 @@ export default async function GovJobDetailPage({ params }: PageProps) {
   };
 
   const shareUrl = `https://hireorbitai.in/gov/${job.slug}`;
-  const shareText = `🚨 *${job.title}*\nTotal Vacancies: ${job.vacancies}\nEligibility: ${job.qualification}\nCheck full notification & apply here: ${shareUrl}`;
+  const shareText = `🚨 *${job.title}*\nTotal Vacancies: ${job.vacancies}\nEligibility: ${job.qualification}\nCheck full post-wise details, syllabus & apply here: ${shareUrl}`;
 
-  // Schema.org JobPosting & NewsArticle JSON-LD
-  const jsonLd = {
+  // Schema.org JobPosting, FAQPage & BreadcrumbList JSON-LD
+  const jsonLdJobPosting = {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     "title": job.title,
@@ -196,19 +210,65 @@ export default async function GovJobDetailPage({ params }: PageProps) {
     }
   };
 
+  const jsonLdFaq = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": enriched.faqs.map((faq) => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  };
+
+  const jsonLdBreadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://hireorbitai.in"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Government Jobs Newsroom",
+        "item": "https://hireorbitai.in/gov"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": job.shortTitle,
+        "item": `https://hireorbitai.in/gov/${job.slug}`
+      }
+    ]
+  };
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 pt-16 lg:pt-20">
-      {/* Google Structured Data */}
+      {/* Google Structured Data (SEO Dominance) */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdJobPosting) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
       />
 
       <Navigation />
 
       {/* Breadcrumb Navigation Bar */}
       <div className="bg-zinc-900/60 border-b border-white/5 py-3">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs text-zinc-400">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs text-zinc-400">
           <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <ChevronRight className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
@@ -227,7 +287,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
       </div>
 
       {/* Main Article Container */}
-      <article className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Article Header */}
         <header className="space-y-4 pb-8 border-b border-white/10">
@@ -335,7 +395,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Action Bar (Top) */}
+        {/* Primary Action Bar (Top) */}
         <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-white/[0.02] border border-white/5 mb-10">
           <a
             href={job.applyUrl}
@@ -366,56 +426,295 @@ export default async function GovJobDetailPage({ params }: PageProps) {
           </Link>
         </div>
 
+        {/* 🌟 1. POST-WISE & DEPARTMENT-WISE VACANCY BREAKDOWN TABLE (Better than Sarkari Result) */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+                <Layers className="w-4 h-4" /> Complete Post Hierarchy
+              </div>
+              <h3 className="text-2xl font-bold text-white">Post-Wise Vacancy &amp; Eligibility Breakdown</h3>
+            </div>
+            <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold bg-white/5 text-zinc-400 border border-white/10">
+              {enriched.postWiseDetails.length} Distinct Positions
+            </span>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-white/10 glass">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr className="bg-white/[0.04] border-b border-white/10 text-zinc-400 font-semibold uppercase text-[11px] tracking-wider">
+                  <th className="py-3.5 px-4 sm:px-6">Post Name</th>
+                  <th className="py-3.5 px-4">Department / Ministry</th>
+                  <th className="py-3.5 px-4">Age Limit</th>
+                  <th className="py-3.5 px-4">Pay Scale</th>
+                  <th className="py-3.5 px-4 sm:px-6">Eligibility Criteria</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-zinc-300">
+                {enriched.postWiseDetails.map((post, idx) => (
+                  <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-4 px-4 sm:px-6 font-bold text-white">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span>{post.postName}</span>
+                      </div>
+                      {post.classification && (
+                        <span className="inline-block mt-1 text-[10px] font-semibold text-zinc-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                          {post.classification}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-zinc-300 font-medium">{post.department || job.organization}</td>
+                    <td className="py-4 px-4 text-emerald-400 font-semibold">{post.ageLimit}</td>
+                    <td className="py-4 px-4 text-zinc-300 text-xs">{post.payScale || job.payScale}</td>
+                    <td className="py-4 px-4 sm:px-6 text-zinc-300 max-w-xs">{post.qualification}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 🌟 2. CATEGORY-WISE RESERVATION DISTRIBUTION */}
+        <section className="mb-12">
+          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+            <Users className="w-4 h-4" /> Category-Wise Reservation Matrix
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Official Category Vacancy Distribution</h3>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 text-center">
+              <span className="text-xs text-zinc-400 font-medium block mb-1">General (UR)</span>
+              <span className="text-lg sm:text-xl font-bold text-white">{enriched.categoryDistribution.ur}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 text-center">
+              <span className="text-xs text-zinc-400 font-medium block mb-1">OBC</span>
+              <span className="text-lg sm:text-xl font-bold text-emerald-400">{enriched.categoryDistribution.obc}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 text-center">
+              <span className="text-xs text-zinc-400 font-medium block mb-1">EWS</span>
+              <span className="text-lg sm:text-xl font-bold text-blue-400">{enriched.categoryDistribution.ews}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 text-center">
+              <span className="text-xs text-zinc-400 font-medium block mb-1">SC</span>
+              <span className="text-lg sm:text-xl font-bold text-amber-400">{enriched.categoryDistribution.sc}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-zinc-900/70 border border-white/10 text-center">
+              <span className="text-xs text-zinc-400 font-medium block mb-1">ST</span>
+              <span className="text-lg sm:text-xl font-bold text-purple-400">{enriched.categoryDistribution.st}</span>
+            </div>
+            <div className="p-4 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 text-center">
+              <span className="text-xs text-emerald-400 font-bold block mb-1">Total Posts</span>
+              <span className="text-lg sm:text-xl font-black text-white">{enriched.categoryDistribution.total}</span>
+            </div>
+          </div>
+        </section>
+
         {/* Detailed Sections Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           
-          {/* Left Column (Important Dates + Highlights + Selection) */}
+          {/* Left Column (Exam Pattern + Qualification + Steps) */}
           <div className="lg:col-span-2 space-y-8">
             
-            {/* Qualification & Eligibility Breakdown */}
-            <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+            {/* 🌟 3. EXAM PATTERN & SYLLABUS MATRIX */}
+            <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-6">
               <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <GraduationCap className="w-4 h-4" /> Educational Qualification &amp; Eligibility
+                <BookOpen className="w-4 h-4" /> Comprehensive Examination Scheme
               </div>
-              <h3 className="text-xl font-bold text-white">Minimum Academic Requirements</h3>
-              <p className="text-sm text-zinc-300 leading-relaxed">
-                {job.qualification}
-              </p>
-              <div className="p-4 rounded-xl bg-zinc-950/60 border border-white/5 text-xs text-zinc-400 space-y-2">
-                <div>• Candidates appearing in final semester/year must meet eligibility cut-off date as per the gazette.</div>
-                <div>• Category Age Relaxation: SC/ST (5 yrs), OBC (3 yrs), PwBD (10 yrs), Ex-Servicemen as per central norms.</div>
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Exam Pattern &amp; Marks Distribution</h3>
+                <p className="text-xs text-zinc-400">Subject-wise question weightage, maximum marks, and duration structure.</p>
               </div>
-            </div>
 
-            {/* Key Highlights */}
-            <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <TrendingUp className="w-4 h-4" /> Crucial Exam Highlights
-              </div>
-              <h3 className="text-xl font-bold text-white">What Every Candidate Must Know</h3>
-              <ul className="space-y-2.5 text-sm text-zinc-300">
-                {job.keyHighlights.map((hl, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span>{hl}</span>
-                  </li>
+              <div className="space-y-6">
+                {enriched.examPatterns.map((tier, tIdx) => (
+                  <div key={tIdx} className="rounded-2xl border border-white/5 bg-zinc-950/60 p-5 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/5">
+                      <div>
+                        <h4 className="text-base font-bold text-white">{tier.tierName}</h4>
+                        <span className="text-xs text-zinc-400 font-medium">{tier.mode}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="px-2.5 py-1 rounded bg-white/5 text-zinc-300 font-medium border border-white/5">
+                          Duration: {tier.duration}
+                        </span>
+                        <span className="px-2.5 py-1 rounded bg-red-500/10 text-red-400 font-medium border border-red-500/20">
+                          Penalty: {tier.negativeMarking}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-zinc-500 border-b border-white/5 font-semibold">
+                            <th className="py-2">Subject / Section</th>
+                            <th className="py-2 text-center">Questions</th>
+                            <th className="py-2 text-right">Max Marks</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-zinc-300">
+                          {tier.subjects.map((sub, sIdx) => (
+                            <tr key={sIdx}>
+                              <td className="py-2.5 font-medium text-white">{sub.name}</td>
+                              <td className="py-2.5 text-center text-zinc-400">{sub.questions}</td>
+                              <td className="py-2.5 text-right font-bold text-emerald-400">{sub.marks}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t border-white/10 font-bold text-white">
+                            <td className="py-2.5">Total Scheme Weightage</td>
+                            <td className="py-2.5 text-center text-zinc-200">{tier.totalQuestions}</td>
+                            <td className="py-2.5 text-right text-emerald-400">{tier.totalMarks}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
-            {/* Selection Stages */}
+            {/* 🌟 4. PHYSICAL STANDARDS (IF APPLICABLE) */}
+            {enriched.physicalStandards && (
+              <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+                <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                  <Activity className="w-4 h-4" /> Physical Standards &amp; Endurance (PST / PET)
+                </div>
+                <h3 className="text-xl font-bold text-white">Physical Standard Test &amp; Fitness Test Criteria</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  {/* Male Standards */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-2 text-xs">
+                    <span className="font-bold text-emerald-400 text-sm block">Male Candidates Criteria</span>
+                    {enriched.physicalStandards.maleHeight && (
+                      <div className="flex justify-between border-b border-white/5 py-1.5">
+                        <span className="text-zinc-400">Minimum Height:</span>
+                        <span className="font-semibold text-white">{enriched.physicalStandards.maleHeight}</span>
+                      </div>
+                    )}
+                    {enriched.physicalStandards.maleChest && (
+                      <div className="flex justify-between border-b border-white/5 py-1.5">
+                        <span className="text-zinc-400">Chest Measurement:</span>
+                        <span className="font-semibold text-white">{enriched.physicalStandards.maleChest}</span>
+                      </div>
+                    )}
+                    {enriched.physicalStandards.malePhysicalTest && (
+                      <div className="pt-1 text-zinc-300">
+                        <span className="text-zinc-400 block mb-0.5">Physical Endurance:</span>
+                        <span className="font-medium text-white">{enriched.physicalStandards.malePhysicalTest}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Female Standards */}
+                  <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-2 text-xs">
+                    <span className="font-bold text-blue-400 text-sm block">Female Candidates Criteria</span>
+                    {enriched.physicalStandards.femaleHeight && (
+                      <div className="flex justify-between border-b border-white/5 py-1.5">
+                        <span className="text-zinc-400">Minimum Height:</span>
+                        <span className="font-semibold text-white">{enriched.physicalStandards.femaleHeight}</span>
+                      </div>
+                    )}
+                    {enriched.physicalStandards.femaleChest && (
+                      <div className="flex justify-between border-b border-white/5 py-1.5">
+                        <span className="text-zinc-400">Weight Standard:</span>
+                        <span className="font-semibold text-white">{enriched.physicalStandards.femaleChest}</span>
+                      </div>
+                    )}
+                    {enriched.physicalStandards.femalePhysicalTest && (
+                      <div className="pt-1 text-zinc-300">
+                        <span className="text-zinc-400 block mb-0.5">Physical Endurance:</span>
+                        <span className="font-medium text-white">{enriched.physicalStandards.femalePhysicalTest}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 🌟 5. STEP-BY-STEP HOW TO APPLY ONLINE GUIDE */}
             <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
               <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <Layers className="w-4 h-4" /> Selection Process Stages
+                <ListOrdered className="w-4 h-4" /> Step-by-Step Candidate Instructions
               </div>
-              <h3 className="text-xl font-bold text-white">Step-by-Step Examination Stages</h3>
-              <div className="space-y-3">
-                {job.selectionProcess.map((step, i) => (
-                  <div key={i} className="p-3.5 rounded-xl bg-zinc-950/60 border border-white/5 flex items-center gap-3 text-sm text-zinc-200">
-                    <span className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0">
-                      {i + 1}
+              <h3 className="text-xl sm:text-2xl font-bold text-white">How to Fill Online Application Form</h3>
+              
+              <div className="space-y-3 pt-2">
+                {enriched.applicationSteps.map((step, idx) => (
+                  <div key={idx} className="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 flex items-start gap-3 text-xs sm:text-sm text-zinc-200">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
                     </span>
-                    <span>{step}</span>
+                    <span className="leading-relaxed">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 🌟 6. USEFUL IMPORTANT LINKS TABLE (Sarkari Result Style Command Center) */}
+            <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <FileCheck className="w-4 h-4" /> Official Gazette Access
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white">Some Useful Important Links</h3>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 divide-y divide-white/10 bg-zinc-950/60">
+                {enriched.usefulLinks.map((link, idx) => (
+                  <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors">
+                    <div>
+                      <div className="font-bold text-white text-sm flex items-center gap-2">
+                        <span>{link.title}</span>
+                        {link.badge && (
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getBadgeStyle(link.badgeColor || 'emerald')}`}>
+                            {link.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-0.5">{link.description}</p>
+                    </div>
+
+                    {link.isExternal ? (
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-emerald-500 hover:text-zinc-950 text-white text-xs font-bold transition-all shrink-0 border border-white/10"
+                      >
+                        Click Here <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.url}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-zinc-950 hover:bg-emerald-400 text-xs font-bold transition-all shrink-0 shadow-glow-sm"
+                      >
+                        Verify with AI <Sparkles className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 🌟 7. FREQUENTLY ASKED QUESTIONS (FAQ with Google FAQ Schema) */}
+            <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                <HelpCircle className="w-4 h-4" /> Frequently Asked Questions
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white">Frequently Asked Questions (FAQ)</h3>
+
+              <div className="space-y-3 pt-2">
+                {enriched.faqs.map((faq, fIdx) => (
+                  <div key={fIdx} className="p-5 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-2">
+                    <h4 className="text-sm sm:text-base font-bold text-white flex items-start gap-2">
+                      <span className="text-emerald-400 font-mono">Q{fIdx + 1}.</span>
+                      <span>{faq.question}</span>
+                    </h4>
+                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed pl-6">
+                      {faq.answer}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -423,7 +722,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
 
           </div>
 
-          {/* Right Column (Dates + AI Conversion Card + Quick Links) */}
+          {/* Right Column (Deadlines + AI Scanner Bridge + Copilot + Disclaimer) */}
           <div className="space-y-6">
             
             {/* Important Dates Card */}
@@ -485,7 +784,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
             <div className="p-6 rounded-3xl bg-zinc-900/60 border border-white/10 space-y-3">
               <div className="text-xs text-zinc-400 font-medium">Preparing for this exam?</div>
               <h5 className="text-sm font-bold text-white">Generate 60-Day Study Plan with AI</h5>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-400 leading-relaxed">
                 Use HireOrbitAI Copilot to break down the official syllabus, generate mock questions, and master tough topics.
               </p>
               <Link
@@ -497,17 +796,56 @@ export default async function GovJobDetailPage({ params }: PageProps) {
               </Link>
             </div>
 
+            {/* Age Relaxation Breakdown Matrix */}
+            <div className="p-6 rounded-3xl bg-zinc-900/60 border border-white/10 space-y-3 text-xs">
+              <h5 className="text-sm font-bold text-white flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-400" /> Category Age Relaxation
+              </h5>
+              <div className="space-y-2 text-zinc-300">
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-zinc-400">SC / ST Candidates:</span>
+                  <span className="font-semibold text-emerald-400">+5 Years</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-zinc-400">OBC (Non-Creamy):</span>
+                  <span className="font-semibold text-emerald-400">+3 Years</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-zinc-400">PwBD (General / EWS):</span>
+                  <span className="font-semibold text-blue-400">+10 Years</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-zinc-400">PwBD (OBC):</span>
+                  <span className="font-semibold text-blue-400">+13 Years</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-zinc-400">PwBD (SC / ST):</span>
+                  <span className="font-semibold text-blue-400">+15 Years</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Gazette Disclaimer */}
+            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-500 leading-relaxed">
+              <span className="font-semibold text-zinc-400 block mb-1">Authenticity &amp; Editorial Disclaimer:</span>
+              All examination notices, syllabus patterns, and cutoff details are cross-referenced with official gazettes from government recruitment boards ({job.organization}). For official registration and payments, always rely solely on the official government website.
+            </div>
+
           </div>
+
         </div>
 
-        {/* Trending / Related Govt Jobs */}
-        <section className="pt-8 border-t border-white/10">
+        {/* More Trending Opportunities Grid */}
+        <section className="pt-10 border-t border-white/10">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Flame className="w-5 h-5 text-emerald-400" />
-              More Trending Government Opportunities
-            </h3>
-            <Link href="/gov" className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-semibold">
+            <div className="flex items-center gap-2">
+              <Flame className="w-5 h-5 text-amber-500" />
+              <h2 className="text-xl font-bold text-white">More Trending Government Opportunities</h2>
+            </div>
+            <Link 
+              href="/gov"
+              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 transition-colors"
+            >
               View All <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -517,18 +855,16 @@ export default async function GovJobDetailPage({ params }: PageProps) {
               <Link
                 key={rj.id}
                 href={`/gov/${rj.slug}`}
-                className="glass p-5 rounded-2xl border border-white/10 hover:border-emerald-500/30 transition-all group flex flex-col justify-between"
+                className="p-5 rounded-2xl glass border border-white/5 hover:border-emerald-500/30 transition-all group block"
               >
-                <div>
-                  <div className="text-[11px] text-zinc-400 font-medium mb-1 truncate">{rj.organization}</div>
-                  <h4 className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-2">
-                    {rj.title}
-                  </h4>
-                </div>
-                <div className="flex items-center justify-between text-xs text-zinc-400 pt-3 border-t border-white/5">
-                  <span className="text-emerald-400 font-bold">{rj.vacancies}</span>
-                  <span className="text-zinc-500 flex items-center gap-0.5">
-                    Read Notice <ChevronRight className="w-3 h-3" />
+                <div className="text-[11px] text-zinc-500 font-medium mb-1 truncate">{rj.organization}</div>
+                <h3 className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3">
+                  {rj.title}
+                </h3>
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-white/5">
+                  <span className="text-emerald-400 font-semibold">{rj.vacancies}</span>
+                  <span className="text-zinc-500 group-hover:text-zinc-300 flex items-center gap-1">
+                    Read Notice <ArrowRight className="w-3 h-3" />
                   </span>
                 </div>
               </Link>
