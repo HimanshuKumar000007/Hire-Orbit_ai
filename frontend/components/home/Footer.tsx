@@ -5,16 +5,16 @@ import { Orbit, Twitter, Linkedin, Github, Mail } from 'lucide-react';
 
 const footerLinks = {
   Product: ['Features', 'Pricing', 'Integrations', 'Changelog', 'Roadmap'],
-  Company: ['About', 'Blog', 'Careers', 'Press', 'Partners'],
+  Company: ['About', 'Founder', 'Blog', 'Careers', 'Press', 'Partners'],
   Resources: ['Documentation', 'Help Center', 'Community', 'Templates', 'Webinars'],
   Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
 };
 
 const socialLinks = [
-  { icon: Twitter, href: '#', label: 'Twitter' },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Github, href: '#', label: 'GitHub' },
-  { icon: Mail, href: '#', label: 'Email' },
+  { icon: Twitter, href: 'https://twitter.com/hireorbitai', label: 'Twitter' },
+  { icon: Linkedin, href: 'https://linkedin.com/company/hireorbitai', label: 'LinkedIn' },
+  { icon: Github, href: 'https://github.com/HimanshuKumar000007', label: 'GitHub' },
+  { icon: Mail, href: 'mailto:hireorbitai@gmail.com', label: 'Email' },
 ];
 
 export function Footer() {
@@ -76,6 +76,7 @@ export function Footer() {
                         link === 'Integrations' ? '/integrations' : 
                         link === 'Roadmap' ? '/roadmap' : 
                         link === 'About' ? '/about' : 
+                        link === 'Founder' ? '/founder' : 
                         link === 'Blog' ? '/blog' : 
                         link === 'Careers' ? '/careers' : 
                         link === 'Press' ? '/press' : 

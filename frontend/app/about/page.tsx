@@ -15,7 +15,11 @@ import {
   Star,
   Quote,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  GraduationCap,
+  MapPin,
+  Briefcase,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -118,7 +122,7 @@ export default function AboutPage() {
       </section>
 
       {/* Meet the Founder Section */}
-      <section className="py-32 relative overflow-hidden bg-white/[0.01]">
+      <section id="founder" className="py-32 relative overflow-hidden bg-white/[0.01]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <motion.div 
@@ -128,20 +132,42 @@ export default function AboutPage() {
               className="flex-1 relative"
             >
               <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/20 to-blue-500/20 blur-3xl opacity-30" />
-              <div className="relative glass-strong rounded-[3rem] p-4 border border-white/10 aspect-square max-w-sm mx-auto overflow-hidden group">
-                <div className="absolute inset-0 bg-zinc-900 flex items-center justify-center">
-                   <Users className="w-32 h-32 text-zinc-800 group-hover:scale-110 transition-transform duration-700" />
+              <div className="relative glass-strong rounded-[3rem] p-6 border border-white/10 max-w-md mx-auto overflow-hidden group">
+                <div className="rounded-[2rem] bg-gradient-to-br from-zinc-900 to-zinc-950 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden border border-white/5">
+                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center mb-6 shadow-glow">
+                    <Users className="w-12 h-12 text-emerald-400 group-hover:scale-110 transition-transform duration-500" />
+                  </div>
+                  <h3 className="text-white font-bold text-2xl mb-1">Himanshu Kumar</h3>
+                  <p className="text-emerald-400 font-semibold text-sm mb-4">CEO & Founder, HireOrbitAI</p>
+                  
+                  <div className="w-full space-y-2.5 pt-4 border-t border-white/5 text-left text-xs">
+                    <div className="flex items-center gap-2.5 text-zinc-300">
+                      <GraduationCap className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>B.Com (Hons), Banaras Hindu University</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-zinc-300">
+                      <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>Mirzapur, Uttar Pradesh - 231305, India</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-60" />
-                <div className="absolute bottom-10 left-10 right-10">
-                   <div className="text-white font-bold text-2xl mb-1">Himanshu Kumar</div>
-                   <div className="text-emerald-400 font-medium text-sm">Founder & Visionary</div>
+
+                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <Sparkles className="w-3.5 h-3.5" /> Founder & Executive Leadership
+                  </span>
+                  <Link href="/founder" className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold flex items-center gap-1">
+                    Full Profile <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             </motion.div>
 
             <div className="flex-1 space-y-8">
               <div className="space-y-4">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                  <Briefcase className="w-3.5 h-3.5" /> Leadership & Vision
+                </div>
                 <h2 className="text-3xl sm:text-4xl font-bold text-white">Behind the <span className="gradient-text">Vision</span></h2>
                 <div className="w-20 h-1 bg-emerald-500 rounded-full" />
               </div>
@@ -153,18 +179,49 @@ export default function AboutPage() {
                   and talent is often lost in translation. We built this platform to give 
                   every professional a clear, data-backed path to their potential."
                 </p>
-                <div className="mt-6 text-emerald-400 font-bold">— Himanshu Kumar</div>
+                <div className="mt-6">
+                  <div className="text-white font-bold text-lg">Himanshu Kumar</div>
+                  <div className="text-emerald-400 font-medium text-sm">CEO & Founder, HireOrbitAI</div>
+                  <div className="text-xs text-zinc-500 mt-1 flex flex-wrap items-center gap-2">
+                    <span>B.Com (Hons) • Banaras Hindu University</span>
+                    <span>•</span>
+                    <span>Mirzapur - 231305, UP</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 pt-6">
+              {/* Founder Credentials Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="glass p-4 rounded-2xl border border-white/5 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <GraduationCap className="w-4.5 h-4.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-sm">Alma Mater</div>
+                    <div className="text-xs text-zinc-400 mt-0.5">B.Com (Hons), Banaras Hindu University</div>
+                  </div>
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-white/5 flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                    <MapPin className="w-4.5 h-4.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <div className="text-white font-bold text-sm">Location</div>
+                    <div className="text-xs text-zinc-400 mt-0.5">Mirzapur - 231305, UP, India</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 pt-2">
                 <div className="glass p-6 rounded-2xl border border-white/5">
                   <Star className="w-6 h-6 text-amber-400 mb-4" />
-                  <div className="text-white font-bold">100+</div>
+                  <div className="text-white font-bold text-xl">100+</div>
                   <div className="text-xs text-zinc-500">Industry Partnerships</div>
                 </div>
                 <div className="glass p-6 rounded-2xl border border-white/5">
                   <ShieldCheck className="w-6 h-6 text-emerald-400 mb-4" />
-                  <div className="text-white font-bold">50k+</div>
+                  <div className="text-white font-bold text-xl">50k+</div>
                   <div className="text-xs text-zinc-500">Career Matches</div>
                 </div>
               </div>
