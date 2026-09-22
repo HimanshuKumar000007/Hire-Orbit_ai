@@ -452,6 +452,48 @@ export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [
     officialPdfUrl: 'https://uppsc.up.nic.in',
     applyUrl: 'https://uppsc.up.nic.in',
     updatedAt: '8 hours ago',
+  },
+  {
+    id: 'ssc-gd-constable-2026',
+    slug: 'ssc-gd-constable-2026-notification-bsf-cisf-crpf',
+    title: 'SSC GD Constable 2026: 39,481 Vacancies in BSF, CISF, CRPF, SSB, ITBP, SSF & Assam Rifles',
+    shortTitle: 'SSC GD Constable 2026 Form',
+    organization: 'Staff Selection Commission (SSC)',
+    category: 'central',
+    type: 'job',
+    badgeStatus: 'Applications Open',
+    badgeColor: 'emerald',
+    vacancies: '39,481 Posts',
+    qualification: 'Matriculation or 10th Class Examination Pass from a recognized Board',
+    qualificationLevel: '10th',
+    ageLimit: '18 - 23 Years (Relaxation as per central government norms)',
+    payScale: 'Pay Level 3 (₹21,700 - ₹69,100)',
+    applicationFee: {
+      generalOBC: '₹100',
+      scStPh: 'Exempted (₹0)',
+      female: 'Exempted (₹0)',
+    },
+    importantDates: {
+      startDate: 'Active Now',
+      lastDate: '31 May 2026',
+      examDate: 'CBE: September - October 2026',
+    },
+    location: 'All India (Central Armed Police Forces)',
+    summary: 'Staff Selection Commission has issued the national open recruitment notification for General Duty Constables across CAPFs including Border Security Force (BSF), Central Industrial Security Force (CISF), Central Reserve Police Force (CRPF), Indo-Tibetan Border Police (ITBP), Sashastra Seema Bal (SSB), and Secretariat Security Force (SSF).',
+    keyHighlights: [
+      'Massive 39,481 vacancy recruitment drive for 10th pass candidates',
+      'Computer Based Examination (CBE) available in 13 regional languages plus English & Hindi',
+      'Physical Standard Test (PST) and Physical Efficiency Test (PET) for written qualifiers'
+    ],
+    selectionProcess: [
+      'Computer Based Examination (CBE - 80 Questions / 160 Marks)',
+      'Physical Standard Test (PST) & Physical Efficiency Test (PET)',
+      'Detailed Medical Examination (DME) & Document Verification'
+    ],
+    officialPdfUrl: 'https://ssc.gov.in',
+    applyUrl: 'https://ssc.gov.in',
+    updatedAt: '15 mins ago',
+    isTrending: true,
   }
 ];
 

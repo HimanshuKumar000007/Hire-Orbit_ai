@@ -138,7 +138,9 @@ export async function GET(request: Request) {
       "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+recruitment%22+OR+%22NVS+recruitment%22+OR+%22UGC+NET%22+OR+%22State+TET%22)+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
       // 10. Northeastern, Himalayan & Hill States (Assam, J&K, Himachal, Punjab, Uttarakhand, Tripura, Nagaland, Sikkim, Manipur, Meghalaya, Arunachal)
       "https://news.google.com/rss/search?q=(%22APSC%22+OR+%22JKSSB%22+OR+%22JKPSC%22+OR+%22HPPSC%22+OR+%22PPSC%22+OR+%22Assam+Police%22+OR+%22NPSC%22+OR+%22TPSC%22+OR+%22SPSC%22+OR+%22UKPSC%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // 11. Official Press Information Bureau (PIB)
+      // 11. Central PSUs, Scientific & Autonomous (ISRO, DRDO, BARC, EPFO, ESIC, IOCL, ONGC, BEL)
+      "https://news.google.com/rss/search?q=(%22ISRO+recruitment%22+OR+%22DRDO+recruitment%22+OR+%22BARC+recruitment%22+OR+%22EPFO+recruitment%22+OR+%22ESIC+recruitment%22)+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 12. Official Press Information Bureau (PIB)
       "https://pib.gov.in/RssMain.aspx?ModId=6"
     ];
 
