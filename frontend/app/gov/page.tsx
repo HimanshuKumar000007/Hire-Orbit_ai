@@ -76,19 +76,19 @@ export default function GovJobsPage() {
   const leadStory = GOV_JOB_NOTIFICATIONS.find((j) => j.isLeadStory) || GOV_JOB_NOTIFICATIONS[0];
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30">
+    <main className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 pt-16 lg:pt-20">
       <Navigation />
 
       {/* Breaking News Ticker (Bloomberg / Multi-Billion Dollar Media Style) */}
-      <div className="pt-20 bg-zinc-900/90 border-b border-white/5 sticky top-16 z-30 backdrop-blur-md">
+      <div className="bg-zinc-900/90 border-b border-white/5 sticky top-16 lg:top-20 z-30 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-3">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider shrink-0 animate-pulse">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider shrink-0 animate-pulse">
             <Radio className="w-3.5 h-3.5 text-red-500" />
             Live Dispatch
           </div>
           <div className="overflow-hidden whitespace-nowrap w-full relative">
             <div className="inline-block animate-marquee text-xs text-zinc-300 font-medium">
-              {BREAKING_TICKER_ITEMS.join('  •  ')}
+              {[...BREAKING_TICKER_ITEMS, ...BREAKING_TICKER_ITEMS].join('    •    ')}
             </div>
           </div>
         </div>
