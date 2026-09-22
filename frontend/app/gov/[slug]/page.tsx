@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
+import { getSupabaseClient } from "@/lib/supabase";
 import { 
   GOV_JOB_NOTIFICATIONS, 
   GovJobNotification 
@@ -28,7 +29,9 @@ import {
   FileText,
   TrendingUp,
   MapPin,
-  Flame
+  Flame,
+  Check,
+  Send
 } from 'lucide-react';
 
 interface PageProps {
@@ -43,9 +46,59 @@ export async function generateStaticParams() {
   }));
 }
 
+async function getJobBySlug(slug: string): Promise<GovJobNotification | null> {
+  // Check static data first
+  const staticJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug);
+  if (staticJob) return staticJob;
+
+  // Fallback to Supabase live database
+  try {
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('gov_notifications')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (!error && data) {
+      return {
+        id: data.id,
+        slug: data.slug,
+        title: data.title,
+        shortTitle: data.short_title || data.title,
+        organization: data.organization,
+        category: data.category,
+        type: data.type,
+        badgeStatus: data.badge_status,
+        badgeColor: data.badge_color,
+        vacancies: data.vacancies,
+        qualification: data.qualification,
+        qualificationLevel: data.qualification_level,
+        ageLimit: data.age_limit,
+        payScale: data.pay_scale,
+        applicationFee: data.application_fee || {},
+        importantDates: data.important_dates || {},
+        location: data.location,
+        summary: data.summary,
+        keyHighlights: data.key_highlights || [],
+        selectionProcess: data.selection_process || [],
+        officialPdfUrl: data.official_pdf_url,
+        applyUrl: data.apply_url,
+        updatedAt: 'Official Gazette Verified',
+        isTrending: data.is_trending,
+        isLeadStory: data.is_lead_story,
+      };
+    }
+  } catch (err) {
+    console.warn("Failed to fetch job from Supabase:", err);
+  }
+
+  return null;
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const job = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug);
+  const job = await getJobBySlug(slug);
 
   if (!job) {
     return {
@@ -55,15 +108,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${job.title} | HireOrbitAI Gov Desk`,
-    description: `${job.summary} Eligibility: ${job.qualification}. Age: ${job.ageLimit}. Vacancies: ${job.vacancies}. Apply online via official link.`,
+    description: `${job.summary} Eligibility: ${job.qualification}. Age: ${job.ageLimit}. Vacancies: ${job.vacancies}. Apply online via official portal.`,
     keywords: [
       job.title,
       job.shortTitle,
       job.organization,
-      "Sarkari Result",
-      "Sarkari Naukri 2026",
+      "Sarkari Result 2026",
+      "Sarkari Naukri",
       "Eligibility Criteria",
-      "Apply Online"
+      "Apply Online Link"
     ],
     openGraph: {
       title: `${job.title} | HireOrbitAI`,
@@ -80,7 +133,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function GovJobDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const job = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug);
+  const job = await getJobBySlug(slug);
 
   if (!job) {
     notFound();
@@ -103,6 +156,9 @@ export default async function GovJobDetailPage({ params }: PageProps) {
     }
   };
 
+  const shareUrl = `https://hireorbitai.in/gov/${job.slug}`;
+  const shareText = `🚨 *${job.title}*\nTotal Vacancies: ${job.vacancies}\nEligibility: ${job.qualification}\nCheck full notification & apply here: ${shareUrl}`;
+
   // Schema.org JobPosting & NewsArticle JSON-LD
   const jsonLd = {
     "@context": "https://schema.org",
@@ -110,7 +166,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
     "title": job.title,
     "description": job.summary,
     "datePosted": "2026-04-01T00:00:00+05:30",
-    "validThrough": job.importantDates.lastDate ? "2026-05-30T23:59:59+05:30" : undefined,
+    "validThrough": job.importantDates.lastDate ? "2026-06-30T23:59:59+05:30" : undefined,
     "employmentType": "FULL_TIME",
     "hiringOrganization": {
       "@type": "Organization",
@@ -163,7 +219,7 @@ export default async function GovJobDetailPage({ params }: PageProps) {
 
           <Link 
             href="/gov" 
-            className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-semibold shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-emerald-400 font-semibold shrink-0 transition-colors border border-white/5"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Newsroom
           </Link>
@@ -175,50 +231,74 @@ export default async function GovJobDetailPage({ params }: PageProps) {
         
         {/* Article Header */}
         <header className="space-y-4 pb-8 border-b border-white/10">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getBadgeStyle(job.badgeColor)}`}>
-              {job.badgeStatus}
-            </span>
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <Building2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-semibold text-zinc-300">{job.organization}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getBadgeStyle(job.badgeColor)}`}>
+                {job.badgeStatus}
+              </span>
+              <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+                <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="font-semibold text-zinc-300">{job.organization}</span>
+              </div>
+              <span className="text-zinc-600">•</span>
+              <div className="flex items-center gap-1 text-xs text-zinc-400">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                <span>Official Gazette Verified</span>
+              </div>
+              <span className="text-zinc-600">•</span>
+              <div className="flex items-center gap-1 text-xs text-zinc-500">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{job.updatedAt}</span>
+              </div>
             </div>
-            <span className="text-zinc-600">•</span>
-            <div className="flex items-center gap-1 text-xs text-zinc-400">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>Official Gazette Sourced</span>
-            </div>
-            <span className="text-zinc-600">•</span>
-            <div className="flex items-center gap-1 text-xs text-zinc-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>Updated {job.updatedAt}</span>
+
+            {/* Social Share Buttons */}
+            <div className="flex items-center gap-2">
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold flex items-center gap-1.5 border border-emerald-500/20 transition-all"
+                title="Share on WhatsApp"
+              >
+                <Share2 className="w-3 h-3" /> WhatsApp
+              </a>
+              <a
+                href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(job.title)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-semibold flex items-center gap-1.5 border border-blue-500/20 transition-all"
+                title="Share on Telegram"
+              >
+                <Send className="w-3 h-3" /> Telegram
+              </a>
             </div>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
             {job.title}
           </h1>
 
-          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-zinc-300 text-sm sm:text-base leading-relaxed">
+          <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 text-zinc-300 text-sm sm:text-base leading-relaxed">
             {job.summary}
           </div>
         </header>
 
         {/* Quick Spec Matrix */}
         <section className="py-8">
-          <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold mb-4">
-            Key Recruitment Specifications
+          <h2 className="text-xs uppercase tracking-wider text-zinc-500 font-bold mb-4 flex items-center gap-2">
+            <Award className="w-3.5 h-3.5 text-emerald-400" /> Key Recruitment Specifications
           </h2>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1 flex items-center gap-1">
                 <Award className="w-3.5 h-3.5 text-emerald-400" /> Vacancies
               </div>
               <div className="text-white font-bold text-sm sm:text-base">{job.vacancies}</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1 flex items-center gap-1">
                 <IndianRupee className="w-3.5 h-3.5 text-emerald-400" /> Pay Scale
               </div>
@@ -227,24 +307,24 @@ export default async function GovJobDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 text-emerald-400" /> Age Bracket
               </div>
               <div className="text-white font-bold text-xs sm:text-sm">{job.ageLimit}</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1">Gen / OBC Fee</div>
               <div className="text-white font-bold text-sm">{job.applicationFee.generalOBC}</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1">SC / ST / PH</div>
               <div className="text-emerald-400 font-bold text-sm">{job.applicationFee.scStPh}</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-zinc-900 border border-white/5">
+            <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/5">
               <div className="text-zinc-500 text-xs mb-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-emerald-400" /> Location
               </div>
@@ -302,8 +382,8 @@ export default async function GovJobDetailPage({ params }: PageProps) {
                 {job.qualification}
               </p>
               <div className="p-4 rounded-xl bg-zinc-950/60 border border-white/5 text-xs text-zinc-400 space-y-2">
-                <div>• Candidates appearing in final semester/year must meet eligibility cut-off date.</div>
-                <div>• Age relaxation: SC/ST (5 yrs), OBC (3 yrs), PwBD (10 yrs), Ex-Servicemen as per central norms.</div>
+                <div>• Candidates appearing in final semester/year must meet eligibility cut-off date as per the gazette.</div>
+                <div>• Category Age Relaxation: SC/ST (5 yrs), OBC (3 yrs), PwBD (10 yrs), Ex-Servicemen as per central norms.</div>
               </div>
             </div>
 

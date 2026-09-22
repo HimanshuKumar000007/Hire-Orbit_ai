@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -32,10 +32,8 @@ import {
   Layers,
   Zap,
   Info,
-  Download,
   Flame,
-  Radio,
-  Eye
+  Radio
 } from 'lucide-react';
 
 export default function GovJobsPage() {
@@ -44,7 +42,6 @@ export default function GovJobsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedQualification, setSelectedQualification] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedJob, setSelectedJob] = useState<GovJobNotification | null>(null);
 
   useEffect(() => {
     async function loadLiveNotifications() {
@@ -449,25 +446,17 @@ export default function GovJobsPage() {
                     <div className="pt-4 mt-2 flex items-center gap-2">
                       <Link
                         href={`/gov/${item.slug}`}
-                        className="flex-1 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-white/10"
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-glow-sm"
                       >
-                        Full Notice
+                        Read Full Notice
                         <ChevronRight className="w-3.5 h-3.5" />
                       </Link>
-
-                      <button
-                        onClick={() => setSelectedJob(item)}
-                        className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5"
-                        title="Quick Preview Modal"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
 
                       <a
                         href={item.applyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-2.5 px-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all border border-emerald-500/20"
+                        className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white hover:text-emerald-400 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-white/10"
                         title="Open Official Portal"
                       >
                         Apply / Portal
@@ -534,179 +523,6 @@ export default function GovJobsPage() {
 
         </div>
       </section>
-
-      {/* Interactive Detail Modal / Drawer */}
-      <AnimatePresence>
-        {selectedJob && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-sm overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-zinc-900 border border-white/10 rounded-3xl max-w-2xl w-full p-6 sm:p-8 relative shadow-2xl my-8 text-left"
-            >
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="absolute top-6 right-6 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                aria-label="Close dialog"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Modal Header */}
-              <div className="pr-10">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    {selectedJob.badgeStatus}
-                  </span>
-                  <span className="text-xs text-zinc-400">• {selectedJob.organization}</span>
-                </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight">
-                  {selectedJob.title}
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Official Gazette Source • Last verified {selectedJob.updatedAt}
-                </p>
-              </div>
-
-              {/* Modal Body */}
-              <div className="space-y-6 mt-6 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin">
-                {/* Summary */}
-                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-sm text-zinc-300 leading-relaxed">
-                  {selectedJob.summary}
-                </div>
-
-                {/* Quick Info Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">Vacancies</div>
-                    <div className="text-white font-bold">{selectedJob.vacancies}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">Pay Scale</div>
-                    <div className="text-emerald-400 font-bold truncate">{selectedJob.payScale}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">Age Bracket</div>
-                    <div className="text-white font-bold">{selectedJob.ageLimit}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">General/OBC Fee</div>
-                    <div className="text-zinc-200 font-medium">{selectedJob.applicationFee.generalOBC}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">SC/ST/PH Fee</div>
-                    <div className="text-zinc-200 font-medium">{selectedJob.applicationFee.scStPh}</div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/5">
-                    <div className="text-zinc-500 mb-0.5">Location</div>
-                    <div className="text-zinc-200 font-medium truncate">{selectedJob.location}</div>
-                  </div>
-                </div>
-
-                {/* Important Dates */}
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-emerald-400" /> Important Dates
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {selectedJob.importantDates.startDate && (
-                      <div className="p-2.5 rounded-lg bg-white/5 flex justify-between">
-                        <span className="text-zinc-400">Application Start:</span>
-                        <span className="text-white font-medium">{selectedJob.importantDates.startDate}</span>
-                      </div>
-                    )}
-                    {selectedJob.importantDates.lastDate && (
-                      <div className="p-2.5 rounded-lg bg-white/5 flex justify-between">
-                        <span className="text-zinc-400">Last Date to Apply:</span>
-                        <span className="text-amber-400 font-bold">{selectedJob.importantDates.lastDate}</span>
-                      </div>
-                    )}
-                    {selectedJob.importantDates.examDate && (
-                      <div className="p-2.5 rounded-lg bg-white/5 flex justify-between">
-                        <span className="text-zinc-400">Exam Date:</span>
-                        <span className="text-blue-400 font-bold">{selectedJob.importantDates.examDate}</span>
-                      </div>
-                    )}
-                    {selectedJob.importantDates.resultDate && (
-                      <div className="p-2.5 rounded-lg bg-white/5 flex justify-between">
-                        <span className="text-zinc-400">Result Status:</span>
-                        <span className="text-emerald-400 font-bold">{selectedJob.importantDates.resultDate}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Key Highlights */}
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" /> Key Exam Takeaways
-                  </h4>
-                  <ul className="space-y-1.5 text-xs text-zinc-300">
-                    {selectedJob.keyHighlights.map((hl, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span>{hl}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Selection Process */}
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-emerald-400" /> Selection Stages
-                  </h4>
-                  <div className="space-y-1.5 text-xs text-zinc-300">
-                    {selectedJob.selectionProcess.map((step, i) => (
-                      <div key={i} className="p-2 rounded-lg bg-white/5 flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                          {i + 1}
-                        </span>
-                        <span>{step}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer / Official Links */}
-              <div className="mt-6 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <a
-                  href={selectedJob.officialPdfUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Official Notification PDF
-                </a>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/onboarding"
-                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-emerald-400 font-semibold text-xs flex items-center justify-center gap-1.5 border border-emerald-500/20 transition-colors"
-                  >
-                    <Zap className="w-3.5 h-3.5" />
-                    Scan My Resume
-                  </Link>
-
-                  <a
-                    href={selectedJob.applyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-glow-sm"
-                  >
-                    Official Apply Portal
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <Footer />
     </main>
