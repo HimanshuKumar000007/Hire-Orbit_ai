@@ -1,0 +1,383 @@
+export interface GovJobNotification {
+  id: string;
+  slug: string;
+  title: string;
+  shortTitle: string;
+  organization: string;
+  category: 'central' | 'railway' | 'banking' | 'police' | 'defense' | 'state' | 'teaching';
+  type: 'job' | 'admit-card' | 'result' | 'answer-key';
+  badgeStatus: string;
+  badgeColor: 'emerald' | 'blue' | 'amber' | 'purple' | 'red';
+  vacancies: string;
+  qualification: string;
+  qualificationLevel: '10th' | '12th' | 'graduate' | 'diploma' | 'postgraduate';
+  ageLimit: string;
+  payScale: string;
+  applicationFee: {
+    generalOBC: string;
+    scStPh: string;
+    female: string;
+  };
+  importantDates: {
+    startDate?: string;
+    lastDate?: string;
+    feeLastDate?: string;
+    examDate?: string;
+    admitCardDate?: string;
+    resultDate?: string;
+  };
+  location: string;
+  summary: string;
+  keyHighlights: string[];
+  selectionProcess: string[];
+  officialPdfUrl: string;
+  applyUrl: string;
+  updatedAt: string;
+  isTrending?: boolean;
+  isLeadStory?: boolean;
+}
+
+export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [
+  {
+    id: 'ssc-cgl-2026',
+    slug: 'ssc-cgl-2026-recruitment-notification',
+    title: 'SSC CGL 2026 Notification Released: 14,582 Group B & C Vacancies',
+    shortTitle: 'SSC CGL 2026 Online Form',
+    organization: 'Staff Selection Commission (SSC)',
+    category: 'central',
+    type: 'job',
+    badgeStatus: 'Applications Live',
+    badgeColor: 'emerald',
+    vacancies: '14,582 Posts',
+    qualification: "Bachelor's Degree in any discipline (B.Com, BA, B.Sc, B.Tech)",
+    qualificationLevel: 'graduate',
+    ageLimit: '18 - 32 Years (Relaxation as per central rules)',
+    payScale: 'Level 4 to Level 8 (₹25,500 to ₹1,51,100 per month)',
+    applicationFee: {
+      generalOBC: '₹100',
+      scStPh: 'Exempted (₹0)',
+      female: 'Exempted (₹0)',
+    },
+    importantDates: {
+      startDate: 'Active Now',
+      lastDate: '30 April 2026',
+      feeLastDate: '01 May 2026',
+      examDate: 'Tier-1: July 2026',
+    },
+    location: 'All India (Central Ministries & Departments)',
+    summary: 'The Staff Selection Commission has officially notified 14,582 vacancies for Assistant Section Officers, Income Tax Inspectors, Central Excise Inspectors, Sub-Inspectors in CBI, and Auditors across Central Government ministries.',
+    keyHighlights: [
+      'Huge vacancy jump compared to last recruitment cycle',
+      'Two-tier computer-based examination pattern',
+      'No interview for Group B non-gazetted and Group C posts',
+      'Negative marking: 0.50 marks per wrong answer in Tier 1'
+    ],
+    selectionProcess: [
+      'Tier 1: Computer Based Objective Examination (200 Marks)',
+      'Tier 2: Computer Based Examination + Data Entry Speed Test',
+      'Document Verification & Medical Examination'
+    ],
+    officialPdfUrl: 'https://ssc.gov.in',
+    applyUrl: 'https://ssc.gov.in',
+    updatedAt: '12 mins ago',
+    isTrending: true,
+    isLeadStory: true,
+  },
+  {
+    id: 'rrb-ntpc-2026',
+    slug: 'railway-rrb-ntpc-2026-recruitment',
+    title: 'Railway RRB NTPC 2026: 11,558 Graduate & Under-Graduate Posts',
+    shortTitle: 'RRB NTPC 2026 Application',
+    organization: 'Indian Railways (RRB)',
+    category: 'railway',
+    type: 'job',
+    badgeStatus: 'Apply Online Open',
+    badgeColor: 'emerald',
+    vacancies: '11,558 Posts',
+    qualification: '12th Pass (Undergraduate) OR Bachelor’s Degree (Graduate)',
+    qualificationLevel: 'graduate',
+    ageLimit: '18 - 36 Years (3 Years General Age Relaxation Included)',
+    payScale: 'Level 2 to Level 6 (₹19,900 to ₹92,300 per month)',
+    applicationFee: {
+      generalOBC: '₹500 (₹400 refunded on appearing in CBT-1)',
+      scStPh: '₹250 (Full refund on appearing in CBT-1)',
+      female: '₹250 (Full refund on appearing in CBT-1)',
+    },
+    importantDates: {
+      startDate: 'Active Now',
+      lastDate: '15 May 2026',
+      feeLastDate: '16 May 2026',
+      examDate: 'CBT-1: August - September 2026',
+    },
+    location: 'All 21 RRB Zones Across India',
+    summary: 'Railway Recruitment Boards have launched the centralized employment notice for non-technical popular categories including Station Master, Goods Train Manager, Senior Commercial cum Ticket Clerk, and Accounts Clerk.',
+    keyHighlights: [
+      'Over 8,000 Graduate and 3,400+ 12th Pass vacancies',
+      'CBT-1 is screening only; marks not counted in final merit',
+      'Full or partial application fee refunded upon taking CBT-1'
+    ],
+    selectionProcess: [
+      '1st Stage Computer Based Test (CBT-1)',
+      '2nd Stage Computer Based Test (CBT-2)',
+      'Computer Based Aptitude Test (CBAT / Typing Skill Test where applicable)',
+      'Document Verification & Medical Fitness Test'
+    ],
+    officialPdfUrl: 'https://indianrailways.gov.in',
+    applyUrl: 'https://rrbapply.gov.in',
+    updatedAt: '25 mins ago',
+    isTrending: true,
+  },
+  {
+    id: 'up-police-constable-2026',
+    slug: 'up-police-constable-re-exam-result-cutoffs',
+    title: 'UP Police Constable 60,244 Posts: Scorecard & Category-Wise Cutoff Released',
+    shortTitle: 'UP Police Constable Result',
+    organization: 'UPPRPB (Uttar Pradesh Police)',
+    category: 'police',
+    type: 'result',
+    badgeStatus: 'Result Declared',
+    badgeColor: 'amber',
+    vacancies: '60,244 Posts',
+    qualification: '10+2 (Intermediate) Pass from any recognized Board',
+    qualificationLevel: '12th',
+    ageLimit: '18 - 25 Years (Male) / 18 - 28 Years (Female)',
+    payScale: 'Pay Band 5200-20200, Grade Pay 2000 (Level 3: ₹21,700 - ₹69,100)',
+    applicationFee: {
+      generalOBC: '₹400',
+      scStPh: '₹400',
+      female: '₹400',
+    },
+    importantDates: {
+      resultDate: 'Announced Today',
+      examDate: 'Re-Exam Conducted in Aug 2025/2026',
+    },
+    location: 'Uttar Pradesh',
+    summary: 'The Uttar Pradesh Police Recruitment and Promotion Board has published the official normalized merit scorecards and category-wise cutoffs for the 60,244 Constable Civil Police recruitment test.',
+    keyHighlights: [
+      'Normalised marks calculated using equi-percentile method',
+      'Physical Standard Test (PST) & Document Verification call letters starting next week',
+      'Total qualified candidates for PST: approx 2.5 times the vacancies'
+    ],
+    selectionProcess: [
+      'Written Examination (300 Marks - Done)',
+      'Physical Standard Test (PST) & Document Verification (Upcoming)',
+      'Physical Efficiency Test (PET - Running)',
+      'Final Merit List & Medical Examination'
+    ],
+    officialPdfUrl: 'https://uppbpb.gov.in',
+    applyUrl: 'https://uppbpb.gov.in',
+    updatedAt: '40 mins ago',
+    isTrending: true,
+  },
+  {
+    id: 'sbi-po-2026',
+    slug: 'sbi-po-2026-prelims-admit-card-download',
+    title: 'SBI PO 2026: Preliminary Examination Hall Ticket & Admit Card Active',
+    shortTitle: 'SBI PO Prelims Admit Card',
+    organization: 'State Bank of India (SBI)',
+    category: 'banking',
+    type: 'admit-card',
+    badgeStatus: 'Admit Card Live',
+    badgeColor: 'blue',
+    vacancies: '2,000 Posts',
+    qualification: 'Graduation in any discipline from a recognized University',
+    qualificationLevel: 'graduate',
+    ageLimit: '21 - 30 Years',
+    payScale: 'Starting basic pay of ₹41,960 + 4 advance increments',
+    applicationFee: {
+      generalOBC: '₹750',
+      scStPh: 'Exempted (₹0)',
+      female: '₹750 / Category exempt',
+    },
+    importantDates: {
+      admitCardDate: 'Available Now',
+      examDate: '18 - 25 May 2026',
+    },
+    location: 'Pan India Branches',
+    summary: 'State Bank of India has activated the direct download server link for the Probationary Officers Phase-I Preliminary Online Examination call letters.',
+    keyHighlights: [
+      'Mandatory to carry original government photo ID and photocopy',
+      'Sectional timing of 20 minutes for English, Quantitative Aptitude, and Reasoning',
+      'No sectional cutoffs in SBI PO Prelims, only overall category cutoff'
+    ],
+    selectionProcess: [
+      'Phase I: Preliminary Exam (100 Marks)',
+      'Phase II: Main Exam (Objective + Descriptive 250 Marks)',
+      'Phase III: Psychometric Test, Interview & Group Exercises'
+    ],
+    officialPdfUrl: 'https://sbi.co.in/careers',
+    applyUrl: 'https://ibpsonline.ibps.in',
+    updatedAt: '1 hour ago',
+  },
+  {
+    id: 'upsc-cse-2026',
+    slug: 'upsc-civil-services-ias-ips-2026-prelims-notification',
+    title: 'UPSC Civil Services 2026: IAS, IPS, IFS Preliminary Examination',
+    shortTitle: 'UPSC IAS / IPS 2026',
+    organization: 'Union Public Service Commission (UPSC)',
+    category: 'central',
+    type: 'admit-card',
+    badgeStatus: 'Admit Card Available',
+    badgeColor: 'blue',
+    vacancies: '1,056 Posts',
+    qualification: 'Graduate in any discipline (B.Com, BA, B.Sc, MBBS, B.Tech)',
+    qualificationLevel: 'graduate',
+    ageLimit: '21 - 32 Years (Up to 6 attempts for General, relaxed for others)',
+    payScale: 'Level 10 (₹56,100 to ₹2,50,000 for Cabinet Secretary level)',
+    applicationFee: {
+      generalOBC: '₹100',
+      scStPh: 'Exempted (₹0)',
+      female: 'Exempted (₹0)',
+    },
+    importantDates: {
+      examDate: '24 May 2026 (Sunday)',
+      admitCardDate: 'Active on e-Summon portal',
+    },
+    location: 'All India Services & Central Civil Services',
+    summary: 'The Union Public Service Commission has released the e-Admit Cards for the Civil Services (Preliminary) Examination 2026 across 77 examination cities nationwide.',
+    keyHighlights: [
+      'Two objective papers: GS Paper I (Cutoff) and GS Paper II CSAT (Qualifying at 33%)',
+      'Negative marking: One-third (0.33) deducted per wrong answer',
+      'E-admit card entry gates close 30 minutes prior to session start'
+    ],
+    selectionProcess: [
+      'Civil Services Preliminary Examination (Objective)',
+      'Civil Services Main Examination (Written Descriptive - 9 Papers)',
+      'Personality Test (Interview - 275 Marks)'
+    ],
+    officialPdfUrl: 'https://upsc.gov.in',
+    applyUrl: 'https://upsconline.nic.in',
+    updatedAt: '2 hours ago',
+  },
+  {
+    id: 'ssc-chsl-2026',
+    slug: 'ssc-chsl-10-plus-2-2026-notification',
+    title: 'SSC CHSL 2026: 3,712 Posts for 10+2 Intermediates (LDC, JSA, DEO)',
+    shortTitle: 'SSC CHSL 10+2 Form',
+    organization: 'Staff Selection Commission (SSC)',
+    category: 'central',
+    type: 'job',
+    badgeStatus: 'Applications Open',
+    badgeColor: 'emerald',
+    vacancies: '3,712 Posts',
+    qualification: '12th Standard Pass from a recognized Board or University',
+    qualificationLevel: '12th',
+    ageLimit: '18 - 27 Years',
+    payScale: 'Level 2 (₹19,900 - ₹63,200) & Level 4 (₹25,500 - ₹81,100)',
+    applicationFee: {
+      generalOBC: '₹100',
+      scStPh: '₹0',
+      female: '₹0',
+    },
+    importantDates: {
+      startDate: 'Active Now',
+      lastDate: '20 May 2026',
+      examDate: 'Tier-1: July / August 2026',
+    },
+    location: 'Central Ministries & Offices Nationwide',
+    summary: 'Great opportunity for 12th pass students across India. Recruits Lower Division Clerks (LDC), Junior Secretariat Assistants (JSA), and Data Entry Operators (DEO).',
+    keyHighlights: [
+      'Minimum qualification is only 12th pass',
+      'Tier 1 computer-based test of 100 questions (200 marks)',
+      'Skill Test / Typing Test conducted in Tier 2'
+    ],
+    selectionProcess: [
+      'Tier-1 Computer Based Examination',
+      'Tier-2 Objective + Skill/Typing Test',
+      'Document Verification'
+    ],
+    officialPdfUrl: 'https://ssc.gov.in',
+    applyUrl: 'https://ssc.gov.in',
+    updatedAt: '3 hours ago',
+  },
+  {
+    id: 'rrb-alp-2026',
+    slug: 'railway-rrb-alp-cbt-2-exam-city-admit-card',
+    title: 'Railway RRB ALP: 18,799 Assistant Loco Pilot Exam City Intimation & CBT-2 Schedule',
+    shortTitle: 'RRB ALP CBT-2 Update',
+    organization: 'Railway Recruitment Boards (RRB)',
+    category: 'railway',
+    type: 'admit-card',
+    badgeStatus: 'Exam City Active',
+    badgeColor: 'blue',
+    vacancies: '18,799 Posts',
+    qualification: 'Matriculation (10th) + ITI / Act Apprentice OR Diploma/B.Tech in Engineering',
+    qualificationLevel: 'diploma',
+    ageLimit: '18 - 33 Years',
+    payScale: 'Level 2 (Initial Pay ₹19,900 + Running Allowances)',
+    applicationFee: {
+      generalOBC: '₹500',
+      scStPh: '₹250',
+      female: '₹250',
+    },
+    importantDates: {
+      examDate: 'CBT-2: June 2026',
+      admitCardDate: '4 Days before exam date',
+    },
+    location: 'All Railway Zones across India',
+    summary: 'RRB has uploaded the Exam City and Date Intimation slip for candidates qualified for the 2nd Stage Computer Based Test (CBT-2) for 18,799 Assistant Loco Pilot vacancies.',
+    keyHighlights: [
+      'CBT-2 Part A determines merit for next stage',
+      'Part B is qualifying in relevant trade (35% marks required)',
+      'Free travel pass activated for SC/ST candidates'
+    ],
+    selectionProcess: [
+      'CBT-1 (Done)',
+      'CBT-2 (Part A + Part B)',
+      'Computer Based Aptitude Test (CBAT)',
+      'Document Verification & Medical Exam (A1 Standard)'
+    ],
+    officialPdfUrl: 'https://indianrailways.gov.in',
+    applyUrl: 'https://rrbapply.gov.in',
+    updatedAt: '4 hours ago',
+  },
+  {
+    id: 'ctet-2026',
+    slug: 'ctet-2026-official-provisional-answer-key-challenge',
+    title: 'CTET 2026: Official Provisional Answer Key & OMR Sheet Released by CBSE',
+    shortTitle: 'CTET Official Answer Key',
+    organization: 'Central Board of Secondary Education (CBSE)',
+    category: 'teaching',
+    type: 'answer-key',
+    badgeStatus: 'Answer Key Out',
+    badgeColor: 'purple',
+    vacancies: 'National Eligibility Certificate',
+    qualification: 'Senior Secondary or Graduation + D.El.Ed / B.Ed',
+    qualificationLevel: 'graduate',
+    ageLimit: 'No upper age limit',
+    payScale: 'Qualifying certificate for PRT/TGT/PGT recruitment in KVS, NVS & State Schools',
+    applicationFee: {
+      generalOBC: '₹1,000 (Single Paper) / ₹1,200 (Both)',
+      scStPh: '₹500 / ₹600',
+      female: 'As per category',
+    },
+    importantDates: {
+      resultDate: 'Expected next week',
+    },
+    location: 'Pan India Exam Centers',
+    summary: 'CBSE has hosted the scanned images of OMR answer sheets and provisional answer keys for candidates of the Central Teacher Eligibility Test on ctet.nic.in with objection window open.',
+    keyHighlights: [
+      'Challenging fee: ₹1,000 per question (refunded if objection accepted)',
+      'General category qualifying score: 60% (90/150)',
+      'SC/ST/OBC qualifying score: 55% (82/150)',
+      'CTET certificate validity is now lifetime'
+    ],
+    selectionProcess: [
+      'Paper 1 (For Classes I to V - Primary Stage)',
+      'Paper 2 (For Classes VI to VIII - Elementary Stage)',
+      'DigiLocker issuance of Certificate'
+    ],
+    officialPdfUrl: 'https://ctet.nic.in',
+    applyUrl: 'https://ctet.nic.in',
+    updatedAt: '5 hours ago',
+  }
+];
+
+export const BREAKING_TICKER_ITEMS = [
+  "🚨 LIVE: SSC CGL 2026 official notification published for 14,582 Group B & C vacancies. Online forms active.",
+  "⚡ Railway RRB NTPC 2026 centralized registration open across all 21 zones for 11,558 positions.",
+  "📢 UP Police Constable 60,244 recruitment scorecards & normalized cutoffs announced by UPPRPB.",
+  "🎟️ State Bank of India (SBI) releases Phase-1 Preliminary Exam Hall Ticket for 2,000 Probationary Officers.",
+  "🏛️ UPSC Civil Services IAS/IPS 2026 e-Admit Cards available for download for May 24 exam.",
+  "💡 Scan your resume on HireOrbitAI to check instant eligibility for all Central & State government vacancies in 5 seconds."
+];
