@@ -21,12 +21,20 @@ function extractRssItems(xmlText: string): Array<{ title: string; link: string; 
     const pubDate = (dateMatch ? dateMatch[1] : "").trim();
     const description = (descMatch ? descMatch[1] || descMatch[2] : "").replace(/<[^>]*>?/gm, "").trim();
 
-    if (title && (title.toLowerCase().includes("recruitment") || 
-                  title.toLowerCase().includes("vacancy") || 
-                  title.toLowerCase().includes("notification") || 
-                  title.toLowerCase().includes("admit card") || 
-                  title.toLowerCase().includes("result") || 
-                  title.toLowerCase().includes("exam"))) {
+    if (title && (
+      title.toLowerCase().includes("recruitment") || 
+      title.toLowerCase().includes("vacancy") || 
+      title.toLowerCase().includes("notification") || 
+      title.toLowerCase().includes("admit card") || 
+      title.toLowerCase().includes("result") || 
+      title.toLowerCase().includes("exam") ||
+      title.toLowerCase().includes("bharti") ||
+      title.toLowerCase().includes("online form") ||
+      title.toLowerCase().includes("cut off") ||
+      title.toLowerCase().includes("answer key") ||
+      title.toLowerCase().includes("scorecard") ||
+      title.toLowerCase().includes("hall ticket")
+    )) {
       items.push({ title, link, pubDate, description });
     }
   }
@@ -45,7 +53,7 @@ Return ONLY valid JSON (no markdown ticks, no commentary) with this exact schema
 {
   "title": "Clear headline in English (e.g. SSC CGL 2026 Notification Released: 14,000+ Posts)",
   "short_title": "Short title (e.g. SSC CGL 2026 Form)",
-  "organization": "Exact Organization Name (e.g. Staff Selection Commission / Indian Railways / UPSC / SBI)",
+  "organization": "Exact Organization Name (e.g. Staff Selection Commission / Indian Railways / UPSC / SBI / UP Police / Army)",
   "category": "One of: central, railway, banking, police, defense, state, teaching",
   "type": "One of: job, admit-card, result, answer-key",
   "badge_status": "Short status (e.g. Applications Live, Admit Card Out, Result Declared)",
@@ -108,9 +116,21 @@ export async function GET(request: Request) {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Feeds to monitor
+    // Multi-Stream National Feeds (Central, Railways, Banking, Defense, Police, State, Teaching)
     const feeds = [
-      "https://news.google.com/rss/search?q=site:ssc.gov.in+OR+site:rrbapply.gov.in+OR+site:upsc.gov.in+OR+site:uppbpb.gov.in+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 1. Central & Staff Selection / UPSC
+      "https://news.google.com/rss/search?q=(site:ssc.gov.in+OR+site:upsc.gov.in)+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 2. Indian Railways (RRB / RRC)
+      "https://news.google.com/rss/search?q=(site:rrbapply.gov.in+OR+site:indianrailways.gov.in)+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 3. Banking & Financial (IBPS, SBI, RBI, NABARD, LIC)
+      "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22IBPS+Clerk%22+OR+%22RBI+Grade+B%22)+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 4. Defense & Paramilitary (Agniveer, Army, Navy, Air Force, CRPF, BSF, CISF, AFCAT, NDA, CDS)
+      "https://news.google.com/rss/search?q=(%22Army+Agniveer%22+OR+%22AFCAT%22+OR+%22NDA+exam%22+OR+%22CRPF+recruitment%22+OR+%22BSF+recruitment%22)+notification&hl=en-IN&gl=IN&ceid=IN:en",
+      // 5. State Police & Major State PSCs (UP, Bihar, Rajasthan, MP, Delhi DSSSB)
+      "https://news.google.com/rss/search?q=(site:uppbpb.gov.in+OR+site:bpsc.bih.nic.in+OR+%22UP+Police%22+OR+%22Bihar+Police%22+OR+%22DSSSB%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 6. Teaching & Education (CTET, KVS, NVS, UGC NET)
+      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+recruitment%22+OR+%22NVS+recruitment%22+OR+%22UGC+NET%22)+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 7. Official Press Information Bureau (PIB)
       "https://pib.gov.in/RssMain.aspx?ModId=6"
     ];
 
@@ -130,7 +150,7 @@ export async function GET(request: Request) {
     }
 
     // Deduplicate found items by title
-    const uniqueItems = Array.from(new Map(foundItems.map(item => [item.title.toLowerCase().slice(0, 40), item])).values()).slice(0, 5);
+    const uniqueItems = Array.from(new Map(foundItems.map(item => [item.title.toLowerCase().slice(0, 40), item])).values()).slice(0, 8);
 
     // Get existing slugs from database to avoid re-inserting
     const { data: existingRows } = await supabase
