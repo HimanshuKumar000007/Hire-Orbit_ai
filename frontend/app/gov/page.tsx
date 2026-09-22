@@ -97,8 +97,17 @@ export default function GovJobsPage() {
         return false;
       }
       // Category filter
-      if (selectedCategory !== 'all' && item.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === 'state') {
+          const isStateCat = item.category === 'state';
+          const isStatePolice = item.category === 'police' && item.location && item.location.toLowerCase() !== 'all india';
+          const isStateLocation = item.location && item.location.toLowerCase() !== 'all india' && !item.location.toLowerCase().includes('central');
+          if (!isStateCat && !isStatePolice && !isStateLocation) {
+            return false;
+          }
+        } else if (item.category !== selectedCategory) {
+          return false;
+        }
       }
       // Qualification filter
       if (selectedQualification !== 'all' && item.qualificationLevel !== selectedQualification) {
@@ -306,6 +315,7 @@ export default function GovJobsPage() {
               {[
                 { id: 'all', label: 'All Sectors' },
                 { id: 'central', label: 'Central / SSC / UPSC' },
+                { id: 'state', label: 'State Exams (All 28 States)' },
                 { id: 'railway', label: 'Railways' },
                 { id: 'police', label: 'Police & Defense' },
                 { id: 'banking', label: 'Banking' },

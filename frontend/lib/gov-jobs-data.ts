@@ -370,6 +370,88 @@ export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [
     officialPdfUrl: 'https://ctet.nic.in',
     applyUrl: 'https://ctet.nic.in',
     updatedAt: '5 hours ago',
+  },
+  {
+    id: 'bpsc-70th-cce-2026',
+    slug: 'bpsc-70th-combined-competitive-exam-notification',
+    title: 'BPSC 70th CCE 2026: 1,957 Administrative & Police Service Vacancies Announced',
+    shortTitle: 'BPSC 70th CCE Notification',
+    organization: 'Bihar Public Service Commission (BPSC)',
+    category: 'state',
+    type: 'job',
+    badgeStatus: 'Notification Out',
+    badgeColor: 'emerald',
+    vacancies: '1,957 Posts',
+    qualification: 'Bachelor’s Degree in any discipline from a recognized University',
+    qualificationLevel: 'graduate',
+    ageLimit: '20/21/22 to 37 Years (Male) / 40 Years (Female / BC / EBC)',
+    payScale: 'Level 7 & Level 9 (₹44,900 to ₹1,42,400)',
+    applicationFee: {
+      generalOBC: '₹600',
+      scStPh: '₹150 (Bihar Domicile)',
+      female: '₹150 (Bihar Domicile)',
+    },
+    importantDates: {
+      startDate: 'Active Now',
+      lastDate: '25 May 2026',
+      examDate: 'Prelims: August 2026',
+    },
+    location: 'Bihar',
+    summary: 'The Bihar Public Service Commission has released the official advertisement for the 70th Combined Competitive Examination to recruit Sub-Divisional Officers (SDO), Deputy Superintendents of Police (Dy. SP), Revenue Officers, and Block Welfare Officers across Bihar.',
+    keyHighlights: [
+      'Largest vacancy count in state administrative services this year',
+      'Negative marking of 1/3rd (0.33) marks per incorrect answer',
+      'Integrated CCE pattern for both General Administrative and Special departments'
+    ],
+    selectionProcess: [
+      'Preliminary Examination (150 Marks Objective)',
+      'Mains Written Examination (Subjective GS-1, GS-2, Essay & Optional)',
+      'Personality Test / Interview (120 Marks)'
+    ],
+    officialPdfUrl: 'https://bpsc.bih.nic.in',
+    applyUrl: 'https://bpsc.bih.nic.in',
+    updatedAt: '6 hours ago',
+    isTrending: true,
+  },
+  {
+    id: 'uppsc-pcs-2026',
+    slug: 'uppsc-combined-state-upper-subordinate-services-pcs-2026',
+    title: 'UPPSC PCS 2026: Combined State / Upper Subordinate Services Prelims Exam',
+    shortTitle: 'UPPSC PCS 2026 Prelims',
+    organization: 'Uttar Pradesh Public Service Commission (UPPSC)',
+    category: 'state',
+    type: 'admit-card',
+    badgeStatus: 'Exam Date Active',
+    badgeColor: 'blue',
+    vacancies: '920 Posts',
+    qualification: 'Graduate Degree in any discipline (Special criteria for specific posts)',
+    qualificationLevel: 'graduate',
+    ageLimit: '21 - 40 Years (Relaxation up to 5 years for SC/ST/OBC/State Govt Employees)',
+    payScale: 'Pay Band ₹9,300-34,800 Grade Pay ₹4,200 to ₹15,600-39,100 Grade Pay ₹5,400',
+    applicationFee: {
+      generalOBC: '₹125',
+      scStPh: '₹65',
+      female: 'As per category',
+    },
+    importantDates: {
+      examDate: 'Prelims: July 2026',
+      admitCardDate: '10 Days Prior to Exam',
+    },
+    location: 'Uttar Pradesh',
+    summary: 'Uttar Pradesh Public Service Commission has announced the schedule and exam district verification portal for the PCS Preliminary Examination for executive officer, DSP, ARTO, and District Commandant posts.',
+    keyHighlights: [
+      'Paper 1 (GS) determines merit for Mains examination',
+      'Paper 2 (CSAT) is qualifying with mandatory 33% cutoff',
+      'OMR-based multi-city testing across all 75 districts of UP'
+    ],
+    selectionProcess: [
+      'Preliminary Examination (Paper 1 & Paper 2 CSAT)',
+      'Mains Written Examination (8 Descriptive Papers including UP Special GS 5 & 6)',
+      'Personality Interview (100 Marks)'
+    ],
+    officialPdfUrl: 'https://uppsc.up.nic.in',
+    applyUrl: 'https://uppsc.up.nic.in',
+    updatedAt: '8 hours ago',
   }
 ];
 

@@ -116,7 +116,7 @@ export async function GET(request: Request) {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Multi-Stream National Feeds (Central, Railways, Banking, Defense, Police, State, Teaching)
+    // Multi-Stream National & All 28 States Feeds
     const feeds = [
       // 1. Central & Staff Selection / UPSC
       "https://news.google.com/rss/search?q=(site:ssc.gov.in+OR+site:upsc.gov.in)+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
@@ -126,11 +126,19 @@ export async function GET(request: Request) {
       "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22IBPS+Clerk%22+OR+%22RBI+Grade+B%22)+recruitment+notification&hl=en-IN&gl=IN&ceid=IN:en",
       // 4. Defense & Paramilitary (Agniveer, Army, Navy, Air Force, CRPF, BSF, CISF, AFCAT, NDA, CDS)
       "https://news.google.com/rss/search?q=(%22Army+Agniveer%22+OR+%22AFCAT%22+OR+%22NDA+exam%22+OR+%22CRPF+recruitment%22+OR+%22BSF+recruitment%22)+notification&hl=en-IN&gl=IN&ceid=IN:en",
-      // 5. State Police & Major State PSCs (UP, Bihar, Rajasthan, MP, Delhi DSSSB)
-      "https://news.google.com/rss/search?q=(site:uppbpb.gov.in+OR+site:bpsc.bih.nic.in+OR+%22UP+Police%22+OR+%22Bihar+Police%22+OR+%22DSSSB%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // 6. Teaching & Education (CTET, KVS, NVS, UGC NET)
-      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+recruitment%22+OR+%22NVS+recruitment%22+OR+%22UGC+NET%22)+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // 7. Official Press Information Bureau (PIB)
+      // 5. Northern & Hindi Belt States (UP, Bihar, Rajasthan, MP, Haryana, Punjab, Delhi, Uttarakhand)
+      "https://news.google.com/rss/search?q=(%22UP+Police%22+OR+%22UPPSC%22+OR+%22UPSSSC%22+OR+%22BPSC%22+OR+%22Bihar+Police%22+OR+%22RPSC%22+OR+%22MPPSC%22+OR+%22HSSC%22+OR+%22DSSSB%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 6. Western, Eastern & Central States (Maharashtra, Gujarat, West Bengal, Odisha, Jharkhand, Chhattisgarh)
+      "https://news.google.com/rss/search?q=(%22MPSC%22+OR+%22Maharashtra+Police%22+OR+%22GPSC%22+OR+%22WBPSC%22+OR+%22WB+Police%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 7. Southern States (Karnataka, Tamil Nadu, Telangana, Andhra Pradesh, Kerala)
+      "https://news.google.com/rss/search?q=(%22KPSC%22+OR+%22TNPSC%22+OR+%22TSPSC%22+OR+%22APPSC%22+OR+%22Kerala+PSC%22+OR+%22Karnataka+Police%22+OR+%22TNUSRB%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 8. Pan-India State PSCs & High Courts (All States & UTs)
+      "https://news.google.com/rss/search?q=(%22State+PSC%22+OR+%22Public+Service+Commission%22+OR+%22High+Court+recruitment%22+OR+%22Police+Bharti%22)+notification+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 9. Teaching & National Testing (CTET, KVS, NVS, UGC NET, State TET)
+      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+recruitment%22+OR+%22NVS+recruitment%22+OR+%22UGC+NET%22+OR+%22State+TET%22)+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 10. Northeastern, Himalayan & Hill States (Assam, J&K, Himachal, Punjab, Uttarakhand, Tripura, Nagaland, Sikkim, Manipur, Meghalaya, Arunachal)
+      "https://news.google.com/rss/search?q=(%22APSC%22+OR+%22JKSSB%22+OR+%22JKPSC%22+OR+%22HPPSC%22+OR+%22PPSC%22+OR+%22Assam+Police%22+OR+%22NPSC%22+OR+%22TPSC%22+OR+%22SPSC%22+OR+%22UKPSC%22)+recruitment+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 11. Official Press Information Bureau (PIB)
       "https://pib.gov.in/RssMain.aspx?ModId=6"
     ];
 
