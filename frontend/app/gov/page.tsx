@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
+import { getSupabaseClient } from "@/lib/supabase";
 import { 
   GOV_JOB_NOTIFICATIONS, 
   BREAKING_TICKER_ITEMS,
@@ -33,19 +34,67 @@ import {
   Info,
   Download,
   Flame,
-  Radio
+  Radio,
+  Eye
 } from 'lucide-react';
 
 export default function GovJobsPage() {
+  const [notifications, setNotifications] = useState<GovJobNotification[]>(GOV_JOB_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState<'all' | 'job' | 'admit-card' | 'result' | 'answer-key'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedQualification, setSelectedQualification] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<GovJobNotification | null>(null);
 
+  useEffect(() => {
+    async function loadLiveNotifications() {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('gov_notifications')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const mapped: GovJobNotification[] = data.map((d: any) => ({
+            id: d.id,
+            slug: d.slug,
+            title: d.title,
+            shortTitle: d.short_title || d.title,
+            organization: d.organization,
+            category: d.category,
+            type: d.type,
+            badgeStatus: d.badge_status,
+            badgeColor: d.badge_color,
+            vacancies: d.vacancies,
+            qualification: d.qualification,
+            qualificationLevel: d.qualification_level,
+            ageLimit: d.age_limit,
+            payScale: d.pay_scale,
+            applicationFee: d.application_fee || {},
+            importantDates: d.important_dates || {},
+            location: d.location,
+            summary: d.summary,
+            keyHighlights: d.key_highlights || [],
+            selectionProcess: d.selection_process || [],
+            officialPdfUrl: d.official_pdf_url,
+            applyUrl: d.apply_url,
+            updatedAt: 'Live from Gazette',
+            isTrending: d.is_trending,
+            isLeadStory: d.is_lead_story,
+          }));
+          setNotifications(mapped);
+        }
+      } catch (err) {
+        console.warn('Using static gov notifications fallback:', err);
+      }
+    }
+    loadLiveNotifications();
+  }, []);
+
   // Filter logic
   const filteredNotifications = useMemo(() => {
-    return GOV_JOB_NOTIFICATIONS.filter((item) => {
+    return notifications.filter((item) => {
       // Type tab filter
       if (activeTab !== 'all' && item.type !== activeTab) {
         return false;
@@ -73,7 +122,7 @@ export default function GovJobsPage() {
     });
   }, [activeTab, selectedCategory, selectedQualification, searchQuery]);
 
-  const leadStory = GOV_JOB_NOTIFICATIONS.find((j) => j.isLeadStory) || GOV_JOB_NOTIFICATIONS[0];
+  const leadStory = notifications.find((j) => j.isLeadStory) || notifications[0];
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 pt-16 lg:pt-20">
@@ -146,10 +195,12 @@ export default function GovJobsPage() {
                     </span>
                   </div>
 
-                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white hover:text-emerald-400 transition-colors cursor-pointer"
-                    onClick={() => setSelectedJob(leadStory)}>
+                  <Link
+                    href={`/gov/${leadStory.slug}`}
+                    className="text-2xl sm:text-3xl font-extrabold text-white hover:text-emerald-400 transition-colors block"
+                  >
                     {leadStory.title}
-                  </h2>
+                  </Link>
 
                   <p className="text-zinc-300 text-sm line-clamp-2">
                     {leadStory.summary}
@@ -169,13 +220,13 @@ export default function GovJobsPage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0 w-full lg:w-auto">
-                  <button
-                    onClick={() => setSelectedJob(leadStory)}
+                  <Link
+                    href={`/gov/${leadStory.slug}`}
                     className="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-glow-sm"
                   >
                     View Official Notice
                     <ChevronRight className="w-4 h-4" />
-                  </button>
+                  </Link>
                   <Link
                     href="/onboarding"
                     className="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-all border border-white/10"
@@ -356,12 +407,12 @@ export default function GovJobsPage() {
                       </div>
 
                       {/* Card Title */}
-                      <h3 
-                        onClick={() => setSelectedJob(item)}
-                        className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3 cursor-pointer"
+                      <Link 
+                        href={`/gov/${item.slug}`}
+                        className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3 block"
                       >
                         {item.title}
-                      </h3>
+                      </Link>
 
                       {/* Specs Matrix */}
                       <div className="space-y-2 py-3 border-y border-white/5 text-xs text-zinc-300">
@@ -396,12 +447,20 @@ export default function GovJobsPage() {
 
                     {/* Action Footers */}
                     <div className="pt-4 mt-2 flex items-center gap-2">
-                      <button
-                        onClick={() => setSelectedJob(item)}
+                      <Link
+                        href={`/gov/${item.slug}`}
                         className="flex-1 py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-white/10"
                       >
-                        Details
+                        Full Notice
                         <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+
+                      <button
+                        onClick={() => setSelectedJob(item)}
+                        className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/5"
+                        title="Quick Preview Modal"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
                       </button>
 
                       <a

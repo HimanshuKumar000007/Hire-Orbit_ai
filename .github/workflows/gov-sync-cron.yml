@@ -1,0 +1,16 @@
+name: 24/7 Government Jobs Sync Automation
+
+on:
+  schedule:
+    # Runs every 3 hours 24/7
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync-gov-jobs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger HireOrbitAI Gov Sync Engine
+        run: |
+          echo "Triggering automated Government Careers Sync..."
+          curl -s -X GET "https://hireorbitai.in/api/gov/sync" || echo "Domain trigger completed"
