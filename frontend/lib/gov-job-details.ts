@@ -437,26 +437,44 @@ export function getEnrichedJobDetails(job: GovJobNotification): EnrichedJobDetai
     total: job.vacancies
   };
 
+  // ── Derive meaningful post name from the job title ──────────────────────
+  let derivedPostName = job.organization + " — ";
+  if (/constable/i.test(job.title)) derivedPostName += "Constable";
+  else if (/sub.?inspector|si\b/i.test(job.title)) derivedPostName += "Sub Inspector (SI)";
+  else if (/head constable/i.test(job.title)) derivedPostName += "Head Constable";
+  else if (/patwari|lekhpal/i.test(job.title)) derivedPostName += "Patwari / Lekhpal";
+  else if (/clerk|stenographer|steno/i.test(job.title)) derivedPostName += "Clerk / Stenographer";
+  else if (/assistant|asst\b/i.test(job.title)) derivedPostName += "Assistant";
+  else if (/officer/i.test(job.title)) derivedPostName += "Officer";
+  else if (/engineer/i.test(job.title)) derivedPostName += "Junior Engineer (JE)";
+  else if (/nurse/i.test(job.title)) derivedPostName += "Staff Nurse";
+  else if (/pharmacist/i.test(job.title)) derivedPostName += "Pharmacist";
+  else if (/technician/i.test(job.title)) derivedPostName += "Technician";
+  else if (/teacher|principal|lecturer/i.test(job.title)) derivedPostName += "Teacher / Lecturer";
+  else if (/inspector/i.test(job.title)) derivedPostName += "Inspector";
+  else if (/driver/i.test(job.title)) derivedPostName += "Driver";
+  else derivedPostName += "Various Posts";
+
+  const isVacancyKnown = numVacancies > 0 && job.vacancies !== "See Notification";
+
   const defaultPostWiseDetails: PostWiseVacancy[] = [
     {
-      postName: `${job.shortTitle} - Executive / Officer Cadre`,
+      postName: derivedPostName,
       department: job.organization,
-      classification: "Group B / Executive",
-      vacancies: Math.round(numVacancies * 0.65).toLocaleString('en-IN') + " Posts",
+      classification: job.category === "central" ? "Central Government" :
+                      job.category === "state" ? "State Government" :
+                      job.category === "police" ? "Police / Paramilitary" :
+                      job.category === "railway" ? "Indian Railways" :
+                      job.category === "banking" ? "Banking Sector" :
+                      job.category === "teaching" ? "Education / Teaching" :
+                      job.category === "defense" ? "Defence / Armed Forces" : "Government",
+      vacancies: isVacancyKnown ? job.vacancies : "As per Official Notification",
       ageLimit: job.ageLimit,
       qualification: job.qualification,
-      payScale: job.payScale
-    },
-    {
-      postName: `${job.shortTitle} - Ministerial / Assistant Cadre`,
-      department: job.organization,
-      classification: "Group C / Ministerial",
-      vacancies: Math.round(numVacancies * 0.35).toLocaleString('en-IN') + " Posts",
-      ageLimit: job.ageLimit,
-      qualification: job.qualification,
-      payScale: job.payScale
+      payScale: job.payScale !== "As per Government Pay Scale" ? job.payScale : "As per 7th Pay Commission / State Pay Matrix"
     }
   ];
+
 
   const defaultExamPatterns: ExamPatternTier[] = [
     {

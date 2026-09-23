@@ -124,9 +124,13 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   const yearMatch = t.match(/20(2[4-9]|3\d)/);
   const year = yearMatch ? yearMatch[0] : "2026";
 
-  // Build clean title (strip site names in brackets from Google News)
+  // Build clean title — strip ALL news source attribution tags
   const cleanTitle = t
-    .replace(/\s*-\s*(Sarkari Result|Sarkari Naukri|Fresherslive|Employment News|Govt Jobs|Naukri Uday|Job Alert|Jagran Josh)[^-]*$/i, "")
+    .replace(/\s*[-|]\s*(Sarkari Result|Sarkari Naukri|Fresherslive|Employment News|Govt Jobs|Naukri Uday|Job Alert|Jagran Josh|Careers360|Adda247|Adda 247|PW|Physics Wallah|Shiksha\.com|Shiksha|India Today|Hindustan Times|Times of India|TOI|NDTV|News18|Amar Ujala|Dainik Bhaskar|Navbharat Times|Oneindia|Zee News|ABP Live|Patrika|LiveMint|Economic Times|The Hindu|Indian Express|Firstpost|Scroll\.in|Wire|Quint|Print|Tribune|Pioneer|Statesman|Outlook|Deccan Herald|Deccan Chronicle|Hans India|Sakshi Education|Mathrubhumi|Malayala Manorama|Dinamalar|Dinamani|Ananda Bazar)[^-|]*$/i, "")
+    .replace(/\s*\|\s*[^|]{5,50}$/, "") // strip "| Source Name" at end
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
     .trim();
 
   // Build slug
@@ -139,7 +143,21 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   // Build short title
   const short_title = cleanTitle.length > 55 ? cleanTitle.slice(0, 55).trim() + "…" : cleanTitle;
 
-  // Qualification guess from title
+  // Clean description — strip HTML tags, Google News URLs, and garbage
+  const cleanDesc = desc
+    ? desc
+        .replace(/<a\s[^>]*href="https?:\/\/news\.google\.com[^"]*"[^>]*>([^<]*)<\/a>/gi, "$1") // strip GNews hrefs
+        .replace(/<[^>]+>/g, " ")      // strip all HTML tags
+        .replace(/https?:\/\/\S+/g, "") // strip raw URLs
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+    : "";
+
   let qualification = "Graduate / 12th Pass";
   let qualification_level: "10th" | "12th" | "graduate" | "diploma" | "postgraduate" = "graduate";
   if (/10th|matriculation|class 10|sslc/i.test(t + desc)) {
@@ -179,17 +197,26 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   else if (/jammu|kashmir|jkssb|jkpsc/i.test(t + desc)) location = "J&K / Ladakh";
   else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
 
-  // Summary
-  const summary = desc
-    ? desc.slice(0, 250).replace(/\s+/g, " ").trim() + (desc.length > 250 ? "…" : "")
-    : `${organization} has released the ${type === "admit-card" ? "Admit Card" : type === "result" ? "Result" : "Recruitment Notification"} for ${year}. Eligible candidates are advised to visit the official website for details.`;
+  // Summary — use cleaned description or generate one (AFTER qualification is determined)
+  const summary = cleanDesc && cleanDesc.length > 30
+    ? cleanDesc.slice(0, 300).trim() + (cleanDesc.length > 300 ? "…" : "")
+    : `${organization} has officially released the ${
+        type === "admit-card" ? "Admit Card" :
+        type === "result" ? "Result / Merit List" :
+        type === "answer-key" ? "Answer Key" :
+        "Recruitment Notification"
+      } for ${year}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates with ${qualification} are advised to visit the official website immediately.`;
 
   // Key highlights
   const highlights: string[] = [
-    `${badge_status} — check official notification`,
-    location !== "All India" ? `${location} State Level Recruitment` : "Pan-India Recruitment",
-    vacancies !== "See Notification" ? `Total Vacancies: ${vacancies}` : "Multiple Posts Available"
+    `${badge_status} — check official notification for details`,
+    location !== "All India" ? `${location} State Level Recruitment` : "Pan-India / Central Government Recruitment",
+    vacancies !== "See Notification" ? `Total Vacancies: ${vacancies}` : "Multiple Posts Available — Check Notification",
+    `Educational Qualification: ${qualification}`,
+    "Age Limit: 18 - 40 Years (relaxation for SC/ST/OBC as per rules)"
   ];
+
+
 
   // Selection process (type-based)
   const selection_process =
