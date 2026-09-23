@@ -96,7 +96,9 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
 
   if (/admit card|hall ticket|call letter|e-admit/i.test(t)) {
     type = "admit-card"; badge_status = "Admit Card Out"; badge_color = "blue";
-  } else if (/\bresult\b|merit list|final result/i.test(t)) {
+  } else if (/exam date|exam schedule|exam calendar|city slip|city intimation|prelims exam date|mains exam date/i.test(t)) {
+    type = "admit-card"; badge_status = "Exam Date Announced"; badge_color = "blue";
+  } else if (/\bresult\b|merit list|final result|scorecard|cut.?off marks/i.test(t)) {
     type = "result"; badge_status = "Result Declared"; badge_color = "amber";
   } else if (/answer key|provisional answer|objection/i.test(t)) {
     type = "answer-key"; badge_status = "Answer Key Released"; badge_color = "purple";
@@ -160,7 +162,19 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
 
   let qualification = "Graduate / 12th Pass";
   let qualification_level: "10th" | "12th" | "graduate" | "diploma" | "postgraduate" = "graduate";
-  if (/10th|matriculation|class 10|sslc/i.test(t + desc)) {
+  if (/\bapp\b|prosecutor|law officer|\bllb\b|civil judge|advocate|judicial/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in Law (LL.B)"; qualification_level = "graduate";
+  } else if (/nurse|nursing|gnm|b\.?sc nursing/i.test(t + desc)) {
+    qualification = "B.Sc Nursing / GNM Diploma with Council Registration"; qualification_level = "graduate";
+  } else if (/pharmacist|b\.?pharm|d\.?pharm/i.test(t + desc)) {
+    qualification = "Degree / Diploma in Pharmacy (B.Pharm / D.Pharm)"; qualification_level = "diploma";
+  } else if (/ctet|stet|teacher|tre\b|kvs|nvs|b\.?ed|d\.?el\.?ed/i.test(t + desc)) {
+    qualification = "Graduate / Post Graduate with B.Ed / D.El.Ed / TET"; qualification_level = "graduate";
+  } else if (/constable/i.test(t + desc)) {
+    qualification = "10+2 (Intermediate) Pass"; qualification_level = "12th";
+  } else if (/lekhpal|patwari|\bvdo\b/i.test(t + desc)) {
+    qualification = "10+2 Intermediate + State PET / Eligibility Score"; qualification_level = "12th";
+  } else if (/10th|matriculation|class 10|sslc/i.test(t + desc)) {
     qualification = "10th Pass (Matriculation)"; qualification_level = "10th";
   } else if (/12th|intermediate|class 12|higher secondary/i.test(t + desc)) {
     qualification = "12th Pass (Intermediate)"; qualification_level = "12th";
@@ -198,14 +212,20 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
 
   // Summary — use cleaned description or generate one (AFTER qualification is determined)
+  const isExamDateNotice = /exam date|exam schedule|exam calendar|city slip/i.test(t);
+  const noticeTypeLabel = isExamDateNotice 
+    ? "Official Examination Schedule Notice" 
+    : type === "admit-card" 
+    ? "Admit Card / Hall Ticket" 
+    : type === "result" 
+    ? "Result / Merit List" 
+    : type === "answer-key" 
+    ? "Answer Key" 
+    : "Recruitment Notification";
+
   const summary = cleanDesc && cleanDesc.length > 30
     ? cleanDesc.slice(0, 300).trim() + (cleanDesc.length > 300 ? "…" : "")
-    : `${organization} has officially released the ${
-        type === "admit-card" ? "Admit Card" :
-        type === "result" ? "Result / Merit List" :
-        type === "answer-key" ? "Answer Key" :
-        "Recruitment Notification"
-      } for ${year}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates with ${qualification} are advised to visit the official website immediately.`;
+    : `${organization} has officially released the ${noticeTypeLabel} for ${year}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates with ${qualification} are advised to review the official schedule and examination guidelines.`;
 
   // Key highlights
   const highlights: string[] = [
@@ -216,13 +236,11 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     "Age Limit: 18 - 40 Years (relaxation for SC/ST/OBC as per rules)"
   ];
 
-
-
   // Selection process (type-based)
   const selection_process =
-    type === "admit-card" ? ["Download Admit Card from official website", "Appear for Written Exam", "Await Result"] :
-    type === "result" ? ["Written Exam (Completed)", "Document Verification", "Final Merit List"] :
-    type === "answer-key" ? ["Written Exam (Completed)", "Review Answer Key", "Raise Objections if any"] :
+    type === "admit-card" ? ["Download Admit Card / Exam Schedule from official website", "Appear for Written Exam as per shift", "Await Scorecard & Result"] :
+    type === "result" ? ["Written Exam (Completed)", "Document Verification & Medical", "Final Merit List"] :
+    type === "answer-key" ? ["Written Exam (Completed)", "Review Provisional Answer Key", "Raise Objections if any within window"] :
     ["Written Examination / Screening Test", "Physical / Skill Test (if applicable)", "Document Verification", "Final Selection"];
 
   return {
@@ -240,9 +258,9 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     pay_scale: "As per Government Pay Scale",
     application_fee: { generalOBC: "See notification", scStPh: "See notification", female: "See notification" },
     important_dates: {
-      startDate: "Check Official Website",
-      lastDate: "As per notification",
-      examDate: type === "admit-card" ? "Upcoming" : "As per schedule"
+      startDate: type === "job" ? "Check Official Website" : "Announced",
+      lastDate: type === "job" ? "As per notification" : "N/A (Exam Phase)",
+      examDate: isExamDateNotice ? "Announced (Check Schedule Notice)" : type === "admit-card" ? "Upcoming" : "As per schedule"
     },
     location,
     summary,
