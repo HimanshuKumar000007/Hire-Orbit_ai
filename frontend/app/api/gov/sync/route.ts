@@ -260,44 +260,58 @@ export async function GET(_request: Request) {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // ── 25 FEEDS: Every major state board has its own dedicated stream ────────
     const feeds = [
-      // Direct official RSS feeds
+      // 1. Direct: UPSSSC official RSS
       "https://upsssc.gov.in/rss/rss.aspx",
+      // 2. Direct: UPPSC official RSS
       "https://uppsc.up.nic.in/rss/rss.aspx",
+      // 3. Direct: Employment News weekly gazette
       "https://www.employmentnews.gov.in/RSS/GetLatestRss",
+      // 4. Direct: PIB
       "https://pib.gov.in/RssMain.aspx?ModId=6",
-      // UPSSSC + UPPRPB (Google News dedicated)
+      // 5. UPSSSC + UPPRPB (dedicated stream)
       "https://news.google.com/rss/search?q=%22UPSSSC%22+OR+%22UPPRPB%22+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // SSC & UPSC
-      "https://news.google.com/rss/search?q=(%22SSC+CGL%22+OR+%22SSC+CHSL%22+OR+%22SSC+MTS%22+OR+%22SSC+GD%22+OR+%22UPSC+CSE%22)+2026+admit+card+result+notification&hl=en-IN&gl=IN&ceid=IN:en",
-      // Railway
-      "https://news.google.com/rss/search?q=(%22RRB%22+OR+%22RRC%22+OR+%22NTPC%22)+admit+card+result+recruitment+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // Banking
-      "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22IBPS+Clerk%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22RBI+Grade%22)+2026+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // Defense
-      "https://news.google.com/rss/search?q=(%22Agniveer%22+OR+%22NDA+2026%22+OR+%22CDS+2026%22+OR+%22CRPF+recruitment%22)+admit+card+result+notification&hl=en-IN&gl=IN&ceid=IN:en",
-      // North India states
-      "https://news.google.com/rss/search?q=(%22UPPSC%22+OR+%22BPSC%22+OR+%22RPSC%22+OR+%22MPPSC%22+OR+%22HSSC%22+OR+%22DSSSB%22)+2026+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // West / East states
-      "https://news.google.com/rss/search?q=(%22MPSC%22+OR+%22GPSC%22+OR+%22WBPSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // South states
-      "https://news.google.com/rss/search?q=(%22KPSC%22+OR+%22TNPSC%22+OR+%22TSPSC%22+OR+%22APPSC%22+OR+%22Kerala+PSC%22)+2026+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // Northeast & Himalayan states
-      "https://news.google.com/rss/search?q=(%22APSC%22+OR+%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22Assam+Police%22)+2026+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // Teaching
-      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+Recruitment%22+OR+%22NVS+Recruitment%22+OR+%22UGC+NET%22+OR+%22REET%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // PSU / Science bodies
-      "https://news.google.com/rss/search?q=(%22ISRO+Recruitment%22+OR+%22DRDO+Recruitment%22+OR+%22BARC+Recruitment%22+OR+%22EPFO+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // Police Bharti
-      "https://news.google.com/rss/search?q=(%22Police+Constable%22+OR+%22Police+Bharti%22+OR+%22Head+Constable%22+OR+%22Sub+Inspector%22)+2026+admit+card+result+notification&hl=en-IN&gl=IN&ceid=IN:en",
-      // Medical
-      "https://news.google.com/rss/search?q=(%22AIIMS+Recruitment%22+OR+%22NHM+Recruitment%22+OR+%22Staff+Nurse%22+OR+%22Lab+Technician%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // High Courts
-      "https://news.google.com/rss/search?q=(%22High+Court%22+OR+%22District+Court%22)+clerk+stenographer+recruitment+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // State Patwari / Lekhpal / VDO
-      "https://news.google.com/rss/search?q=(%22Lekhpal%22+OR+%22Patwari%22+OR+%22VDO%22+OR+%22Anganwadi+Recruitment%22)+2026+notification+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // State PSC general catch-all
-      "https://news.google.com/rss/search?q=%22State+PSC%22+OR+%22Public+Service+Commission%22+recruitment+notification+2026+admit+card&hl=en-IN&gl=IN&ceid=IN:en"
+      // 6. MPESB + MP Vyapam + MP Police (Madhya Pradesh — DEDICATED)
+      "https://news.google.com/rss/search?q=%22MPESB%22+OR+%22MP+Police+Constable%22+OR+%22MP+Vyapam%22+OR+%22MPPEB%22+OR+%22Madhya+Pradesh+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 7. BPSC + Bihar Police + BSSC (Bihar — DEDICATED)
+      "https://news.google.com/rss/search?q=%22BPSC%22+OR+%22Bihar+Police%22+OR+%22BSSC%22+OR+%22Bihar+STET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 8. RPSC + RSMSSB + Rajasthan Police (Rajasthan — DEDICATED)
+      "https://news.google.com/rss/search?q=%22RPSC%22+OR+%22RSMSSB%22+OR+%22Rajasthan+Police%22+OR+%22REET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 9. HSSC + Haryana Police (Haryana — DEDICATED)
+      "https://news.google.com/rss/search?q=%22HSSC%22+OR+%22HPSC%22+OR+%22Haryana+Police%22+OR+%22Haryana+CET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 10. MPSC + Maharashtra Police (Maharashtra — DEDICATED)
+      "https://news.google.com/rss/search?q=%22MPSC%22+OR+%22Maharashtra+Police%22+OR+%22Maharashtra+Arogya%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 11. GPSC + GSSSB + Gujarat Police (Gujarat — DEDICATED)
+      "https://news.google.com/rss/search?q=%22GPSC%22+OR+%22GSSSB%22+OR+%22Gujarat+Police%22+OR+%22OJAS%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 12. WBPSC + WB Police + WBSSC (West Bengal — DEDICATED)
+      "https://news.google.com/rss/search?q=%22WBPSC%22+OR+%22WB+Police%22+OR+%22WBSSC%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 13. KPSC + Karnataka Police (Karnataka — DEDICATED)
+      "https://news.google.com/rss/search?q=%22KPSC%22+OR+%22KSP%22+OR+%22Karnataka+Police%22+OR+%22KSSB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 14. TNPSC + TNUSRB + TN Police (Tamil Nadu — DEDICATED)
+      "https://news.google.com/rss/search?q=%22TNPSC%22+OR+%22TNUSRB%22+OR+%22Tamil+Nadu+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 15. TSPSC + Telangana Police (Telangana — DEDICATED)
+      "https://news.google.com/rss/search?q=%22TSPSC%22+OR+%22Telangana+Police%22+OR+%22TSLPRB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 16. SSC CGL / CHSL / GD / MTS / CPO / Steno
+      "https://news.google.com/rss/search?q=(%22SSC+CGL%22+OR+%22SSC+CHSL%22+OR+%22SSC+MTS%22+OR+%22SSC+GD%22+OR+%22SSC+CPO%22+OR+%22SSC+Stenographer%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 17. Railway RRB / RRC
+      "https://news.google.com/rss/search?q=(%22RRB+NTPC%22+OR+%22RRB+ALP%22+OR+%22RRC+Group+D%22+OR+%22Railway+Recruitment%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 18. Banking (IBPS, SBI, RBI, LIC)
+      "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22IBPS+Clerk%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22RBI+Grade+B%22)+2026+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 19. Defense (Agniveer, NDA, CRPF, BSF, CISF)
+      "https://news.google.com/rss/search?q=(%22Agniveer%22+OR+%22NDA+2026%22+OR+%22CRPF+Recruitment%22+OR+%22BSF+Recruitment%22+OR+%22CISF+Recruitment%22)+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 20. Teaching (CTET, KVS, NVS, UGC NET, State TETs)
+      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+Recruitment%22+OR+%22NVS+Recruitment%22+OR+%22UGC+NET%22+OR+%22Super+TET%22+OR+%22REET%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 21. PSU / Scientific (ISRO, DRDO, BARC, EPFO, ESIC, IOCL, BEL)
+      "https://news.google.com/rss/search?q=(%22ISRO+Recruitment%22+OR+%22DRDO+Recruitment%22+OR+%22BARC+Recruitment%22+OR+%22EPFO%22+OR+%22ESIC%22+OR+%22IOCL+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 22. Medical & Paramedical (AIIMS, NHM, Staff Nurse, Lab Tech)
+      "https://news.google.com/rss/search?q=(%22AIIMS+Recruitment%22+OR+%22NHM+Recruitment%22+OR+%22Staff+Nurse%22+OR+%22Lab+Technician%22+OR+%22Pharmacist+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 23. High Courts + Judiciary
+      "https://news.google.com/rss/search?q=(%22High+Court+Recruitment%22+OR+%22District+Court%22)+clerk+stenographer+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 24. Patwari / Lekhpal / VDO / Gram Sachiv / Anganwadi
+      "https://news.google.com/rss/search?q=(%22Lekhpal%22+OR+%22Patwari%22+OR+%22VDO+Recruitment%22+OR+%22Gram+Sachiv%22+OR+%22Anganwadi+Supervisor%22)+2026+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+      // 25. Northeast + Himalayan PSCs (JKSSB, HPPSC, UKPSC, APSC, OPSC, JPSC)
+      "https://news.google.com/rss/search?q=(%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22APSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+recruit+admit+result&hl=en-IN&gl=IN&ceid=IN:en"
     ];
 
     // ── Fetch ALL feeds in PARALLEL (much faster than sequential) ──────────
@@ -315,34 +329,43 @@ export async function GET(_request: Request) {
       )
     );
 
-    let foundItems: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
+    // ── ROUND-ROBIN: pick up to 2 items per feed so every state gets representation ──
+    const perFeedItems: Array<Array<{ title: string; link: string; pubDate: string; description: string }>> = [];
     for (const result of feedResults) {
       if (result.status === "fulfilled" && result.value) {
-        foundItems = foundItems.concat(extractRssItems(result.value));
+        perFeedItems.push(extractRssItems(result.value));
+      } else {
+        perFeedItems.push([]);
       }
     }
 
-    // Deduplicate by title (first 50 chars)
-    const uniqueItems = Array.from(
-      new Map(foundItems.map(item => [item.title.toLowerCase().slice(0, 50), item])).values()
-    );
-
-    // Get existing titles/slugs from DB
+    // Get existing titles/slugs from DB first
     const { data: existingRows } = await supabase
       .from("gov_notifications")
       .select("id, slug, title");
 
-    const existingTitles = (existingRows || []).map(r => r.title.toLowerCase().slice(0, 30));
+    const existingTitles = new Set((existingRows || []).map(r => r.title.toLowerCase().slice(0, 30)));
     const existingSlugs = new Set((existingRows || []).map(r => r.slug));
+    const seenThisRun = new Set<string>();
 
-    // Filter only new items
-    const newItems = uniqueItems.filter(item => {
-      const key = item.title.toLowerCase().slice(0, 30);
-      return !existingTitles.some(t => t === key);
-    });
+    // Round-robin: up to 2 new items from each of the 25 feeds = up to 50 per run
+    const toProcess: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
+    const ITEMS_PER_FEED = 2;
+    const MAX_TOTAL = 50;
 
-    // Process up to 25 new items per run (all via fast rule-based parser — no AI calls)
-    const toProcess = newItems.slice(0, 25);
+    for (const feedItems of perFeedItems) {
+      let taken = 0;
+      for (const item of feedItems) {
+        if (toProcess.length >= MAX_TOTAL) break;
+        if (taken >= ITEMS_PER_FEED) break;
+        const key = item.title.toLowerCase().slice(0, 30);
+        if (existingTitles.has(key) || seenThisRun.has(key)) continue;
+        seenThisRun.add(key);
+        toProcess.push(item);
+        taken++;
+      }
+      if (toProcess.length >= MAX_TOTAL) break;
+    }
     const newlyAdded: string[] = [];
 
     for (const item of toProcess) {
@@ -395,7 +418,7 @@ export async function GET(_request: Request) {
       success: true,
       timestamp: new Date().toISOString(),
       feedsScanned: feeds.length,
-      totalItemsFound: uniqueItems.length,
+      totalItemsFound: perFeedItems.reduce((sum, f) => sum + f.length, 0),
       newItemsQueued: toProcess.length,
       newlyAddedCount: newlyAdded.length,
       newlyAdded
