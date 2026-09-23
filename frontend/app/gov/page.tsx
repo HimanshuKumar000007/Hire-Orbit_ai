@@ -50,7 +50,8 @@ export default function GovJobsPage() {
         const { data, error } = await supabase
           .from('gov_notifications')
           .select('*')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(200);
 
         if (!error && data && data.length > 0) {
           const mapped: GovJobNotification[] = data.map((d: any) => ({
@@ -80,7 +81,10 @@ export default function GovJobsPage() {
             isTrending: d.is_trending,
             isLeadStory: d.is_lead_story,
           }));
-          setNotifications(mapped);
+          // Merge: Supabase data first, then any static items not already in DB
+          const supabaseIds = new Set(mapped.map(m => m.id));
+          const staticOnly = GOV_JOB_NOTIFICATIONS.filter(s => !supabaseIds.has(s.id));
+          setNotifications([...mapped, ...staticOnly]);
         }
       } catch (err) {
         console.warn('Using static gov notifications fallback:', err);
@@ -88,6 +92,7 @@ export default function GovJobsPage() {
     }
     loadLiveNotifications();
   }, []);
+
 
   // Filter logic
   const filteredNotifications = useMemo(() => {
@@ -126,7 +131,7 @@ export default function GovJobsPage() {
       }
       return true;
     });
-  }, [activeTab, selectedCategory, selectedQualification, searchQuery]);
+  }, [notifications, activeTab, selectedCategory, selectedQualification, searchQuery]);
 
   const leadStory = notifications.find((j) => j.isLeadStory) || notifications[0];
 
