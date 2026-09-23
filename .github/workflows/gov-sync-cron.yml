@@ -2,8 +2,8 @@ name: 24/7 Government Jobs Sync Automation
 
 on:
   schedule:
-    # Runs every 3 hours 24/7
-    - cron: '0 */3 * * *'
+    # Runs every hour 24/7 (24 times a day)
+    - cron: '0 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:

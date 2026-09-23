@@ -83,6 +83,42 @@ const ORG_MAP: [RegExp, string, string][] = [
   [/\bnhm\b/i, "NHM", "state"],
 ];
 
+// ─── OFFICIAL PORTALS MAP: direct commission websites ─────────────────────────
+const OFFICIAL_PORTAL_MAP: Record<string, string> = {
+  "OPSC": "https://opsc.gov.in",
+  "BPSC": "https://bpsc.bih.nic.in",
+  "BSSC": "https://bssc.bihar.gov.in",
+  "UPSSSC": "https://upsssc.gov.in",
+  "UPPSC": "https://uppsc.up.nic.in",
+  "UP Police": "https://uppbpb.gov.in",
+  "RPSC / RSMSSB": "https://rpsc.rajasthan.gov.in",
+  "MPPSC / MP Vyapam": "https://esb.mp.gov.in",
+  "HSSC": "https://hssc.gov.in",
+  "DSSSB": "https://dsssb.delhi.gov.in",
+  "MPSC": "https://mpsc.gov.in",
+  "GPSC / GSSSB": "https://gpsc.gujarat.gov.in",
+  "WBPSC": "https://psc.wb.gov.in",
+  "KPSC": "https://kpsc.kar.nic.in",
+  "TNPSC": "https://tnpsc.gov.in",
+  "TSPSC": "https://tspsc.gov.in",
+  "APPSC": "https://psc.ap.gov.in",
+  "Kerala PSC": "https://keralapsc.gov.in",
+  "HPPSC": "https://hppsc.hp.gov.in",
+  "APSC": "https://apsc.nic.in",
+  "JKSSB / JKPSC": "https://jkssb.nic.in",
+  "UKPSC": "https://psc.uk.gov.in",
+  "JPSC": "https://jpsc.gov.in",
+  "CGPSC": "https://psc.cg.gov.in",
+  "Staff Selection Commission (SSC)": "https://ssc.gov.in",
+  "UPSC": "https://upsc.gov.in",
+  "Indian Railways (RRB/RRC)": "https://indianrailways.gov.in",
+  "IBPS": "https://ibps.in",
+  "State Bank of India (SBI)": "https://sbi.co.in/careers",
+  "Reserve Bank of India (RBI)": "https://opportunities.rbi.org.in",
+  "CTET / CBSE": "https://ctet.nic.in",
+  "AIIMS": "https://aiimsexams.ac.in",
+};
+
 // ─── SMART RULE-BASED PARSER (no AI, instant) ─────────────────────────────
 function quickParseNotice(raw: { title: string; link: string; pubDate: string; description: string }) {
   const t = raw.title;
@@ -243,6 +279,18 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     type === "answer-key" ? ["Written Exam (Completed)", "Review Provisional Answer Key", "Raise Objections if any within window"] :
     ["Written Examination / Screening Test", "Physical / Skill Test (if applicable)", "Document Verification", "Final Selection"];
 
+  // Extract age limit if mentioned in text (e.g., "21 to 42 years" or "18-30 years")
+  const ageMatch = (t + " " + desc).match(/(\d{2})\s*(?:to|-)\s*(\d{2})\s*years?/i);
+  const age_limit = ageMatch ? `${ageMatch[1]} - ${ageMatch[2]} Years (relaxation as per rules)` : "18 - 40 Years (as per category)";
+
+  // Extract application fee if mentioned in text (e.g., "Rs. 700" or "₹100")
+  const feeMatch = (t + " " + desc).match(/(?:rs\.?|₹)\s*(\d+)/i);
+  const generalFee = feeMatch ? `₹${feeMatch[1]}` : "See notification";
+
+  // Extract pay scale if mentioned in text (e.g., "Level 10" or "Pay Matrix Rs. 44,900")
+  const payMatch = (t + " " + desc).match(/(?:level\s*\d+|pay matrix\s*(?:rs\.?)?\s*[\d,]+|rs\.?\s*[\d,]+(?:\s*to\s*[\d,]+)?\s*per\s*month)/i);
+  const pay_scale = payMatch ? payMatch[0] : "As per Government Pay Scale";
+
   return {
     title: cleanTitle,
     short_title,
@@ -254,9 +302,9 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     vacancies,
     qualification,
     qualification_level,
-    age_limit: "18 - 40 Years (as per category)",
-    pay_scale: "As per Government Pay Scale",
-    application_fee: { generalOBC: "See notification", scStPh: "See notification", female: "See notification" },
+    age_limit,
+    pay_scale,
+    application_fee: { generalOBC: generalFee, scStPh: "Exempted / See notification", female: generalFee },
     important_dates: {
       startDate: type === "job" ? "Check Official Website" : "Announced",
       lastDate: type === "job" ? "As per notification" : "N/A (Exam Phase)",
@@ -266,8 +314,8 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     summary,
     key_highlights: highlights,
     selection_process,
-    official_pdf_url: raw.link,
-    apply_url: raw.link,
+    official_pdf_url: raw.link || (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
+    apply_url: (raw.link && !raw.link.includes("news.google.com")) ? raw.link : (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
     slug
   };
 }
@@ -356,7 +404,13 @@ export async function GET(_request: Request) {
       // 24. Patwari / Lekhpal / VDO / Gram Sachiv / Anganwadi
       "https://news.google.com/rss/search?q=(%22Lekhpal%22+OR+%22Patwari%22+OR+%22VDO+Recruitment%22+OR+%22Gram+Sachiv%22+OR+%22Anganwadi+Supervisor%22)+2026+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
       // 25. Northeast + Himalayan PSCs (JKSSB, HPPSC, UKPSC, APSC, OPSC, JPSC)
-      "https://news.google.com/rss/search?q=(%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22APSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+recruit+admit+result&hl=en-IN&gl=IN&ceid=IN:en"
+      "https://news.google.com/rss/search?q=(%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22APSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+recruit+admit+result&hl=en-IN&gl=IN&ceid=IN:en",
+      // 26. Sarkari Result & Sarkari Exam live feeds (Real-time crawler)
+      "https://news.google.com/rss/search?q=%22sarkariresult%22+OR+%22sarkari+result%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 27. PhysicsWallah (PW.live) Judiciary, Police & State Exams live feed
+      "https://news.google.com/rss/search?q=%22pw.live%22+OR+%22physicswallah%22+recruitment+admit+card+exam+date+2026&hl=en-IN&gl=IN&ceid=IN:en",
+      // 28. Adda247 & Testbook live feeds
+      "https://news.google.com/rss/search?q=(%22adda247%22+OR+%22testbook%22)+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en"
     ];
 
     // ── Fetch ALL feeds in PARALLEL (much faster than sequential) ──────────
