@@ -422,6 +422,109 @@ export const CURATED_JOB_DETAILS: Record<string, Partial<EnrichedJobDetails>> = 
       { title: "Download Official Cutoff Gazette PDF", description: "Category-wise normalized cutoff marks list", url: "https://uppbpb.gov.in", isExternal: true, badge: "Cutoff PDF", badgeColor: "blue" },
       { title: "Uttar Pradesh Police Recruitment Board", description: "Official homepage of UPPRPB", url: "https://uppbpb.gov.in", isExternal: true, badge: "Official Portal", badgeColor: "blue" }
     ]
+  },
+
+  // 4. OPSC Assistant Public Prosecutor (APP) 2026
+  'opsc-app-exam-date-2026-out-check-prelims-exam-date': {
+    isVacancyKnown: true,
+    domainName: "Legal & Prosecution Services (Home Department, Govt of Odisha)",
+    postWiseDetails: [
+      {
+        postName: "Assistant Public Prosecutor (APP) (Group-B)",
+        department: "Home Department, Government of Odisha",
+        classification: "Group B Gazetted (State Prosecution Service)",
+        vacancies: "172 Posts (58 Reserved for Women)",
+        ageLimit: "21 - 42 Years (as on 01.01.2026)",
+        qualification: "Bachelor's Degree in Law (LL.B.) from a recognized University + at least 2 years of active practice experience as an Advocate (certified by District & Sessions Judge) + ability to speak, read & write Odia (Class 10 standard)",
+        payScale: "Pay Matrix Level 10 (Basic ₹44,900/- under ORSP Rules, 2017) + DA, HRA & allowances"
+      }
+    ],
+    categoryDistribution: {
+      ur: "86 (29 Women)",
+      obc: "23 (8 Women) [SEBC]",
+      sc: "27 (9 Women)",
+      st: "36 (12 Women)",
+      ews: "Included in SEBC / UR",
+      total: "172 Posts (58 Women)"
+    },
+    examPatterns: [
+      {
+        tierName: "Stage 1: Preliminary Screening Examination (Objective Multiple Choice)",
+        mode: "Offline OMR Based Screening Test",
+        totalQuestions: 100,
+        totalMarks: 100,
+        duration: "2 Hours (120 Minutes)",
+        negativeMarking: "0.25 Marks (25%) deduction per incorrect response",
+        subjects: [
+          { name: "Code of Criminal Procedure (CrPC, 1973 / BNSS) & Indian Penal Code (IPC)", questions: 40, marks: 40 },
+          { name: "Indian Evidence Act (BSA) & Code of Civil Procedure (CPC)", questions: 30, marks: 30 },
+          { name: "General English & Legal Drafting Vocabulary", questions: 15, marks: 15 },
+          { name: "Constitution of India & Current National Legal Affairs", questions: 15, marks: 15 }
+        ]
+      },
+      {
+        tierName: "Stage 2: Main Written Examination (Descriptive Subjective Papers)",
+        mode: "Descriptive Pen & Paper Test (4 Papers, 150 Marks each)",
+        totalQuestions: "4 Subject Modules",
+        totalMarks: 600,
+        duration: "2.5 Hours per Paper",
+        negativeMarking: "No negative marking (Descriptive Evaluation)",
+        subjects: [
+          { name: "Paper I: General English (Essay, Precis Writing & Legal Drafting)", questions: 1, marks: 150 },
+          { name: "Paper II: Criminal Major Laws (CrPC, IPC & Indian Evidence Act)", questions: 5, marks: 150 },
+          { name: "Paper III: Criminal Minor Laws & Special Acts (POCSO, NDPS, SC/ST Act, Arms Act)", questions: 5, marks: 150 },
+          { name: "Paper IV: Miscellaneous Acts, High Court Rules & State Regulations", questions: 5, marks: 150 }
+        ]
+      },
+      {
+        tierName: "Stage 3: Viva-Voce / Interview & Personality Test",
+        mode: "Personal Interview before OPSC Selection Board",
+        totalQuestions: "Board Assessment",
+        totalMarks: 50,
+        duration: "20 to 30 Minutes",
+        negativeMarking: "N/A",
+        subjects: [
+          { name: "Assessment of Legal Knowledge, Courtroom Demeanour, Prosecution Ethics & Odia Fluency", questions: 1, marks: 50 }
+        ]
+      }
+    ],
+    applicationSteps: [
+      "Step 1: Visit the official portal of Odisha Public Service Commission at opsc.gov.in.",
+      "Step 2: Click on 'Recruitment to the Post of Assistant Public Prosecutor (Group-B) (Advt No. 2026)' and click 'Apply Online'.",
+      "Step 3: Register your Mobile Number and Email ID to generate your candidate login credentials.",
+      "Step 4: Fill in personal details, educational qualifications (LL.B degree marks), Bar Council enrollment number, and upload 2-year Advocate Practice Certificate issued by District & Sessions Judge.",
+      "Step 5: Upload scanned passport-size photograph, signature, and left thumb impression matching official specifications.",
+      "Step 6: Pay the application fee of ₹700 (General / SEBC) online (Refundable to those who appear in the Preliminary Examination). SC/ST/PwD of Odisha are exempted.",
+      "Step 7: Submit the completed online form and download the final printed Application Confirmation Slip."
+    ],
+    examDayGuidelines: [
+      "The Preliminary Examination is scheduled for November 1, 2026 (Sunday) across designated test centers in Cuttack, Bhubaneswar, Balasore, Berhampur, and Sambalpur.",
+      "Candidates must report to their respective test centers at least 90 minutes prior to exam commencement. Entry gates close 15 minutes before the exam start time.",
+      "Biometric verification (fingerprint capture and facial scan) will be conducted at the venue entrance.",
+      "Use ONLY transparent black or blue ballpoint pens for marking responses on OMR answer sheets.",
+      "Electronic gadgets including mobile phones, bluetooth earphones, smartwatches, digital wristbands, and legal bare acts/books are strictly prohibited inside the hall."
+    ],
+    requiredDocuments: [
+      "Printed copy of OPSC APP Admit Card / Hall Ticket with clear candidate photograph",
+      "Original Government Photo Identity Proof (Aadhaar Card with photo / Voter ID / Passport / Driving License / PAN Card)",
+      "Two (2) recent passport-sized color photographs identical to the photo uploaded during registration",
+      "Advocate Enrollment Certificate and 2 Years Practice Certificate issued by District & Sessions Judge",
+      "PwBD Certificate and Scribe Permission Letter (if applicable)"
+    ],
+    faqs: [
+      { question: "What is the total vacancy count for OPSC APP Recruitment 2026?", answer: "The Odisha Public Service Commission has officially announced 172 vacancies for Assistant Public Prosecutor (Group-B), of which 58 posts are reserved for women candidates." },
+      { question: "What is the exam date for the OPSC APP Preliminary Examination?", answer: "The OPSC APP Preliminary Examination is scheduled to be held on November 1, 2026 (Sunday). Admit cards will be released on opsc.gov.in 7 to 10 days before the exam date." },
+      { question: "What is the application fee for OPSC APP 2026 and is it refundable?", answer: "The application fee is ₹700 for General and SEBC candidates, which is refundable to candidates who appear for the Preliminary Examination. SC, ST, and PwD candidates of Odisha are completely exempted (₹0)." },
+      { question: "Is prior advocate practice experience mandatory for OPSC APP?", answer: "Yes, candidates must possess at least 2 years of active practice experience as an Advocate, certified by the District & Sessions Judge, in addition to an LL.B Degree." },
+      { question: "What is the salary and pay scale for an Assistant Public Prosecutor in Odisha?", answer: "Selected candidates receive Pay Matrix Level 10 with a starting basic pay of ₹44,900/- per month under the ORSP Rules, 2017, plus Dearness Allowance (DA), House Rent Allowance (HRA), and government perks." }
+    ],
+    usefulLinks: [
+      { title: "OPSC APP Online Application & Registration Portal", description: "Direct link to submit application form and track status", url: "https://opsc.gov.in", isExternal: true, badge: "Apply Online", badgeColor: "emerald" },
+      { title: "Download Official OPSC APP Notification Gazette PDF", description: "Complete recruitment circular with reservation rosters & rules", url: "https://opsc.gov.in", isExternal: true, badge: "Official PDF", badgeColor: "blue" },
+      { title: "Download Prelims Exam Date Schedule Circular", description: "Official notice announcing November 1, 2026 exam date", url: "https://opsc.gov.in", isExternal: true, badge: "Exam Date Notice", badgeColor: "blue" },
+      { title: "Odisha Public Service Commission (OPSC) Portal", description: "Homepage of OPSC (opsc.gov.in)", url: "https://opsc.gov.in", isExternal: true, badge: "Official Portal", badgeColor: "blue" },
+      { title: "Verify Eligibility with HireOrbit AI", description: "Instant 5-second degree, age & experience compatibility scan", url: "/onboarding", isExternal: false, badge: "AI Powered", badgeColor: "emerald" }
+    ]
   }
 };
 
