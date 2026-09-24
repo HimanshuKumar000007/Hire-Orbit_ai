@@ -27,29 +27,23 @@ export async function generateStaticParams() {
 }
 
 async function getJobBySlug(slug: string): Promise<GovJobNotification | null> {
-  // Check static data first
-  const staticJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug || j.id === slug);
-  if (staticJob) return staticJob;
-
-  // Handle common Sarkari Result permalink aliases
+  // Resolve common aliases to canonical slug
+  let targetSlug = slug;
   if (slug === 'rrb-ntpc-inter-level-07-2026' || slug === 'rrb-ntpc-10-plus-2-2026') {
-    const aliasJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === 'rrb-ntpc-10-plus-2-inter-level-recruitment-2026');
-    if (aliasJob) return aliasJob;
+    targetSlug = 'rrb-ntpc-10-plus-2-inter-level-recruitment-2026';
+  } else if (slug === 'ugc-net-admit-card-2026' || slug === 'ugc-net-2026-admit-card' || slug === 'ugc-net-june-2026-schedule-released-nta-to-conduct-exam-from-june-22-to-30-check') {
+    targetSlug = 'ugc-net-admit-card-2026';
   }
 
-  if (slug === 'ugc-net-admit-card-2026' || slug === 'ugc-net-2026-admit-card' || slug === 'ugc-net-june-2026-schedule-released-nta-to-conduct-exam-from-june-22-to-30-check') {
-    const aliasJob = GOV_JOB_NOTIFICATIONS.find((j) => j.id === 'ugc-net-admit-card-2026' || j.slug === 'ugc-net-admit-card-2026');
-    if (aliasJob) return aliasJob;
-  }
-
-  // Fallback to Supabase live database
+  // 1. Prioritize Supabase live database for verified, structured data
   try {
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('gov_notifications')
       .select('*')
-      .eq('slug', slug)
-      .single();
+      .or(`slug.eq."${targetSlug}",id.eq."${targetSlug}",slug.eq."${slug}",id.eq."${slug}"`)
+      .limit(1)
+      .maybeSingle();
 
     if (!error && data) {
       return {
@@ -75,17 +69,27 @@ async function getJobBySlug(slug: string): Promise<GovJobNotification | null> {
         selectionProcess: data.selection_process || [],
         officialPdfUrl: data.official_pdf_url,
         applyUrl: data.apply_url,
-        updatedAt: 'Official Gazette Verified',
+        updatedAt: 'Live Gazette Verified',
         isTrending: data.is_trending,
         isLeadStory: data.is_lead_story,
+        categoryDistribution: data.category_distribution || undefined,
+        postWiseDetails: data.post_wise_details || undefined,
+        examPattern: data.exam_pattern || undefined,
+        applicationInstructions: data.application_instructions || undefined,
+        documentsRequired: data.documents_required || undefined,
       };
     }
   } catch (err) {
-    console.warn("Failed to fetch job from Supabase:", err);
+    console.warn("Using fallback static gov notification for slug:", slug, err);
   }
+
+  // 2. Safe Fallback to static bootstrap data (ensures offline build & SSG never break)
+  const staticJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === targetSlug || j.id === targetSlug || j.slug === slug || j.id === slug);
+  if (staticJob) return staticJob;
 
   return null;
 }
+
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

@@ -419,27 +419,29 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
   // If it's an entrance exam (like UGC NET), or vacancies are unspecified/not applicable, vacancy MUST be null!
   if (!isEntranceOrEligibilityExam && hasRealNumericVacancies) {
     const curated = CURATED_JOB_DETAILS[job.id] || CURATED_JOB_DETAILS[job.slug];
+    const catDist = (job as any).categoryDistribution || curated?.categoryDistribution;
+    const postHierarchy = (job as any).postWiseDetails || curated?.postWiseDetails;
     vacancyData = {
       total: job.vacancies,
       isKnown: true,
-      categoryDistribution: curated?.categoryDistribution,
-      postHierarchy: curated?.postWiseDetails
+      categoryDistribution: catDist,
+      postHierarchy: postHierarchy
     };
   }
 
-  // Conditional Exam Pattern (Only if curated exists or verified)
+  // Conditional Exam Pattern (Priority: DB -> Curated -> null)
   const curated = CURATED_JOB_DETAILS[job.id] || CURATED_JOB_DETAILS[job.slug];
   let examPatternData: UniversalNotice['examPattern'] = null;
-  if (curated?.examPatterns && curated.examPatterns.length > 0) {
-    const tier = curated.examPatterns[0];
+  const rawPattern = (job as any).examPattern || (curated?.examPatterns && curated.examPatterns.length > 0 ? curated.examPatterns[0] : null);
+  if (rawPattern) {
     examPatternData = {
-      tierName: tier.tierName,
-      mode: tier.mode,
-      totalQuestions: tier.totalQuestions,
-      totalMarks: tier.totalMarks,
-      duration: tier.duration,
-      negativeMarking: tier.negativeMarking,
-      subjects: tier.subjects
+      tierName: rawPattern.tierName || "Written Examination",
+      mode: rawPattern.mode || "Computer Based Test (CBT)",
+      totalQuestions: rawPattern.totalQuestions,
+      totalMarks: rawPattern.totalMarks,
+      duration: rawPattern.duration,
+      negativeMarking: rawPattern.negativeMarking,
+      subjects: rawPattern.subjects
     };
   }
 
@@ -711,29 +713,22 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
     }
   }
 
-  // 2. Refined Exam & Recruitment Name
-  let examName = job.shortTitle || job.title;
-  let recruitmentName = job.title;
+  // 2. Refined Exam & Recruitment Name (Generic Normalization, Zero Hardcoded Exams)
   const yearMatch = title.match(/202[4-9]/);
   const examYear = yearMatch ? yearMatch[0] : "2026";
 
-  if (/rrb\s*alp/i.test(title)) {
-    examName = "RRB Assistant Loco Pilot (ALP)";
-    recruitmentName = `RRB ALP Recruitment ${examYear}`;
-  } else if (/rrb\s*ntpc/i.test(title)) {
-    examName = /graduate/i.test(title) ? "RRB NTPC (Graduate)" : "RRB NTPC (10+2 Inter Level)";
-    recruitmentName = `Railway NTPC Recruitment ${examYear}`;
-  } else if (/ssc\s*cgl/i.test(title)) {
-    examName = "SSC Combined Graduate Level (CGL)";
-    recruitmentName = `SSC CGL Examination ${examYear}`;
-  } else if (/ssc\s*chsl/i.test(title)) {
-    examName = "SSC Combined Higher Secondary Level (CHSL)";
-    recruitmentName = `SSC CHSL Recruitment ${examYear}`;
-  } else if (/up\s*police/i.test(title)) {
-    examName = /constable/i.test(title) ? "UP Police Constable" : "UP Police Sub Inspector";
-    recruitmentName = `UP Police Recruitment ${examYear}`;
-  } else if (/bpsc/i.test(title)) {
-    examName = /tre|teacher/i.test(title) ? "BPSC School Teacher (TRE)" : "BPSC Combined Competitive Exam (CCE)";
+  let examName = job.shortTitle || job.title;
+  // Generic cleanup of trailing notification headlines or post counts
+  examName = examName
+    .replace(/\s*:\s*\d[\d,]*.*$/i, '')
+    .replace(/\s*notification\s*released.*$/i, '')
+    .replace(/\s*online\s*form.*$/i, '')
+    .replace(/\s*recruitment\s*202[4-9].*$/i, '')
+    .trim();
+
+  let recruitmentName = job.title;
+  if (recruitmentName.length > 80 && examName) {
+    recruitmentName = `${examName} Recruitment ${examYear}`;
   }
 
   // 3. Extract Notification / Advertisement / CEN Number if present
@@ -800,21 +795,67 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
     dates.resultDate = rawDates.resultDate;
   }
 
-  // 6. Curated Fallback Details
+  // 6. Curated Fallback Details (Strictly secondary fallback)
   const curated = CURATED_JOB_DETAILS[job.id] || CURATED_JOB_DETAILS[job.slug];
 
-  // 7. Vacancy Breakdown (Strict: Only if real numeric vacancies exist)
+  // 7. Vacancy Breakdown (Priority 1: DB fields, Priority 2: Curated fallback)
   const isEntranceOrEligibilityExam = /ugc\s*net|ctet|stet|neet|gate|jee|cat\b|clat\b/i.test(title);
   const rawVacMatch = job.vacancies.match(/(\d[\d,]+)/);
   const hasRealNumericVacancies = !!rawVacMatch && !/see notification|as per notification|multiple|refer/i.test(job.vacancies);
+
+  // Helper to extract category distribution (handles upper/lower case keys)
+  const resolveCategoryDistribution = (rawDb: any, rawCurated: any) => {
+    const raw = rawDb || rawCurated;
+    if (!raw || typeof raw !== 'object') return undefined;
+    const getVal = (k: string) => {
+      const val = raw[k] ?? raw[k.toUpperCase()] ?? raw[k.toLowerCase()];
+      return val !== undefined && val !== null ? String(val) : "";
+    };
+    const ur = getVal('ur');
+    const obc = getVal('obc');
+    const sc = getVal('sc');
+    const st = getVal('st');
+    const ews = getVal('ews');
+    let total = getVal('total');
+    if (!total) {
+      const sum = [ur, obc, sc, st, ews]
+        .map(v => parseInt(v.replace(/,/g, ''), 10))
+        .filter(n => !isNaN(n))
+        .reduce((a, b) => a + b, 0);
+      if (sum > 0) total = sum.toLocaleString('en-IN');
+    }
+    if (!ur && !obc && !sc && !st && !ews && !total) return undefined;
+    return {
+      ur: ur || "-",
+      obc: obc || "-",
+      sc: sc || "-",
+      st: st || "-",
+      ews: ews || "-",
+      total: total || (job.vacancies || "-")
+    };
+  };
+
+  // Helper to resolve post hierarchy
+  const resolvePostHierarchy = (rawDbPosts: any, rawCuratedPosts: any): PostDetailItem[] | undefined => {
+    const raw = (Array.isArray(rawDbPosts) && rawDbPosts.length > 0) ? rawDbPosts : rawCuratedPosts;
+    if (!Array.isArray(raw) || raw.length === 0) return undefined;
+    return raw.map((p: any) => ({
+      postName: p.postName || p.name || p.title || "Government Post",
+      department: p.department || p.ministry,
+      classification: p.classification || p.cadre,
+      qualification: p.qualification || p.eligibility,
+      payScale: p.payScale || p.payLevel || p.salary,
+      vacancies: p.vacancies !== undefined ? String(p.vacancies) : (p.vacancy !== undefined ? String(p.vacancy) : undefined),
+    }));
+  };
 
   let vacancyData: UniversalRecruitmentNotice['vacancy'] = null;
   if (!isEntranceOrEligibilityExam && hasRealNumericVacancies) {
     vacancyData = {
       total: job.vacancies,
       isKnown: true,
-      categoryDistribution: curated?.categoryDistribution,
-      postHierarchy: curated?.postWiseDetails
+      categoryDistribution: resolveCategoryDistribution(job.categoryDistribution, curated?.categoryDistribution),
+      postHierarchy: resolvePostHierarchy(job.postWiseDetails, curated?.postWiseDetails)
     };
   }
 
@@ -873,31 +914,37 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
     };
   }
 
-  // 12. Selection Process (Dynamic stages)
+  // 12. Selection Process (Priority: DB -> Curated -> Selection Process Array)
   let selectionStages: string[] | null = null;
-  if (curated?.selectionStages && curated.selectionStages.length > 0) {
-    selectionStages = curated.selectionStages;
-  } else if (job.selectionProcess && job.selectionProcess.length > 0 && !job.selectionProcess[0].includes('Check Notification')) {
+  if (job.selectionProcess && job.selectionProcess.length > 0 && !job.selectionProcess[0].includes('Check Notification')) {
     selectionStages = job.selectionProcess;
+  } else if (curated?.selectionStages && curated.selectionStages.length > 0) {
+    selectionStages = curated.selectionStages;
   }
 
-  // 13. Exam Pattern (Only verified from curated or specs)
+  // 13. Exam Pattern (Priority: DB -> Curated -> null)
   let examPatternData: UniversalRecruitmentNotice['examPattern'] = null;
-  if (curated?.examPatterns && curated.examPatterns.length > 0) {
-    const tier = curated.examPatterns[0];
+  const rawPattern = job.examPattern || (curated?.examPatterns && curated.examPatterns.length > 0 ? curated.examPatterns[0] : null);
+  if (rawPattern) {
     examPatternData = {
-      tierName: tier.tierName,
-      mode: tier.mode,
-      totalQuestions: tier.totalQuestions,
-      totalMarks: tier.totalMarks,
-      duration: tier.duration,
-      negativeMarking: tier.negativeMarking,
-      subjects: tier.subjects
+      tierName: rawPattern.tierName || "Written Examination Scheme",
+      mode: rawPattern.mode || "Online (CBT) / Offline OMR",
+      totalQuestions: rawPattern.totalQuestions,
+      totalMarks: rawPattern.totalMarks,
+      duration: rawPattern.duration,
+      negativeMarking: rawPattern.negativeMarking,
+      subjects: Array.isArray(rawPattern.subjects) ? rawPattern.subjects.map((s: any) => ({
+        name: s.name || s.subject || "Section",
+        questions: s.questions ?? "-",
+        marks: s.marks ?? "-",
+      })) : undefined
     };
   }
 
-  // 14. Documents Required
-  const documentsRequired: string[] = curated?.requiredDocuments && curated.requiredDocuments.length > 0
+  // 14. Documents Required (Priority: DB -> Curated -> Standard Statutory Checklist)
+  const documentsRequired: string[] = (Array.isArray(job.documentsRequired) && job.documentsRequired.length > 0)
+    ? job.documentsRequired
+    : (curated?.requiredDocuments && curated.requiredDocuments.length > 0)
     ? curated.requiredDocuments
     : [
         "Recent Passport Size Color Photograph (with clear white background, taken within last 3 months).",
@@ -909,12 +956,14 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
         "Active personal Mobile Number and Email ID for receiving registration OTP and official communications."
       ];
 
-  // 15. How to Apply Steps
+  // 15. How to Apply Steps (Priority: DB -> Curated -> Standard Guided Walkthrough)
   const cleanApplyUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
     ? job.applyUrl
     : officialPortalUrl;
 
-  const howToApply: string[] = curated?.applicationSteps && curated.applicationSteps.length > 0
+  const howToApply: string[] = (Array.isArray(job.applicationInstructions) && job.applicationInstructions.length > 0)
+    ? job.applicationInstructions
+    : (curated?.applicationSteps && curated.applicationSteps.length > 0)
     ? curated.applicationSteps
     : [
         `Step 1: Visit the official commission portal at ${officialPortalUrl} or click the verified 'Apply Online' link below.`,

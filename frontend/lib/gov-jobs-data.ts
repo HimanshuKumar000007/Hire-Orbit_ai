@@ -41,6 +41,26 @@ export interface GovJobNotification {
   updatedAt: string;
   isTrending?: boolean;
   isLeadStory?: boolean;
+  categoryDistribution?: Record<string, string | number>;
+  postWiseDetails?: Array<{
+    postName: string;
+    department?: string;
+    classification?: string;
+    qualification?: string;
+    payScale?: string;
+    vacancies?: string | number;
+  }>;
+  examPattern?: {
+    tierName?: string;
+    mode?: string;
+    totalQuestions?: string | number;
+    totalMarks?: string | number;
+    duration?: string;
+    negativeMarking?: string;
+    subjects?: Array<{ name: string; questions: string | number; marks: string | number }>;
+  };
+  applicationInstructions?: string[];
+  documentsRequired?: string[];
 }
 
 export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [

@@ -75,6 +75,11 @@ export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
             updatedAt: 'Live Gazette Verified',
             isTrending: d.is_trending,
             isLeadStory: d.is_lead_story,
+            categoryDistribution: d.category_distribution || undefined,
+            postWiseDetails: d.post_wise_details || undefined,
+            examPattern: d.exam_pattern || undefined,
+            applicationInstructions: d.application_instructions || undefined,
+            documentsRequired: d.documents_required || undefined,
           }));
 
           const supabaseIds = new Set(mapped.map(m => m.id));
