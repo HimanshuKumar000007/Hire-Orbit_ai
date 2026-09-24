@@ -443,22 +443,24 @@ function extractDatesFromNotice(
 
   const formatExtractedDate = (p1: string, p2: string, p3?: string) => {
     const y = p3 && p3.match(/20\d\d/) ? p3.trim() : (year || "2026");
-    if (isNaN(Number(p1.replace(/\D/g, "")))) {
-      const d = p2.replace(/\D/g, "");
-      return `${d} ${p1} ${y}`.trim();
-    } else {
+    if (/\d/.test(p1)) {
+      // p1 is day digits (e.g., "27" or "27th"), p2 is month name
       const d = p1.replace(/\D/g, "");
       return `${d} ${p2} ${y}`.trim();
+    } else {
+      // p1 is month name, p2 is day digits
+      const d = p2.replace(/\D/g, "");
+      return `${d} ${p1} ${y}`.trim();
     }
   };
 
-  // 1. Exam Date Extraction
+  // 1. Exam Date Extraction (Supports "exam on September 27", "prelims on 27 Sep", DD/MM/YYYY, etc.)
   let examDate: string | null = null;
-  const examDateMatch = combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+  const examDateMatch = combined.match(new RegExp(`(?:cbt|exam(?:ination)?|written test|screening|prelims|mains|schedule[d]?)\\s*(?:on|from|for|is|held on|date[:\\s]+)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:cbt|exam(?:ination)?|written test|screening|prelims|mains|schedule[d]?)\\s*(?:on|from|for|is|held on|date[:\\s]+)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:on|from)\\s+([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:on|from)\\s+(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(/([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/);
+    || combined.match(/(?:exam|held|scheduled).*?([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/i);
 
   if (examDateMatch) {
     if (examDateMatch[0].includes("/") || examDateMatch[0].includes("-")) {
@@ -468,7 +470,16 @@ function extractDatesFromNotice(
     }
   }
 
-  // 2. Last Date to Apply
+  // 2. Admit Card / Hall Ticket Release Date Extraction
+  let admitCardDate: string | null = null;
+  const admitCardMatch = combined.match(new RegExp(`(?:admit card|hall ticket|call letter|city slip)\\s*(?:out|released|available|download|live)?\\s*(?:on|from)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:admit card|hall ticket|call letter|city slip)\\s*(?:out|released|available|download|live)?\\s*(?:on|from)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
+
+  if (admitCardMatch) {
+    admitCardDate = formatExtractedDate(admitCardMatch[1], admitCardMatch[2], admitCardMatch[3]);
+  }
+
+  // 3. Last Date to Apply
   let lastDate: string | null = null;
   const lastDateMatch = combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
@@ -482,7 +493,7 @@ function extractDatesFromNotice(
     }
   }
 
-  // 3. Start Date
+  // 4. Start Date
   let startDate: string | null = null;
   const startDateMatch = combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
@@ -491,17 +502,23 @@ function extractDatesFromNotice(
     startDate = formatExtractedDate(startDateMatch[1], startDateMatch[2], startDateMatch[3]);
   }
 
-  const isExamOrAdmitNotice = type === "admit-card" || /exam date|exam schedule|hall ticket|admit card|city slip/i.test(title);
-  const isResultNotice = type === "result";
-  const isAnswerKeyNotice = type === "answer-key";
+  // 5. Result Date
+  let resultDate: string | null = null;
+  const resultMatch = combined.match(new RegExp(`(?:result|scorecard|merit list)\\s*(?:out|declared|released|announced)?\\s*(?:on|from)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:result|scorecard|merit list)\\s*(?:out|declared|released|announced)?\\s*(?:on|from)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
 
+  if (resultMatch) {
+    resultDate = formatExtractedDate(resultMatch[1], resultMatch[2], resultMatch[3]);
+  }
+
+  // STRICT SEPARATION: Only store actual structured dates or null (never UI placeholder sentences)
   return {
-    startDate: startDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Advt Released (Completed)" : "Active / Check Official Portal"),
-    lastDate: lastDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Check Official Gazette Window"),
-    feeLastDate: lastDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Same as Application Last Date"),
-    examDate: examDate || (isExamOrAdmitNotice ? "Announced (Check Schedule Notice Below)" : "To be Notified Soon"),
-    admitCardDate: type === "admit-card" ? "Available Now / Upcoming" : (isExamOrAdmitNotice ? "7 - 10 Days Before Examination" : "Before Examination"),
-    resultDate: isResultNotice ? "Available Now (Declared)" : "To be Announced Post-Exam"
+    startDate: startDate || null,
+    lastDate: lastDate || null,
+    feeLastDate: lastDate || null,
+    examDate: examDate || null,
+    admitCardDate: admitCardDate || null,
+    resultDate: resultDate || null
   };
 }
 
@@ -997,15 +1014,22 @@ export async function GET(request: Request) {
         const newDates: Record<string, any> = parsed.important_dates || {};
 
         // Change Signals
+        const isPlaceholderText = (val: any) => Boolean(val && typeof val === "string" && /announced|upcoming|notified|check|available now \/|window closed|as per|active \/|tba/i.test(val));
+
         const hasDateChange = Boolean(
           newDates.lastDate && 
           newDates.lastDate !== oldDates.lastDate && 
-          !newDates.lastDate.includes("Check Official")
+          !isPlaceholderText(newDates.lastDate)
         );
         const hasExamChange = Boolean(
           newDates.examDate && 
           newDates.examDate !== oldDates.examDate && 
-          !newDates.examDate.includes("To be Notified Soon")
+          !isPlaceholderText(newDates.examDate)
+        );
+        const hasAdmitCardChange = Boolean(
+          newDates.admitCardDate &&
+          newDates.admitCardDate !== oldDates.admitCardDate &&
+          !isPlaceholderText(newDates.admitCardDate)
         );
         const hasBadgeChange = Boolean(
           parsed.badge_status && 
@@ -1029,10 +1053,11 @@ export async function GET(request: Request) {
           !parsed.apply_url.includes("employmentnews.gov.in")
         );
 
-        if (hasDateChange || hasExamChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate) {
+        if (hasDateChange || hasExamChange || hasAdmitCardChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate) {
           const reasons: string[] = [];
           if (hasDateChange) reasons.push(`Last date updated to ${newDates.lastDate}`);
           if (hasExamChange) reasons.push(`Exam date announced: ${newDates.examDate}`);
+          if (hasAdmitCardChange) reasons.push(`Admit card date: ${newDates.admitCardDate}`);
           if (hasBadgeChange) reasons.push(`Status changed to ${parsed.badge_status}`);
           if (hasVacanciesUpdate) reasons.push(`Vacancies confirmed: ${parsed.vacancies}`);
           if (hasVerificationUpgrade) reasons.push(`Upgraded to Official Verified`);
@@ -1048,11 +1073,21 @@ export async function GET(request: Request) {
             updatedSourcesTracked.push(parsed.sourceTrackingEntry);
           }
 
+          // Clean merge: real dates overwrite, placeholders stripped to null
+          const cleanMergedDates: Record<string, any> = { ...oldDates };
+          for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "admitCardDate", "resultDate"]) {
+            if (newDates[k]) {
+              cleanMergedDates[k] = newDates[k];
+            } else if (isPlaceholderText(cleanMergedDates[k])) {
+              cleanMergedDates[k] = null;
+            }
+          }
+
           if (!isTestMode) {
             await supabase.from("gov_notifications").update({
               badge_status: parsed.badge_status || existingMatch.badge_status,
               badge_color: parsed.badge_color || existingMatch.badge_color,
-              important_dates: { ...oldDates, ...newDates },
+              important_dates: cleanMergedDates,
               vacancies: hasVacanciesUpdate ? parsed.vacancies : existingMatch.vacancies,
               verification_status: hasVerificationUpgrade ? "verified" : existingMatch.verification_status,
               official_pdf_url: (hasVerificationUpgrade && parsed.official_pdf_url) ? parsed.official_pdf_url : existingMatch.official_pdf_url,

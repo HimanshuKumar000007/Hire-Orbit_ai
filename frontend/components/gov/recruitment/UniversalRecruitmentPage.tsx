@@ -146,8 +146,13 @@ export function UniversalRecruitmentPage({ notice, allNotices = [] }: UniversalR
         {/* N. Documents Required Checklist */}
         <DocumentsRequiredPanel documents={notice.documentsRequired} />
 
-        {/* O. How to Apply Online Steps */}
-        <HowToApplyPanel steps={notice.howToApply} authority={notice.authority} />
+        {/* O. How to Apply Online Steps / Download Admit Card Steps */}
+        <HowToApplyPanel 
+          steps={notice.howToApply} 
+          authority={notice.authority} 
+          isAdmitCard={/admit card|hall ticket|call letter/i.test(notice.title) || /admit card|hall ticket/i.test(notice.recruitmentName)}
+          examName={notice.examName}
+        />
 
         {/* P. Official Links Command Center (Verified Links Table) */}
         <RecruitmentOfficialLinks links={notice.links} authority={notice.authority} />

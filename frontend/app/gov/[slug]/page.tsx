@@ -133,7 +133,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const isAdmitNotice = job.type === 'admit-card' || 
-    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar/i.test(job.title);
+    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar|e-admit\b/i.test(job.title) ||
+    /admit card|hall ticket|city slip|exam date/i.test(job.badgeStatus || "");
 
   if (isAdmitNotice) {
     return {
@@ -211,7 +212,8 @@ export default async function GovJobDetailPage({ params }: PageProps) {
 
   // 🌟 UNIVERSAL ADMIT CARD / EXAM SCHEDULE SYSTEM
   const isAdmitNotice = job.type === 'admit-card' || 
-    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar/i.test(job.title);
+    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar|e-admit\b/i.test(job.title) ||
+    /admit card|hall ticket|city slip|exam date/i.test(job.badgeStatus || "");
 
   if (isAdmitNotice) {
     const universalNotice = normalizeToUniversalNotice(job);

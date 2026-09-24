@@ -67,6 +67,28 @@ export function isOfficialGovDomain(urlStr: string): boolean {
 }
 
 
+const MONTH_NAMES_REGEX = /jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?/i;
+const NUMERIC_DATE_REGEX = /\b[0-3]?\d[./-][0-1]?\d[./-](?:20)?\d\d\b/;
+
+export function cleanDateValue(val: any): string | undefined {
+  if (!val || typeof val !== 'string') return undefined;
+  const s = val.trim();
+  if (s.length < 4) return undefined;
+  // If it matches placeholder phrases without an explicit day + month/year
+  const isPlaceholder = /announced|upcoming|notified|check|available|window closed|as per|active \/|tba|soon|released|completed|same as/i.test(s);
+  if (isPlaceholder && !MONTH_NAMES_REGEX.test(s) && !NUMERIC_DATE_REGEX.test(s)) {
+    return undefined;
+  }
+  if (!MONTH_NAMES_REGEX.test(s) && !NUMERIC_DATE_REGEX.test(s)) {
+    return undefined;
+  }
+  return s;
+}
+
+export function isRealDateString(val?: string | null): boolean {
+  return !!cleanDateValue(val);
+}
+
 export interface UniversalNoticeDates {
   applicationStart?: string;
   applicationLastDate?: string;
@@ -78,6 +100,9 @@ export interface UniversalNoticeDates {
   shiftTimings?: string;
   answerKeyDate?: string;
   resultDate?: string;
+  // Explicit status indicators (strictly decoupled from date values)
+  examDateStatus?: 'ANNOUNCED' | 'NOTIFIED_SOON' | 'EXACT_DATE';
+  admitCardStatus?: 'AVAILABLE_NOW' | 'CITY_SLIP_OUT' | 'EXPECTED_SOON' | 'NOT_RELEASED';
 }
 
 export interface CredentialRule {
@@ -266,43 +291,56 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
     statusBadgeColor = 'amber';
   } else {
     status = 'ADMIT_CARD_AVAILABLE';
-    statusLabel = 'Admit Card / Schedule Live';
+    statusLabel = 'Admit Card Available Now';
     statusBadgeColor = 'emerald';
   }
 
-  // 4. Sanitize and Filter Dates (No "N/A" repetitions)
+  // 4. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
   const rawDates = job.importantDates || {};
   const dates: UniversalNoticeDates = {};
 
-  if (rawDates.startDate && !rawDates.startDate.includes('N/A') && rawDates.startDate !== 'Announced') {
-    dates.applicationStart = rawDates.startDate;
-  }
-  if (rawDates.lastDate && !rawDates.lastDate.includes('N/A')) {
-    dates.applicationLastDate = rawDates.lastDate;
-  } else if (isAdmitNotice) {
-    dates.applicationLastDate = "Registration Window Closed";
-  }
+  const cleanStart = cleanDateValue(rawDates.startDate);
+  if (cleanStart) dates.applicationStart = cleanStart;
 
-  if (rawDates.examDate && !rawDates.examDate.includes('N/A')) {
-    dates.examDate = rawDates.examDate;
-  } else if (isExamDateOnly || isAdmitNotice) {
-    dates.examDate = "Check Schedule Circular Below";
-  }
+  const cleanLast = cleanDateValue(rawDates.lastDate);
+  if (cleanLast) dates.applicationLastDate = cleanLast;
 
-  if (rawDates.admitCardDate && !rawDates.admitCardDate.includes('N/A')) {
-    dates.admitCardDate = rawDates.admitCardDate;
-  } else if (status === 'ADMIT_CARD_AVAILABLE') {
-    dates.admitCardDate = "Available Now";
-  } else if (status === 'EXAM_CITY_SLIP_AVAILABLE') {
-    dates.citySlipDate = "Available Now";
-    dates.admitCardDate = "3 - 4 Days Before Exam";
-  } else {
-    dates.admitCardDate = "To Be Announced Soon";
-  }
+  const cleanFeeLast = cleanDateValue(rawDates.feeLastDate);
+  if (cleanFeeLast) dates.feeLastDate = cleanFeeLast;
 
-  if (rawDates.resultDate && !rawDates.resultDate.includes('N/A')) {
-    dates.resultDate = rawDates.resultDate;
-  }
+  const cleanCorrection = cleanDateValue(rawDates.correctionLastDate);
+  if (cleanCorrection) dates.correctionLastDate = cleanCorrection;
+
+  const cleanCitySlip = cleanDateValue(rawDates.citySlipDate);
+  if (cleanCitySlip) dates.citySlipDate = cleanCitySlip;
+
+  const cleanExam = cleanDateValue(rawDates.examDate);
+  if (cleanExam) dates.examDate = cleanExam;
+
+  const cleanAdmit = cleanDateValue(rawDates.admitCardDate);
+  if (cleanAdmit) dates.admitCardDate = cleanAdmit;
+
+  const cleanResult = cleanDateValue(rawDates.resultDate);
+  if (cleanResult) dates.resultDate = cleanResult;
+
+  // Derive explicit, unambiguous status flags
+  const isAdmitReleasedSignal = status === 'ADMIT_CARD_AVAILABLE';
+  const isCitySlipSignal = status === 'EXAM_CITY_SLIP_AVAILABLE';
+  const isExamAnnouncedSignal = status === 'EXAM_DATE_ANNOUNCED' || !!dates.examDate || isAdmitReleasedSignal;
+
+  dates.admitCardStatus = isAdmitReleasedSignal
+    ? 'AVAILABLE_NOW'
+    : isCitySlipSignal
+    ? 'CITY_SLIP_OUT'
+    : status === 'EXPECTED_SOON'
+    ? 'EXPECTED_SOON'
+    : 'NOT_RELEASED';
+
+  dates.examDateStatus = dates.examDate
+    ? 'EXACT_DATE'
+    : isExamAnnouncedSignal
+    ? 'ANNOUNCED'
+    : 'NOTIFIED_SOON';
 
   // 5. Build Verified Links
   const links: UniversalNoticeLink[] = [];
@@ -845,34 +883,32 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
     statusBadgeColor = 'emerald';
   }
 
-  // 5. Sanitize and Filter Dates (Strictly No "N/A" repetitions)
+  // 5. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
   const dates: UniversalNoticeDates = {};
-  if (rawDates.startDate && !rawDates.startDate.includes('N/A') && rawDates.startDate !== 'Announced') {
-    dates.applicationStart = rawDates.startDate;
-  }
-  if (rawDates.lastDate && !rawDates.lastDate.includes('N/A')) {
-    dates.applicationLastDate = rawDates.lastDate;
-  }
-  if (rawDates.feeLastDate && !rawDates.feeLastDate.includes('N/A')) {
-    dates.feeLastDate = rawDates.feeLastDate;
-  } else if (dates.applicationLastDate) {
-    dates.feeLastDate = dates.applicationLastDate; // typically matches application last date
-  }
-  if (rawDates.correctionLastDate && !rawDates.correctionLastDate.includes('N/A')) {
-    dates.correctionLastDate = rawDates.correctionLastDate;
-  }
-  if (rawDates.examDate && !rawDates.examDate.includes('N/A')) {
-    dates.examDate = rawDates.examDate;
-  }
-  if (rawDates.admitCardDate && !rawDates.admitCardDate.includes('N/A')) {
-    dates.admitCardDate = rawDates.admitCardDate;
-  }
-  if (rawDates.answerKeyDate && !rawDates.answerKeyDate.includes('N/A')) {
-    dates.answerKeyDate = rawDates.answerKeyDate;
-  }
-  if (rawDates.resultDate && !rawDates.resultDate.includes('N/A')) {
-    dates.resultDate = rawDates.resultDate;
-  }
+  const cleanStart = cleanDateValue(rawDates.startDate);
+  if (cleanStart) dates.applicationStart = cleanStart;
+
+  const cleanLast = cleanDateValue(rawDates.lastDate);
+  if (cleanLast) dates.applicationLastDate = cleanLast;
+
+  const cleanFeeLast = cleanDateValue(rawDates.feeLastDate);
+  if (cleanFeeLast) dates.feeLastDate = cleanFeeLast;
+  else if (dates.applicationLastDate) dates.feeLastDate = dates.applicationLastDate;
+
+  const cleanCorrection = cleanDateValue(rawDates.correctionLastDate);
+  if (cleanCorrection) dates.correctionLastDate = cleanCorrection;
+
+  const cleanExam = cleanDateValue(rawDates.examDate);
+  if (cleanExam) dates.examDate = cleanExam;
+
+  const cleanAdmit = cleanDateValue(rawDates.admitCardDate);
+  if (cleanAdmit) dates.admitCardDate = cleanAdmit;
+
+  const cleanAnswerKey = cleanDateValue(rawDates.answerKeyDate);
+  if (cleanAnswerKey) dates.answerKeyDate = cleanAnswerKey;
+
+  const cleanResult = cleanDateValue(rawDates.resultDate);
+  if (cleanResult) dates.resultDate = cleanResult;
 
   // 6. Curated Fallback Details (Strictly secondary fallback)
   const curated = CURATED_JOB_DETAILS[job.id] || CURATED_JOB_DETAILS[job.slug];
@@ -1035,12 +1071,24 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
         "Active personal Mobile Number and Email ID for receiving registration OTP and official communications."
       ];
 
-  // 15. How to Apply Steps (Priority: DB -> Curated -> Standard Guided Walkthrough)
+  // 15. How to Apply Steps (Priority: Admit Card Download -> DB -> Curated -> Standard Guided Walkthrough)
   const cleanApplyUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
     ? job.applyUrl
     : officialPortalUrl;
 
-  const howToApply: string[] = (Array.isArray(job.applicationInstructions) && job.applicationInstructions.length > 0)
+  const isAdmitNotice = job.type === 'admit-card' || 
+    /admit card|hall ticket|call letter|city slip|city intimation/i.test(title) ||
+    /admit card/i.test(job.badgeStatus || "");
+
+  const howToApply: string[] = isAdmitNotice
+    ? [
+        `Step 1: Visit the official commission portal at ${officialPortalUrl} or click the direct verified link below.`,
+        `Step 2: On the candidate portal homepage, locate and click the active notice link for '${examName} Admit Card / Hall Ticket'.`,
+        "Step 3: Enter your verified credentials (Registration Number / Application Number & Date of Birth / Password).",
+        "Step 4: Solve the security captcha code and submit to access your candidate dashboard.",
+        "Step 5: Verify all printed details and download 2 clear color printouts of your examination hall ticket for exam day."
+      ]
+    : (Array.isArray(job.applicationInstructions) && job.applicationInstructions.length > 0)
     ? job.applicationInstructions
     : (curated?.applicationSteps && curated.applicationSteps.length > 0)
     ? curated.applicationSteps

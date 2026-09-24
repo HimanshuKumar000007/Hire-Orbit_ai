@@ -1,5 +1,5 @@
 import React from 'react';
-import { UniversalNoticeDates } from '@/lib/universal-notice-model';
+import { UniversalNoticeDates, isRealDateString } from '@/lib/universal-notice-model';
 import { Calendar, Clock, CheckCircle2, Flame, MapPin } from 'lucide-react';
 
 interface ImportantDatesCardProps {
@@ -7,33 +7,33 @@ interface ImportantDatesCardProps {
 }
 
 export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
-  // Build a list of active date items (only include fields that actually exist)
+  // Build a list of active date items (only include fields that actually exist and are real dates or explicit statuses)
   const items: Array<{ label: string; value: string; isHighlight?: boolean; highlightColor?: string; icon?: any }> = [];
 
-  if (dates.applicationStart) {
+  if (dates.applicationStart && isRealDateString(dates.applicationStart)) {
     items.push({
       label: "Application Window Opened",
       value: dates.applicationStart
     });
   }
 
-  if (dates.applicationLastDate) {
+  if (dates.applicationLastDate && isRealDateString(dates.applicationLastDate)) {
     items.push({
       label: "Registration Last Date",
       value: dates.applicationLastDate,
-      isHighlight: dates.applicationLastDate !== "Registration Window Closed",
+      isHighlight: true,
       highlightColor: "text-amber-400"
     });
   }
 
-  if (dates.correctionLastDate) {
+  if (dates.correctionLastDate && isRealDateString(dates.correctionLastDate)) {
     items.push({
       label: "Application Correction Window",
       value: dates.correctionLastDate
     });
   }
 
-  if (dates.citySlipDate) {
+  if (dates.citySlipDate && isRealDateString(dates.citySlipDate)) {
     items.push({
       label: "Exam City Slip Release",
       value: dates.citySlipDate,
@@ -41,9 +41,17 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-blue-400",
       icon: MapPin
     });
+  } else if (dates.admitCardStatus === 'CITY_SLIP_OUT') {
+    items.push({
+      label: "Exam City Slip",
+      value: "City Intimation Active",
+      isHighlight: true,
+      highlightColor: "text-blue-400",
+      icon: MapPin
+    });
   }
 
-  if (dates.admitCardDate) {
+  if (dates.admitCardDate && isRealDateString(dates.admitCardDate)) {
     items.push({
       label: "Admit Card Download Date",
       value: dates.admitCardDate,
@@ -51,12 +59,28 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-emerald-400",
       icon: CheckCircle2
     });
+  } else if (dates.admitCardStatus === 'AVAILABLE_NOW') {
+    items.push({
+      label: "Admit Card Download",
+      value: "Available Now",
+      isHighlight: true,
+      highlightColor: "text-emerald-400",
+      icon: CheckCircle2
+    });
   }
 
-  if (dates.examDate) {
+  if (dates.examDate && isRealDateString(dates.examDate)) {
     items.push({
       label: "Examination Schedule Date",
       value: dates.examDate,
+      isHighlight: true,
+      highlightColor: "text-blue-400",
+      icon: Flame
+    });
+  } else if (dates.examDateStatus === 'ANNOUNCED') {
+    items.push({
+      label: "Examination Schedule",
+      value: "Official Schedule Announced",
       isHighlight: true,
       highlightColor: "text-blue-400",
       icon: Flame
@@ -70,7 +94,7 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
     });
   }
 
-  if (dates.answerKeyDate) {
+  if (dates.answerKeyDate && isRealDateString(dates.answerKeyDate)) {
     items.push({
       label: "Provisional Answer Key",
       value: dates.answerKeyDate,
@@ -78,7 +102,7 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
     });
   }
 
-  if (dates.resultDate) {
+  if (dates.resultDate && isRealDateString(dates.resultDate)) {
     items.push({
       label: "Scorecard / Result Date",
       value: dates.resultDate,

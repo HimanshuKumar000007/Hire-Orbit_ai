@@ -87,7 +87,15 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
             Admit Card Status
           </span>
           <span className="text-sm font-bold text-white block">
-            {notice.dates.admitCardDate || "Check Schedule Notice"}
+            {notice.dates.admitCardDate
+              ? `Available (${notice.dates.admitCardDate})`
+              : (notice.dates.admitCardStatus === 'AVAILABLE_NOW' || notice.status === 'ADMIT_CARD_AVAILABLE')
+              ? "Available Now"
+              : (notice.dates.admitCardStatus === 'CITY_SLIP_OUT' || notice.status === 'EXAM_CITY_SLIP_AVAILABLE')
+              ? "Exam City Slip Out"
+              : (notice.dates.admitCardStatus === 'EXPECTED_SOON' || notice.status === 'EXPECTED_SOON')
+              ? "Expected Soon"
+              : "Release Pending"}
           </span>
         </div>
 
@@ -96,7 +104,11 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
             Exam Date &amp; Window
           </span>
           <span className="text-sm font-bold text-blue-400 block">
-            {notice.dates.examDate || "Notify Shortly"}
+            {notice.dates.examDate
+              ? notice.dates.examDate
+              : (notice.dates.examDateStatus === 'ANNOUNCED' || notice.status === 'EXAM_DATE_ANNOUNCED' || notice.status === 'ADMIT_CARD_AVAILABLE')
+              ? "Announced (Check Schedule Notice)"
+              : "To be Notified Soon"}
           </span>
         </div>
 

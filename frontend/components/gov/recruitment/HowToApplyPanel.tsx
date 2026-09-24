@@ -3,12 +3,22 @@ import { FileText, ChevronRight } from 'lucide-react';
 interface HowToApplyPanelProps {
   steps: string[];
   authority: string;
+  isAdmitCard?: boolean;
+  examName?: string;
 }
 
-export function HowToApplyPanel({ steps, authority }: HowToApplyPanelProps) {
+export function HowToApplyPanel({ steps, authority, isAdmitCard, examName }: HowToApplyPanelProps) {
   if (!steps || steps.length === 0) {
     return null;
   }
+
+  const title = isAdmitCard
+    ? `How to Download ${examName || authority} Admit Card`
+    : "Step-by-Step Instructions: How to Apply Online";
+
+  const subtitle = isAdmitCard
+    ? `Official hall ticket download procedure for ${authority}`
+    : `Official application procedure for ${authority}`;
 
   return (
     <div className="rounded-2xl glass p-6 border border-white/10 mb-8 bg-zinc-900/40">
@@ -19,10 +29,10 @@ export function HowToApplyPanel({ steps, authority }: HowToApplyPanelProps) {
           </div>
           <div>
             <h2 className="text-base font-bold text-white tracking-tight">
-              Step-by-Step Instructions: How to Apply Online
+              {title}
             </h2>
             <p className="text-xs text-zinc-400">
-              Official application procedure for {authority}
+              {subtitle}
             </p>
           </div>
         </div>
