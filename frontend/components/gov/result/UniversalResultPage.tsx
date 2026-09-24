@@ -4,6 +4,7 @@ import { UniversalResultNotice } from "@/lib/universal-notice-model";
 import { GovJobNotification } from "@/lib/gov-jobs-data";
 import { ResultHero } from "./ResultHero";
 import { ResultStatusCard } from "./ResultStatusCard";
+import { ResultPrimaryActions } from "./ResultPrimaryActions";
 import { ResultQuickFacts } from "./ResultQuickFacts";
 import { ResultImportantDates } from "./ResultImportantDates";
 import { ResultDetailsPanel } from "./ResultDetailsPanel";
@@ -89,10 +90,13 @@ export function UniversalResultPage({ notice, allNotices = [] }: UniversalResult
       {/* Main Content Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* C. Current Result Status Card with Desktop & Mobile Sticky CTAs */}
+        {/* C. Current Result Status Card */}
         <ResultStatusCard notice={notice} />
 
-        {/* D. Scannable Quick Facts Overview (Only verified fields) */}
+        {/* D. Prominent Primary Actions (Check Result, Scorecard, Cutoff, Merit List) */}
+        <ResultPrimaryActions notice={notice} />
+
+        {/* E. Scannable Quick Facts Overview (Only verified fields) */}
         <ResultQuickFacts facts={notice.quickFacts} />
 
         {/* E. Important Dates Timeline (No N/A clutter) */}

@@ -34,9 +34,38 @@ export interface UniversalNoticeLink {
   badgeColor?: 'emerald' | 'blue' | 'amber' | 'purple';
   isOfficial: boolean;
   isExternal: boolean;
-  verificationLevel: VerificationLevel;
   sourceNote?: string;
+  sourceName?: string;
+  sourceType?: 'official' | 'aggregator';
+  linkType?: string;
+  verificationStatus?: string;
+  verificationLevel?: VerificationLevel;
 }
+
+export function isOfficialGovDomain(urlStr: string): boolean {
+  if (!urlStr) return false;
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host.endsWith(".gov.in") ||
+      host.endsWith(".nic.in") ||
+      host.endsWith(".ac.in") ||
+      host.endsWith(".edu.in") ||
+      host === "ibps.in" ||
+      host.endsWith(".ibps.in") ||
+      host === "sbi.co.in" ||
+      host.endsWith(".sbi.co.in") ||
+      host === "rbi.org.in" ||
+      host.endsWith(".rbi.org.in") ||
+      host === "nta.ac.in" ||
+      host.endsWith(".nta.ac.in")
+    );
+  } catch {
+    return false;
+  }
+}
+
 
 export interface UniversalNoticeDates {
   applicationStart?: string;
@@ -1319,8 +1348,10 @@ export interface UniversalResultNotice {
   source: {
     name: string;
     officialUrl: string;
-    verificationStatus: 'Official Source Verified' | 'Gazette Circular Verified';
+    verificationStatus: 'Official Source Verified' | 'Gazette Circular Verified' | 'Source Confirmed' | 'Sarkari Result Source' | string;
     lastVerifiedAt: string;
+    isOfficial?: boolean;
+    sourceType?: 'official' | 'aggregator';
   };
 
   // Dynamic FAQs
@@ -1338,22 +1369,49 @@ export function generateResultFingerprint(
   stage: string = "general",
   region: string = "all"
 ): string {
-  const clean = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "");
+  const canonicalAuth = getCanonicalAuthorityKey(authority);
 
-  const cleanAuth = clean(authority).slice(0, 15);
-  const cleanExam = clean(examName)
-    .replace(/result|scorecard|merit_list|marks|exam/g, "")
-    .slice(0, 25);
-  const cleanYear = year.replace(/[^0-9]/g, "");
-  const cleanStage = clean(stage).slice(0, 15);
-  const cleanRegion = clean(region).slice(0, 15);
+  let cleanExam = (examName || "")
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/20\d\d/g, " ")
+    .replace(/\b(result|scorecard|merit\s*list|selection\s*list|marks|exam|examination|declared|released|out|download|check|final|provisional|announcement|notice)\b/gi, " ");
 
-  return `${cleanAuth}_${cleanExam}_${cleanYear}_result_${cleanStage}_${cleanRegion}`;
+  if (canonicalAuth) {
+    cleanExam = cleanExam.replace(new RegExp(`\\b${canonicalAuth}\\b`, 'gi'), " ");
+  }
+
+  const examKey = cleanExam
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 30) || "exam";
+
+  const cleanYear = (year || "2026").replace(/[^0-9]/g, "").slice(0, 4) || "2026";
+
+  let cleanStage = "general";
+  const st = (stage || "").toLowerCase();
+  if (/cbt\s*[-]?\s*1/i.test(st)) cleanStage = "cbt1";
+  else if (/cbt\s*[-]?\s*2/i.test(st)) cleanStage = "cbt2";
+  else if (/tier\s*[-]?\s*1/i.test(st)) cleanStage = "tier1";
+  else if (/tier\s*[-]?\s*2/i.test(st)) cleanStage = "tier2";
+  else if (/prelims|preliminary/i.test(st)) cleanStage = "prelims";
+  else if (/mains/i.test(st)) cleanStage = "mains";
+  else if (/final/i.test(st)) cleanStage = "final";
+  else if (/pet|pst|physical/i.test(st)) cleanStage = "pet";
+  else if (/skill|typing/i.test(st)) cleanStage = "skill";
+  else if (/interview/i.test(st)) cleanStage = "interview";
+  else {
+    cleanStage = st.replace(/[^a-z0-9]/g, "_").replace(/^_+|_+$/g, "").slice(0, 15) || "general";
+  }
+
+  let cleanRegion = (region || "all")
+    .toLowerCase()
+    .replace(/all\s*india/i, "all")
+    .replace(/[^a-z0-9]/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 15) || "all";
+
+  return `${canonicalAuth}_${examKey}_${cleanYear}_result_${cleanStage}_${cleanRegion}`;
 }
 
 // ─── AUTHENTIC NORMALIZATION ENGINE FOR RESULTS ────────────────────────────
@@ -1373,8 +1431,16 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     }
   }
 
-  // 2. Exam Name & Stage Resolution
+  // 2. Exam Name & Stage Resolution (Generic Zero-Hardcoding)
   let examName = job.shortTitle || job.title;
+  examName = examName
+    .replace(/\b(result|declared|scorecard|cut[\s-]?off|marks|merit\s*list|selection\s*list|out|available|download|check|online\s*link|link\s*active|released|announcement|notice|202[4-9])\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!examName || examName.length < 3) {
+    examName = job.shortTitle || job.title;
+  }
+
   let stage = "Written Examination";
   const yearMatch = title.match(/202[4-9]/);
   const examYear = yearMatch ? yearMatch[0] : "2026";
@@ -1397,23 +1463,6 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     stage = "Physical Test (PET / PST)";
   } else if (/skill|typing/i.test(title + " " + job.summary)) {
     stage = "Skill Test / Typing Test";
-  }
-
-  // Refine exam name
-  if (/rrb\s*alp/i.test(title)) {
-    examName = "RRB Assistant Loco Pilot (ALP)";
-  } else if (/rrb\s*ntpc/i.test(title)) {
-    examName = /graduate/i.test(title) ? "RRB NTPC (Graduate)" : "RRB NTPC (10+2 Inter Level)";
-  } else if (/ssc\s*cgl/i.test(title)) {
-    examName = "SSC Combined Graduate Level (CGL)";
-  } else if (/ssc\s*chsl/i.test(title)) {
-    examName = "SSC Combined Higher Secondary Level (CHSL)";
-  } else if (/up\s*police/i.test(title)) {
-    examName = /constable/i.test(title) ? "UP Police Constable" : "UP Police Sub Inspector";
-  } else if (/ugc\s*net/i.test(title)) {
-    examName = "UGC NET Examination";
-  } else if (/ctet/i.test(title)) {
-    examName = "Central Teacher Eligibility Test (CTET)";
   }
 
   const resultName = `${examName} ${stage} Result ${examYear}`;
@@ -1483,16 +1532,31 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     dates.cutoffDate = "Released Along with Result";
   }
 
-  // 5. Clean Official URLs
-  const cleanPdfUrl = (job.officialPdfUrl && !job.officialPdfUrl.includes('news.google.com'))
-    ? job.officialPdfUrl
-    : officialPortalUrl;
+  // 5. Clean URLs & Classify Source (Zero-Block Sarkari Result / Aggregator Policy)
+  const rawResultUrl = job.applyUrl || "";
+  const rawPdfUrl = job.officialPdfUrl || "";
+  const isOfficialResultLink = isOfficialGovDomain(rawResultUrl);
+  const isOfficialPdf = isOfficialGovDomain(rawPdfUrl);
+  const isSarkariResult = /sarkariresult/i.test(rawResultUrl) || /sarkariresult/i.test(rawPdfUrl);
 
-  const cleanResultUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
-    ? job.applyUrl
-    : cleanPdfUrl;
+  const resultSourceType: 'official' | 'aggregator' = isOfficialResultLink ? 'official' : 'aggregator';
+  const resultSourceName = isOfficialResultLink 
+    ? authority 
+    : (isSarkariResult ? 'Sarkari Result' : 'Source Confirmed');
+  const verificationStatus: string = isOfficialResultLink 
+    ? 'Official Source Verified' 
+    : 'Source Confirmed';
 
-  // 6. Action URLs (only when verified!)
+  // Candidate Access Link: NEVER block or drop the link, even if from Sarkari Result!
+  const cleanResultUrl = (rawResultUrl && !rawResultUrl.includes('news.google.com') && !rawResultUrl.includes('employmentnews.gov.in'))
+    ? rawResultUrl
+    : (rawPdfUrl && !rawPdfUrl.includes('news.google.com') ? rawPdfUrl : officialPortalUrl);
+
+  const cleanPdfUrl = (rawPdfUrl && !rawPdfUrl.includes('news.google.com') && !rawPdfUrl.includes('employmentnews.gov.in'))
+    ? rawPdfUrl
+    : (isOfficialResultLink ? cleanResultUrl : officialPortalUrl);
+
+  // 6. Action URLs (only when verified/available, never blocked)
   const primaryActionUrls: UniversalResultNotice['primaryActionUrls'] = {
     checkResultUrl: (status !== 'EXPECTED_SOON') ? cleanResultUrl : undefined,
     downloadScorecardUrl: (isScorecardLive) ? cleanResultUrl : undefined,
@@ -1606,18 +1670,23 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
   // 14. Official Links Command Center
   const links: UniversalNoticeLink[] = [];
 
-  // Primary Result Link
-  if (status !== 'EXPECTED_SOON') {
+  // Primary Result Link (Candidate access preserved whether official or aggregator)
+  if (status !== 'EXPECTED_SOON' && cleanResultUrl) {
     links.push({
-      title: `Check ${resultName}`,
+      title: isOfficialResultLink ? `Check ${resultName} (Official)` : `Check ${resultName} (via ${resultSourceName})`,
       url: cleanResultUrl,
       type: 'result',
-      badge: 'Result Live',
-      badgeColor: 'emerald',
-      isOfficial: true,
+      badge: isOfficialResultLink ? 'Official Link' : `${resultSourceName} Link`,
+      badgeColor: isOfficialResultLink ? 'emerald' : 'amber',
+      isOfficial: isOfficialResultLink,
       isExternal: true,
-      verificationLevel: 'VERIFIED',
-      sourceNote: 'Direct official commission result portal'
+      verificationLevel: isOfficialResultLink ? 'VERIFIED' : 'DERIVED',
+      sourceNote: isOfficialResultLink 
+        ? 'Direct official commission result portal' 
+        : `${resultSourceName} candidate access gateway (Official commission link pending)`,
+      sourceName: resultSourceName,
+      sourceType: resultSourceType,
+      verificationStatus
     });
   }
 
@@ -1757,10 +1826,12 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     nextStage,
     links,
     source: {
-      name: authority,
+      name: resultSourceName,
       officialUrl: officialPortalUrl,
-      verificationStatus: 'Official Source Verified',
-      lastVerifiedAt: job.updatedAt || 'Official Gazette Verified'
+      verificationStatus,
+      lastVerifiedAt: job.updatedAt || 'Official Gazette Verified',
+      isOfficial: isOfficialResultLink,
+      sourceType: resultSourceType
     },
     faqs,
     fingerprint

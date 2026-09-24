@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { generateRecruitmentFingerprint } from "@/lib/universal-notice-model";
+import { generateRecruitmentFingerprint, generateResultFingerprint } from "@/lib/universal-notice-model";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
@@ -606,14 +606,53 @@ function quickParseNotice(
 
   const short_title = cleanTitle.length > 55 ? cleanTitle.slice(0, 55).trim() + "…" : cleanTitle;
 
-  // 7. Extract Notification Number (CEN, Advt No, Notification No)
+  // 7. Location Detection (Moved up for fingerprint accuracy)
+  let location = "All India";
+  if (/\bup\b|uttar pradesh|upsssc|uppsc|upprpb/i.test(t + desc)) location = "Uttar Pradesh";
+  else if (/bihar|bpsc|bssc/i.test(t + desc)) location = "Bihar";
+  else if (/rajasthan|rpsc|rsmssb/i.test(t + desc)) location = "Rajasthan";
+  else if (/madhya pradesh|mppsc|mpesb|vyapam/i.test(t + desc)) location = "Madhya Pradesh";
+  else if (/haryana|hssc/i.test(t + desc)) location = "Haryana";
+  else if (/delhi|dsssb/i.test(t + desc)) location = "Delhi";
+  else if (/maharashtra|mpsc/i.test(t + desc)) location = "Maharashtra";
+  else if (/gujarat|gpsc|gsssb/i.test(t + desc)) location = "Gujarat";
+  else if (/west bengal|wbpsc/i.test(t + desc)) location = "West Bengal";
+  else if (/karnataka|kpsc/i.test(t + desc)) location = "Karnataka";
+  else if (/tamil nadu|tnpsc/i.test(t + desc)) location = "Tamil Nadu";
+  else if (/telangana|tspsc/i.test(t + desc)) location = "Telangana";
+  else if (/andhra|appsc/i.test(t + desc)) location = "Andhra Pradesh";
+  else if (/kerala/i.test(t + desc)) location = "Kerala";
+  else if (/assam|apsc/i.test(t + desc)) location = "Assam";
+  else if (/jharkhand|jpsc/i.test(t + desc)) location = "Jharkhand";
+  else if (/odisha|opsc/i.test(t + desc)) location = "Odisha";
+  else if (/chhattisgarh|cgpsc/i.test(t + desc)) location = "Chhattisgarh";
+  else if (/himachal|hppsc/i.test(t + desc)) location = "Himachal Pradesh";
+  else if (/uttarakhand|ukpsc/i.test(t + desc)) location = "Uttarakhand";
+  else if (/jammu|kashmir|jkssb|jkpsc/i.test(t + desc)) location = "J&K / Ladakh";
+  else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
+
+  // 8. Extract Notification Number (CEN, Advt No, Notification No)
   const notifMatch = (t + " " + desc).match(/\b(?:cen|advt\.?\s*no\.?|notification\s*no\.?|employment\s*notice\s*no\.?)\s*[:.-]?\s*([a-z0-9\/-]+)/i);
   const notificationNumber = notifMatch ? notifMatch[1].trim() : undefined;
 
-  // 8. Canonical Fingerprint for Deduplication
-  const fingerprint = generateRecruitmentFingerprint(organization, short_title || cleanTitle, year, notificationNumber);
+  // 9. Canonical Fingerprint for Deduplication
+  let resultStage = "general";
+  if (/cbt\s*[-]?\s*1/i.test(t + " " + desc)) resultStage = "cbt1";
+  else if (/cbt\s*[-]?\s*2/i.test(t + " " + desc)) resultStage = "cbt2";
+  else if (/tier\s*[-]?\s*1/i.test(t + " " + desc)) resultStage = "tier1";
+  else if (/tier\s*[-]?\s*2/i.test(t + " " + desc)) resultStage = "tier2";
+  else if (/prelims|preliminary/i.test(t + " " + desc)) resultStage = "prelims";
+  else if (/mains/i.test(t + " " + desc)) resultStage = "mains";
+  else if (/final/i.test(t + " " + desc)) resultStage = "final";
+  else if (/pet|pst|physical/i.test(t + " " + desc)) resultStage = "pet";
+  else if (/skill|typing/i.test(t + " " + desc)) resultStage = "skill";
+  else if (/interview/i.test(t + " " + desc)) resultStage = "interview";
 
-  // 9. Qualification Matrix
+  const fingerprint = type === "result"
+    ? generateResultFingerprint(organization, cleanTitle, year, resultStage, location)
+    : generateRecruitmentFingerprint(organization, short_title || cleanTitle, year, notificationNumber);
+
+  // 10. Qualification Matrix
   let qualification = "Bachelor's Degree in any discipline / Relevant Qualification";
   let qualification_level: "10th" | "12th" | "graduate" | "diploma" | "postgraduate" = "graduate";
 
@@ -678,31 +717,6 @@ function quickParseNotice(
     qualification_level = "diploma";
   }
 
-  // 10. Location Detection
-  let location = "All India";
-  if (/\bup\b|uttar pradesh|upsssc|uppsc|upprpb/i.test(t + desc)) location = "Uttar Pradesh";
-  else if (/bihar|bpsc|bssc/i.test(t + desc)) location = "Bihar";
-  else if (/rajasthan|rpsc|rsmssb/i.test(t + desc)) location = "Rajasthan";
-  else if (/madhya pradesh|mppsc|mpesb|vyapam/i.test(t + desc)) location = "Madhya Pradesh";
-  else if (/haryana|hssc/i.test(t + desc)) location = "Haryana";
-  else if (/delhi|dsssb/i.test(t + desc)) location = "Delhi";
-  else if (/maharashtra|mpsc/i.test(t + desc)) location = "Maharashtra";
-  else if (/gujarat|gpsc|gsssb/i.test(t + desc)) location = "Gujarat";
-  else if (/west bengal|wbpsc/i.test(t + desc)) location = "West Bengal";
-  else if (/karnataka|kpsc/i.test(t + desc)) location = "Karnataka";
-  else if (/tamil nadu|tnpsc/i.test(t + desc)) location = "Tamil Nadu";
-  else if (/telangana|tspsc/i.test(t + desc)) location = "Telangana";
-  else if (/andhra|appsc/i.test(t + desc)) location = "Andhra Pradesh";
-  else if (/kerala/i.test(t + desc)) location = "Kerala";
-  else if (/assam|apsc/i.test(t + desc)) location = "Assam";
-  else if (/jharkhand|jpsc/i.test(t + desc)) location = "Jharkhand";
-  else if (/odisha|opsc/i.test(t + desc)) location = "Odisha";
-  else if (/chhattisgarh|cgpsc/i.test(t + desc)) location = "Chhattisgarh";
-  else if (/himachal|hppsc/i.test(t + desc)) location = "Himachal Pradesh";
-  else if (/uttarakhand|ukpsc/i.test(t + desc)) location = "Uttarakhand";
-  else if (/jammu|kashmir|jkssb|jkpsc/i.test(t + desc)) location = "J&K / Ladakh";
-  else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
-
   // 11. Authoritative Factual Summary (HireOrbitAI native copy)
   const noticeTypeLabel = type === "recruitment" ? "Recruitment Notification" : badge_status;
   const summary = `${organization} has officially announced the ${noticeTypeLabel} for ${cleanTitle}. ${vacancies !== "See Notification" ? `Total verified vacancies: ${vacancies}. ` : ""}Eligible candidates possessing ${qualification} are advised to review the official schedule and eligibility conditions.`;
@@ -718,19 +732,37 @@ function quickParseNotice(
   let apply_url: string = officialMapping?.portalUrl || "https://employmentnews.gov.in";
   let verification_status: "verified" | "pending" = "pending";
 
-  if (isDirectOfficialUrl) {
-    official_pdf_url = raw.link;
-    apply_url = raw.link;
-    verification_status = "verified";
-  } else if (!source.isAggregator && source.trustLevel === "official") {
-    verification_status = "verified";
-    official_pdf_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
-    apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+  if (type === "result") {
+    if (isDirectOfficialUrl) {
+      official_pdf_url = raw.link;
+      apply_url = raw.link;
+      verification_status = "verified";
+    } else if (!source.isAggregator && source.trustLevel === "official") {
+      verification_status = "verified";
+      official_pdf_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+      apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+    } else {
+      // RESULT SOURCE POLICY: Sarkari Result / Aggregator candidate access is NEVER blocked!
+      // Retain the aggregator link so candidates have direct immediate result access.
+      verification_status = "pending";
+      official_pdf_url = null;
+      apply_url = raw.link;
+    }
   } else {
-    // AGGREGATOR DISCOVERY: Never treat aggregator URL as official!
-    verification_status = "pending";
-    official_pdf_url = null; // Left null until official source confirms
-    apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+    if (isDirectOfficialUrl) {
+      official_pdf_url = raw.link;
+      apply_url = raw.link;
+      verification_status = "verified";
+    } else if (!source.isAggregator && source.trustLevel === "official") {
+      verification_status = "verified";
+      official_pdf_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+      apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+    } else {
+      // AGGREGATOR DISCOVERY: Never treat aggregator URL as official!
+      verification_status = "pending";
+      official_pdf_url = null; // Left null until official source confirms
+      apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+    }
   }
 
   // 14. Discovery Source Metadata Entry
@@ -989,14 +1021,22 @@ export async function GET(request: Request) {
           parsed.verification_status === "verified" && 
           existingMatch.verification_status !== "verified"
         );
+        // Result link update (e.g. scorecard available, cutoff PDF, or new candidate result link)
+        const hasResultLinkUpdate = Boolean(
+          parsed.type === "result" &&
+          parsed.apply_url &&
+          parsed.apply_url !== existingMatch.apply_url &&
+          !parsed.apply_url.includes("employmentnews.gov.in")
+        );
 
-        if (hasDateChange || hasExamChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade) {
+        if (hasDateChange || hasExamChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate) {
           const reasons: string[] = [];
           if (hasDateChange) reasons.push(`Last date updated to ${newDates.lastDate}`);
           if (hasExamChange) reasons.push(`Exam date announced: ${newDates.examDate}`);
           if (hasBadgeChange) reasons.push(`Status changed to ${parsed.badge_status}`);
           if (hasVacanciesUpdate) reasons.push(`Vacancies confirmed: ${parsed.vacancies}`);
           if (hasVerificationUpgrade) reasons.push(`Upgraded to Official Verified`);
+          if (hasResultLinkUpdate) reasons.push(`Result access link updated to ${parsed.apply_url}`);
 
           const updatedSourcesTracked = Array.isArray(existingMatch.sources_tracked)
             ? [...existingMatch.sources_tracked]
@@ -1016,7 +1056,7 @@ export async function GET(request: Request) {
               vacancies: hasVacanciesUpdate ? parsed.vacancies : existingMatch.vacancies,
               verification_status: hasVerificationUpgrade ? "verified" : existingMatch.verification_status,
               official_pdf_url: (hasVerificationUpgrade && parsed.official_pdf_url) ? parsed.official_pdf_url : existingMatch.official_pdf_url,
-              apply_url: (hasVerificationUpgrade && parsed.apply_url) ? parsed.apply_url : existingMatch.apply_url,
+              apply_url: (hasVerificationUpgrade || hasResultLinkUpdate) ? parsed.apply_url : existingMatch.apply_url,
               sources_tracked: updatedSourcesTracked,
               updated_at: new Date().toISOString()
             }).eq("id", existingMatch.id);
