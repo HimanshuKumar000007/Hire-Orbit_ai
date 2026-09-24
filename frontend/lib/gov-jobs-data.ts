@@ -5,7 +5,7 @@ export interface GovJobNotification {
   shortTitle: string;
   organization: string;
   category: 'central' | 'railway' | 'banking' | 'police' | 'defense' | 'state' | 'teaching';
-  type: 'job' | 'admit-card' | 'result' | 'answer-key';
+  type: 'job' | 'recruitment' | 'admit-card' | 'result' | 'answer-key';
   badgeStatus: string;
   badgeColor: 'emerald' | 'blue' | 'amber' | 'purple' | 'red';
   vacancies: string;
@@ -19,13 +19,17 @@ export interface GovJobNotification {
     female: string;
   };
   importantDates: {
+    notificationDate?: string;
     startDate?: string;
     lastDate?: string;
     feeLastDate?: string;
+    correctionStartDate?: string;
+    correctionLastDate?: string;
     citySlipDate?: string;
     examDate?: string;
     shiftTimings?: string;
     admitCardDate?: string;
+    answerKeyDate?: string;
     resultDate?: string;
   };
   location: string;

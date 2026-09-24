@@ -1,4 +1,4 @@
-import GovJobsPage from "../page";
+import LatestGovJobsPage from "../jobs/page";
 
 export const metadata = {
   title: "Latest Government Jobs 2026 (Apply Online) | HireOrbitAI Gov Desk",
@@ -8,6 +8,7 @@ export const metadata = {
   },
 };
 
-export default function LatestGovJobsPage() {
-  return <GovJobsPage />;
+export default function LatestJobsRoute() {
+  return <LatestGovJobsPage />;
 }
+

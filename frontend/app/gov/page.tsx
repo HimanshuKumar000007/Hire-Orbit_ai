@@ -11,6 +11,7 @@ import {
   BREAKING_TICKER_ITEMS,
   GovJobNotification 
 } from "@/lib/gov-jobs-data";
+import { UniversalJobCard } from "@/components/gov/jobs/UniversalJobCard";
 import { 
   Search, 
   Sparkles, 
@@ -376,111 +377,9 @@ export default function GovJobsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredNotifications.map((item) => {
-                const getBadgeStyle = (color: string) => {
-                  switch (color) {
-                    case 'emerald':
-                      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                    case 'blue':
-                      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-                    case 'amber':
-                      return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                    case 'purple':
-                      return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
-                    default:
-                      return 'bg-white/10 text-zinc-300 border-white/10';
-                  }
-                };
-
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="glass rounded-2xl p-6 border border-white/10 hover:border-emerald-500/30 transition-all flex flex-col justify-between group hover:shadow-glow-sm"
-                  >
-                    <div>
-                      {/* Card Header: Organization & Badge */}
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                            <Building2 className="w-4 h-4 text-emerald-400" />
-                          </div>
-                          <div className="text-xs text-zinc-400 font-medium truncate max-w-[170px]">
-                            {item.organization}
-                          </div>
-                        </div>
-
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border shrink-0 ${getBadgeStyle(item.badgeColor)}`}>
-                          {item.badgeStatus}
-                        </span>
-                      </div>
-
-                      {/* Card Title */}
-                      <Link 
-                        href={`/gov/${item.slug}`}
-                        className="text-base font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-3 block"
-                      >
-                        {item.title}
-                      </Link>
-
-                      {/* Specs Matrix */}
-                      <div className="space-y-2 py-3 border-y border-white/5 text-xs text-zinc-300">
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Vacancies:</span>
-                          <span className="font-bold text-emerald-400">{item.vacancies}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Eligibility:</span>
-                          <span className="font-medium text-zinc-200 truncate max-w-[180px] text-right" title={item.qualification}>
-                            {item.qualification}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Age Bracket:</span>
-                          <span className="font-medium text-zinc-300">{item.ageLimit}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Key Date:</span>
-                          <span className="font-medium text-amber-400">
-                            {item.importantDates.lastDate 
-                              ? `Deadline: ${item.importantDates.lastDate}`
-                              : item.importantDates.examDate
-                              ? `Exam: ${item.importantDates.examDate}`
-                              : item.importantDates.resultDate
-                              ? `Result: ${item.importantDates.resultDate}`
-                              : 'Active Now'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Footers */}
-                    <div className="pt-4 mt-2 flex items-center gap-2">
-                      <Link
-                        href={`/gov/${item.slug}`}
-                        className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-glow-sm"
-                      >
-                        Read Full Notice
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-
-                      <a
-                        href={item.applyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 text-white hover:text-emerald-400 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-white/10"
-                        title="Open Official Portal"
-                      >
-                        Apply / Portal
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </motion.div>
-                );
-              })}
+              {filteredNotifications.map((item) => (
+                <UniversalJobCard key={item.id} job={item} />
+              ))}
             </div>
           )}
 

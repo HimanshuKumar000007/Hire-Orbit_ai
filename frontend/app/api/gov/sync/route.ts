@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { generateRecruitmentFingerprint } from "@/lib/universal-notice-model";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
@@ -622,16 +623,25 @@ export async function GET(_request: Request) {
       }
     }
 
-    // Get existing titles/slugs from DB first
+    // Get existing notices from DB for fingerprint comparison
     const { data: existingRows } = await supabase
       .from("gov_notifications")
-      .select("id, slug, title");
+      .select("id, slug, title, important_dates, badge_status, type, organization");
 
-    const existingTitles = new Set((existingRows || []).map(r => r.title.toLowerCase().slice(0, 30)));
-    const existingSlugs = new Set((existingRows || []).map(r => r.slug));
+    const existingBySlug = new Map<string, any>();
+    const existingByFingerprint = new Map<string, any>();
+
+    for (const row of existingRows || []) {
+      if (row.slug) existingBySlug.set(row.slug, row);
+      if (row.organization && row.title) {
+        const fp = generateRecruitmentFingerprint(row.organization, row.title);
+        existingByFingerprint.set(fp, row);
+      }
+    }
+
     const seenThisRun = new Set<string>();
 
-    // Round-robin: up to 2 new items from each of the 25 feeds = up to 50 per run
+    // Round-robin: pick up to 2 items per feed
     const toProcess: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
     const ITEMS_PER_FEED = 2;
     const MAX_TOTAL = 50;
@@ -641,23 +651,50 @@ export async function GET(_request: Request) {
       for (const item of feedItems) {
         if (toProcess.length >= MAX_TOTAL) break;
         if (taken >= ITEMS_PER_FEED) break;
-        const key = item.title.toLowerCase().slice(0, 30);
-        if (existingTitles.has(key) || seenThisRun.has(key)) continue;
+        const key = item.title.toLowerCase().slice(0, 35);
+        if (seenThisRun.has(key)) continue;
         seenThisRun.add(key);
         toProcess.push(item);
         taken++;
       }
       if (toProcess.length >= MAX_TOTAL) break;
     }
+
     const newlyAdded: string[] = [];
+    const updatedCount: string[] = [];
 
     for (const item of toProcess) {
       const parsed = quickParseNotice(item);
       if (!parsed.slug || parsed.title.length < 10) continue;
 
-      // Ensure slug uniqueness
+      const itemFp = generateRecruitmentFingerprint(parsed.organization, parsed.short_title || parsed.title);
+      const existingMatch = existingBySlug.get(parsed.slug) || existingByFingerprint.get(itemFp);
+
+      // CASE 1: EXISTING RECRUITMENT FOUND -> CHECK FOR UPDATES
+      if (existingMatch) {
+        const oldDates: Record<string, any> = existingMatch.important_dates || {};
+        const newDates: Record<string, any> = parsed.important_dates || {};
+        const hasDateChange = newDates.lastDate && newDates.lastDate !== oldDates.lastDate;
+        const hasExamChange = newDates.examDate && newDates.examDate !== oldDates.examDate;
+        const hasBadgeChange = parsed.badge_status && parsed.badge_status !== existingMatch.badge_status;
+
+        if (hasDateChange || hasExamChange || hasBadgeChange) {
+          await supabase.from("gov_notifications").update({
+            badge_status: parsed.badge_status || existingMatch.badge_status,
+            badge_color: parsed.badge_color || existingMatch.badge_color,
+            important_dates: { ...oldDates, ...newDates },
+            official_pdf_url: parsed.official_pdf_url || existingMatch.official_pdf_url,
+            apply_url: parsed.apply_url || existingMatch.apply_url,
+          }).eq("id", existingMatch.id);
+
+          updatedCount.push(`${parsed.title} (Updated dates/status)`);
+        }
+        continue;
+      }
+
+      // CASE 2: GENUINELY NEW RECRUITMENT -> INSERT NEW RECORD
       let slug = parsed.slug;
-      if (existingSlugs.has(slug)) {
+      if (existingBySlug.has(slug)) {
         slug = `${slug}-${Date.now().toString(36)}`;
       }
 
@@ -693,7 +730,8 @@ export async function GET(_request: Request) {
 
       if (!error) {
         newlyAdded.push(parsed.title);
-        existingSlugs.add(slug);
+        existingBySlug.set(slug, { id, slug });
+        existingByFingerprint.set(itemFp, { id, slug });
       }
     }
 
@@ -704,7 +742,9 @@ export async function GET(_request: Request) {
       totalItemsFound: perFeedItems.reduce((sum, f) => sum + f.length, 0),
       newItemsQueued: toProcess.length,
       newlyAddedCount: newlyAdded.length,
-      newlyAdded
+      updatedCount: updatedCount.length,
+      newlyAdded,
+      updatedItems: updatedCount
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
