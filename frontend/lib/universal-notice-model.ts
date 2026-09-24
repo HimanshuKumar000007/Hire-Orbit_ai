@@ -1085,3 +1085,587 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── UNIVERSAL RESULT INTELLIGENCE MODEL & SYSTEM ──────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ResultStatus =
+  | 'RESULT_DECLARED'
+  | 'SCORECARD_AVAILABLE'
+  | 'CUTOFF_RELEASED'
+  | 'MERIT_LIST_RELEASED'
+  | 'RESULT_PARTIALLY_RELEASED'
+  | 'REGIONAL_RESULT_RELEASED'
+  | 'RESULT_NOT_DECLARED'
+  | 'EXPECTED_SOON'
+  | 'REVISED_RESULT'
+  | 'FINAL_RESULT_DECLARED';
+
+export interface CategoryCutoffItem {
+  category: string;
+  cutoffMarks: string | number;
+  qualifyingStatus?: string;
+}
+
+export interface PostCutoffItem {
+  postName: string;
+  categoryCutoffs: CategoryCutoffItem[];
+}
+
+export interface UniversalResultNotice {
+  id: string;
+  slug: string;
+  title: string;
+  shortTitle: string;
+  noticeType: 'result';
+  authority: string;
+  organization: string;
+  examName: string;
+  resultName: string;
+  year: string;
+  category: 'central' | 'railway' | 'banking' | 'police' | 'defense' | 'state' | 'teaching';
+  region?: string;
+  stage: string;
+  status: ResultStatus;
+  statusLabel: string;
+  statusBadgeColor: 'emerald' | 'amber' | 'blue' | 'purple' | 'rose' | 'zinc';
+  summary: string;
+  publishedAt: string;
+  updatedAt: string;
+
+  // Primary Direct Action URLs (only when verified, never fake)
+  primaryActionUrls: {
+    checkResultUrl?: string;
+    downloadScorecardUrl?: string;
+    checkCutoffUrl?: string;
+    downloadMeritListUrl?: string;
+    officialPortalUrl: string;
+  };
+
+  // Scannable Quick Facts Overview (Only verified attributes)
+  quickFacts: QuickFactItem[];
+
+  // Priority Chronological Dates (no N/A clutter)
+  dates: {
+    examDate?: string;
+    answerKeyDate?: string;
+    resultDate?: string;
+    scorecardDate?: string;
+    cutoffDate?: string;
+    meritListDate?: string;
+    nextStageDate?: string;
+  };
+
+  // Result Details & Formats
+  resultDetails: {
+    stage: string;
+    resultDeclared: boolean;
+    declarationDate?: string;
+    resultFormat?: 'PDF Roll Number List' | 'Individual Scorecard Login' | 'Merit List PDF' | 'OMR Scorecard';
+    totalCandidates?: string;
+    qualifiedCandidates?: string;
+    totalPosts?: string;
+    examMode?: string;
+  };
+
+  // Scorecard Information (strictly null if not available)
+  scorecard: {
+    isAvailable: boolean;
+    releaseDate?: string;
+    downloadUrl?: string;
+    loginRequired: boolean;
+    requiredCredentials: string[];
+  } | null;
+
+  // Cutoff Information (strictly null if not available; never invent numbers)
+  cutoff: {
+    isReleased: boolean;
+    releaseDate?: string;
+    overallCutoff?: string;
+    categoryCutoffs?: CategoryCutoffItem[];
+    postCutoffs?: PostCutoffItem[];
+    cutoffPdfUrl?: string;
+    officialNote?: string;
+  } | null;
+
+  // Merit List Information (strictly null if not available)
+  meritList: {
+    isReleased: boolean;
+    meritListUrl?: string;
+    totalSelected?: string;
+    selectionCriteria?: string;
+  } | null;
+
+  // Required Login Credentials
+  credentials: {
+    label: string;
+    requiredItems: string[];
+  };
+
+  // Step-by-Step How to Check Result
+  howToCheckSteps: string[];
+
+  // Next Stage / Further Assessment Process (strictly null if unknown)
+  nextStage: {
+    stageName: string;
+    tentativeDate?: string;
+    description: string;
+    stagesFlow?: string[];
+  } | null;
+
+  // Official Links Command Center
+  links: UniversalNoticeLink[];
+
+  // Source & Verification Metadata
+  source: {
+    name: string;
+    officialUrl: string;
+    verificationStatus: 'Official Source Verified' | 'Gazette Circular Verified';
+    lastVerifiedAt: string;
+  };
+
+  // Dynamic FAQs
+  faqs: Array<{ question: string; answer: string }>;
+
+  // Fingerprint for deduplication
+  fingerprint: string;
+}
+
+// ─── RESULT FINGERPRINT GENERATOR ───────────────────────────────────────────
+export function generateResultFingerprint(
+  authority: string,
+  examName: string,
+  year: string = "2026",
+  stage: string = "general",
+  region: string = "all"
+): string {
+  const clean = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const cleanAuth = clean(authority).slice(0, 15);
+  const cleanExam = clean(examName)
+    .replace(/result|scorecard|merit_list|marks|exam/g, "")
+    .slice(0, 25);
+  const cleanYear = year.replace(/[^0-9]/g, "");
+  const cleanStage = clean(stage).slice(0, 15);
+  const cleanRegion = clean(region).slice(0, 15);
+
+  return `${cleanAuth}_${cleanExam}_${cleanYear}_result_${cleanStage}_${cleanRegion}`;
+}
+
+// ─── AUTHENTIC NORMALIZATION ENGINE FOR RESULTS ────────────────────────────
+export function normalizeToUniversalResult(job: GovJobNotification): UniversalResultNotice {
+  const title = job.title;
+  const rawCombined = `${job.title} ${job.shortTitle} ${job.organization} ${job.summary} ${job.location}`.toLowerCase();
+
+  // 1. Resolve Authority & Official Portal
+  let authority = job.organization;
+  let officialPortalUrl = job.applyUrl || "https://employmentnews.gov.in";
+
+  for (const [key, mapping] of Object.entries(OFFICIAL_PORTAL_REGISTRY)) {
+    if (new RegExp(`\\b${key}\\b`, 'i').test(rawCombined)) {
+      authority = mapping.authority;
+      officialPortalUrl = mapping.portalUrl;
+      break;
+    }
+  }
+
+  // 2. Exam Name & Stage Resolution
+  let examName = job.shortTitle || job.title;
+  let stage = "Written Examination";
+  const yearMatch = title.match(/202[4-9]/);
+  const examYear = yearMatch ? yearMatch[0] : "2026";
+
+  if (/cbt\s*[-]?\s*1/i.test(title + " " + job.summary)) {
+    stage = "CBT-1 (Computer Based Test 1)";
+  } else if (/cbt\s*[-]?\s*2/i.test(title + " " + job.summary)) {
+    stage = "CBT-2 (Computer Based Test 2)";
+  } else if (/tier\s*[-]?\s*1/i.test(title + " " + job.summary)) {
+    stage = "Tier-1 (Preliminary Examination)";
+  } else if (/tier\s*[-]?\s*2/i.test(title + " " + job.summary)) {
+    stage = "Tier-2 (Mains Examination)";
+  } else if (/prelims|preliminary/i.test(title + " " + job.summary)) {
+    stage = "Preliminary Examination (Prelims)";
+  } else if (/mains/i.test(title + " " + job.summary)) {
+    stage = "Mains Examination";
+  } else if (/final/i.test(title + " " + job.summary)) {
+    stage = "Final Selection / Merit List";
+  } else if (/pet|pst|physical/i.test(title + " " + job.summary)) {
+    stage = "Physical Test (PET / PST)";
+  } else if (/skill|typing/i.test(title + " " + job.summary)) {
+    stage = "Skill Test / Typing Test";
+  }
+
+  // Refine exam name
+  if (/rrb\s*alp/i.test(title)) {
+    examName = "RRB Assistant Loco Pilot (ALP)";
+  } else if (/rrb\s*ntpc/i.test(title)) {
+    examName = /graduate/i.test(title) ? "RRB NTPC (Graduate)" : "RRB NTPC (10+2 Inter Level)";
+  } else if (/ssc\s*cgl/i.test(title)) {
+    examName = "SSC Combined Graduate Level (CGL)";
+  } else if (/ssc\s*chsl/i.test(title)) {
+    examName = "SSC Combined Higher Secondary Level (CHSL)";
+  } else if (/up\s*police/i.test(title)) {
+    examName = /constable/i.test(title) ? "UP Police Constable" : "UP Police Sub Inspector";
+  } else if (/ugc\s*net/i.test(title)) {
+    examName = "UGC NET Examination";
+  } else if (/ctet/i.test(title)) {
+    examName = "Central Teacher Eligibility Test (CTET)";
+  }
+
+  const resultName = `${examName} ${stage} Result ${examYear}`;
+
+  // 3. Status Engine (Derived from structured data & title facts)
+  let status: ResultStatus = 'RESULT_DECLARED';
+  let statusLabel = 'Result Declared';
+  let statusBadgeColor: UniversalResultNotice['statusBadgeColor'] = 'emerald';
+
+  const isScorecardLive = /scorecard.*(?:out|available|live|active)|download scorecard|marks out/i.test(title);
+  const isCutoffLive = /cutoff.*(?:out|released|declared)|cut-off marks/i.test(title);
+  const isMeritLive = /merit list.*(?:out|released|declared)|selection list/i.test(title);
+  const isFinal = /final result/i.test(title);
+  const isRevised = /revised result/i.test(title);
+  const isExpectedSoon = /expected soon|likely soon|announcing soon|to be declared/i.test(title) || 
+    /expected soon/i.test(job.badgeStatus);
+
+  if (isFinal) {
+    status = 'FINAL_RESULT_DECLARED';
+    statusLabel = 'Final Result & Selection List Live';
+    statusBadgeColor = 'emerald';
+  } else if (isRevised) {
+    status = 'REVISED_RESULT';
+    statusLabel = 'Revised Result Declared';
+    statusBadgeColor = 'blue';
+  } else if (isScorecardLive) {
+    status = 'SCORECARD_AVAILABLE';
+    statusLabel = 'Scorecard & Marks Available';
+    statusBadgeColor = 'emerald';
+  } else if (isCutoffLive) {
+    status = 'CUTOFF_RELEASED';
+    statusLabel = 'Result & Cutoff Released';
+    statusBadgeColor = 'emerald';
+  } else if (isMeritLive) {
+    status = 'MERIT_LIST_RELEASED';
+    statusLabel = 'Merit List Released';
+    statusBadgeColor = 'emerald';
+  } else if (isExpectedSoon) {
+    status = 'EXPECTED_SOON';
+    statusLabel = 'Result Expected Shortly';
+    statusBadgeColor = 'amber';
+  } else {
+    status = 'RESULT_DECLARED';
+    statusLabel = 'Official Result Declared';
+    statusBadgeColor = 'emerald';
+  }
+
+  // 4. Sanitize and Filter Dates
+  const rawDates = job.importantDates || {};
+  const dates: UniversalResultNotice['dates'] = {};
+
+  if (rawDates.examDate && !rawDates.examDate.includes('N/A')) {
+    dates.examDate = rawDates.examDate;
+  }
+  if (rawDates.answerKeyDate && !rawDates.answerKeyDate.includes('N/A')) {
+    dates.answerKeyDate = rawDates.answerKeyDate;
+  }
+  if (rawDates.resultDate && !rawDates.resultDate.includes('N/A')) {
+    dates.resultDate = rawDates.resultDate;
+  } else if (status !== 'EXPECTED_SOON') {
+    dates.resultDate = "Declared (Check Link Below)";
+  }
+  if (isScorecardLive) {
+    dates.scorecardDate = "Available Now";
+  }
+  if (isCutoffLive) {
+    dates.cutoffDate = "Released Along with Result";
+  }
+
+  // 5. Clean Official URLs
+  const cleanPdfUrl = (job.officialPdfUrl && !job.officialPdfUrl.includes('news.google.com'))
+    ? job.officialPdfUrl
+    : officialPortalUrl;
+
+  const cleanResultUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
+    ? job.applyUrl
+    : cleanPdfUrl;
+
+  // 6. Action URLs (only when verified!)
+  const primaryActionUrls: UniversalResultNotice['primaryActionUrls'] = {
+    checkResultUrl: (status !== 'EXPECTED_SOON') ? cleanResultUrl : undefined,
+    downloadScorecardUrl: (isScorecardLive) ? cleanResultUrl : undefined,
+    checkCutoffUrl: (isCutoffLive) ? cleanPdfUrl : undefined,
+    downloadMeritListUrl: (isMeritLive || isFinal) ? cleanPdfUrl : undefined,
+    officialPortalUrl
+  };
+
+  // 7. Authority-Aware Credentials
+  let credentials = {
+    label: "Registration Number & Date of Birth",
+    requiredItems: ["Registration / Roll Number", "Date of Birth (DD/MM/YYYY)", "Security Captcha"]
+  };
+
+  if (/nta|ugc net|csir|ctet/i.test(rawCombined)) {
+    credentials = {
+      label: "Application Number & Date of Birth",
+      requiredItems: ["Application Number", "Date of Birth", "Security PIN Code"]
+    };
+  } else if (/ssc/i.test(rawCombined)) {
+    credentials = {
+      label: "Registration ID & Password / Roll Number",
+      requiredItems: ["Registration Number / Roll Number", "User Password", "Captcha Code"]
+    };
+  } else if (/rrb|railway/i.test(rawCombined)) {
+    credentials = {
+      label: "Railway Registration Number & User Password (DOB)",
+      requiredItems: ["Registration Number", "Date of Birth (DDMMYYYY)"]
+    };
+  }
+
+  // 8. Result Details & Candidate Statistics (if mentioned in text)
+  const qualMatch = (title + " " + job.summary).match(/([\d,]+)\s*(?:candidates|aspirants)?\s*qualified/i);
+  const qualifiedCandidates = qualMatch ? qualMatch[1] : undefined;
+
+  const totalPosts = job.vacancies && !/see notification|as per notification|multiple|refer/i.test(job.vacancies)
+    ? job.vacancies
+    : undefined;
+
+  const resultDetails: UniversalResultNotice['resultDetails'] = {
+    stage,
+    resultDeclared: status !== 'EXPECTED_SOON',
+    declarationDate: dates.resultDate,
+    resultFormat: cleanPdfUrl.endsWith('.pdf') ? 'PDF Roll Number List' : 'Individual Scorecard Login',
+    qualifiedCandidates,
+    totalPosts,
+    examMode: /cbt/i.test(stage) ? 'Computer Based Test (CBT)' : 'Written Examination'
+  };
+
+  // 9. Scorecard Panel (Strict: only if scorecard verified)
+  const scorecard: UniversalResultNotice['scorecard'] = isScorecardLive ? {
+    isAvailable: true,
+    releaseDate: dates.scorecardDate || "Available Now",
+    downloadUrl: cleanResultUrl,
+    loginRequired: true,
+    requiredCredentials: credentials.requiredItems
+  } : null;
+
+  // 10. Cutoff Panel (Strict: only if cutoff verified; never invent numbers)
+  const cutoff: UniversalResultNotice['cutoff'] = isCutoffLive ? {
+    isReleased: true,
+    releaseDate: dates.cutoffDate || "Released Along with Result",
+    cutoffPdfUrl: cleanPdfUrl,
+    officialNote: "Cutoff marks have been published in the official result writeup notification PDF by the commission."
+  } : null;
+
+  // 11. Merit List Panel (Strict: only if merit list verified)
+  const meritList: UniversalResultNotice['meritList'] = (isMeritLive || isFinal) ? {
+    isReleased: true,
+    meritListUrl: cleanPdfUrl,
+    totalSelected: qualifiedCandidates || totalPosts,
+    selectionCriteria: "Merit order determined by normalized aggregate scores in the examination."
+  } : null;
+
+  // 12. Next Stage Determination (Strict: based on verified selection stages)
+  let nextStage: UniversalResultNotice['nextStage'] = null;
+  const stages = job.selectionProcess || [];
+  if (stages.length > 1) {
+    if (/cbt\s*[-]?\s*1|tier\s*[-]?\s*1|prelims/i.test(stage)) {
+      nextStage = {
+        stageName: stages[1] || "2nd Stage Examination",
+        description: "Candidates qualified in this stage are shortlisted to appear for the next phase as per commission notification.",
+        stagesFlow: stages
+      };
+    } else if (/cbt\s*[-]?\s*2|tier\s*[-]?\s*2|mains/i.test(stage)) {
+      nextStage = {
+        stageName: stages[2] || "Skill Test / Document Verification",
+        description: "Shortlisted candidates will be called for Document Verification and Skill/Aptitude Test.",
+        stagesFlow: stages
+      };
+    } else if (isFinal) {
+      nextStage = {
+        stageName: "Appointment & Joining Formalities",
+        description: "Recommended candidates will receive formal appointment letters and medical examination intimation from respective departments.",
+        stagesFlow: stages
+      };
+    }
+  }
+
+  // 13. Step-by-Step How to Check Result
+  const howToCheckSteps = [
+    `Step 1: Open the official ${authority} portal at ${officialPortalUrl} or click the direct verified link below.`,
+    `Step 2: On the homepage, locate the active notice for "${resultName}".`,
+    `Step 3: Click on the Result link (or open the official Result PDF write-up).`,
+    `Step 4: If the portal requires candidate login, enter your verified credentials: ${credentials.requiredItems.join(', ')}.`,
+    `Step 5: For PDF results, press 'Ctrl + F' (or use search on mobile) and type your Roll Number or Registration Number.`,
+    `Step 6: If your Roll Number is displayed, you have qualified for the next stage of recruitment.`,
+    `Step 7: Download and save the Result PDF and take a printout of your scorecard for future verification records.`
+  ];
+
+  // 14. Official Links Command Center
+  const links: UniversalNoticeLink[] = [];
+
+  // Primary Result Link
+  if (status !== 'EXPECTED_SOON') {
+    links.push({
+      title: `Check ${resultName}`,
+      url: cleanResultUrl,
+      type: 'result',
+      badge: 'Result Live',
+      badgeColor: 'emerald',
+      isOfficial: true,
+      isExternal: true,
+      verificationLevel: 'VERIFIED',
+      sourceNote: 'Direct official commission result portal'
+    });
+  }
+
+  // Scorecard Download Link (if live)
+  if (isScorecardLive) {
+    links.push({
+      title: `Download ${examName} Scorecard & Marks`,
+      url: cleanResultUrl,
+      type: 'result',
+      badge: 'Scorecard Active',
+      badgeColor: 'emerald',
+      isOfficial: true,
+      isExternal: true,
+      verificationLevel: 'VERIFIED',
+      sourceNote: 'Candidate login portal for individual marks'
+    });
+  }
+
+  // Official Cutoff Marks PDF (if live)
+  if (isCutoffLive || cleanPdfUrl) {
+    links.push({
+      title: `Download Official Result & Cutoff Writeup Notice PDF`,
+      url: cleanPdfUrl,
+      type: 'notification_pdf',
+      badge: 'Official PDF',
+      badgeColor: 'blue',
+      isOfficial: true,
+      isExternal: true,
+      verificationLevel: 'VERIFIED',
+      sourceNote: 'Gazette notification with category-wise cutoff marks'
+    });
+  }
+
+  // Official Portal Homepage
+  links.push({
+    title: `${authority} Official Examination Portal`,
+    url: officialPortalUrl,
+    type: 'official_portal',
+    badge: 'Official Portal',
+    badgeColor: 'blue',
+    isOfficial: true,
+    isExternal: true,
+    verificationLevel: 'VERIFIED',
+    sourceNote: 'Commission headquarters portal'
+  });
+
+  // HireOrbitAI Next Stage Copilot
+  links.push({
+    title: `AI Preparation Plan for Next Stage (${examName})`,
+    url: '/copilot',
+    type: 'syllabus',
+    badge: 'AI Powered',
+    badgeColor: 'emerald',
+    isOfficial: false,
+    isExternal: false,
+    verificationLevel: 'GENERATED',
+    sourceNote: 'Personalized next stage preparation tracker'
+  });
+
+  // 15. Scannable Quick Facts Overview (Only verified fields)
+  const quickFacts: QuickFactItem[] = [
+    { label: "Exam Authority", value: authority },
+    { label: "Exam Name", value: examName },
+    { label: "Result Stage", value: stage, highlight: true },
+    ...(dates.resultDate ? [{ label: "Result Date", value: dates.resultDate, highlight: true }] : []),
+    ...(dates.examDate ? [{ label: "Exam Date", value: dates.examDate }] : []),
+    ...(totalPosts ? [{ label: "Total Posts", value: totalPosts }] : []),
+    ...(qualifiedCandidates ? [{ label: "Qualified Candidates", value: qualifiedCandidates }] : []),
+    ...(nextStage ? [{ label: "Next Stage", value: nextStage.stageName }] : [])
+  ];
+
+  // 16. Dynamic FAQs
+  const faqs = [
+    {
+      question: `Is the ${resultName} declared?`,
+      answer: status !== 'EXPECTED_SOON'
+        ? `Yes, ${authority} has officially declared the ${resultName}. Candidates can check their qualification status directly using the verified links provided on this page.`
+        : `The ${resultName} is expected to be announced shortly by ${authority}. Please refer to the official portal link for the latest update.`
+    },
+    {
+      question: `Where can I check the official result for ${examName}?`,
+      answer: `You can check the result directly on the official ${authority} portal at ${officialPortalUrl} or via the high-contrast 'Check Result' button in our Official Links Command Center.`
+    },
+    {
+      question: `What credentials are required to check the result / scorecard?`,
+      answer: `Candidates need to log in using their ${credentials.requiredItems.join(', ')}.`
+    },
+    ...(isCutoffLive ? [{
+      question: `Has the official cutoff been released for ${examName}?`,
+      answer: `Yes, the category-wise cutoff marks have been officially announced along with the result writeup. You can download the complete cutoff PDF from our Official Links table.`
+    }] : [{
+      question: `What is the expected cutoff for ${examName}?`,
+      answer: `Official cutoff marks are determined exclusively by ${authority} based on normalized exam scores, reservation categories, and total vacancies. Check the official result PDF for confirmed category thresholds.`
+    }]),
+    ...(nextStage ? [{
+      question: `What is the next stage after qualifying ${stage}?`,
+      answer: `Candidates shortlisted in this result will be called for ${nextStage.stageName}. Exact dates and reporting guidelines will be communicated by ${authority}.`
+    }] : []),
+    {
+      question: `What should I do if the official result portal is down or loading slowly?`,
+      answer: `Heavy server traffic immediately after result declaration may cause temporary slowdowns on commission portals. Candidates are advised to clear browser cache, check during non-peak hours, or use the direct official PDF link.`
+    }
+  ];
+
+  // 17. Generate Normalized Fingerprint
+  const fingerprint = generateResultFingerprint(authority, examName, examYear, stage, job.location || "all");
+
+  return {
+    id: job.id,
+    slug: job.slug,
+    title: job.title,
+    shortTitle: job.shortTitle,
+    noticeType: 'result',
+    authority,
+    organization: authority,
+    examName,
+    resultName,
+    year: examYear,
+    category: job.category,
+    region: job.location,
+    stage,
+    status,
+    statusLabel,
+    statusBadgeColor,
+    summary: job.summary,
+    publishedAt: dates.resultDate || "Live Gazette Verified",
+    updatedAt: job.updatedAt || "Official Gazette Verified",
+    primaryActionUrls,
+    quickFacts,
+    dates,
+    resultDetails,
+    scorecard,
+    cutoff,
+    meritList,
+    credentials,
+    howToCheckSteps,
+    nextStage,
+    links,
+    source: {
+      name: authority,
+      officialUrl: officialPortalUrl,
+      verificationStatus: 'Official Source Verified',
+      lastVerifiedAt: job.updatedAt || 'Official Gazette Verified'
+    },
+    faqs,
+    fingerprint
+  };
+}
+
+

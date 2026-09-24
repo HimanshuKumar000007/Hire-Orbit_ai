@@ -641,6 +641,93 @@ export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [
     applyUrl: 'https://ugcnet.nta.ac.in',
     updatedAt: 'Official Gazette Verified',
     isTrending: true,
+  },
+  {
+    id: 'rrb-alp-cbt-1-result-2026',
+    slug: 'rrb-alp-cbt-1-result-2026',
+    title: 'RRB ALP CBT-1 Result 2026 Declared: Check Scorecard, Cutoff & CBT-2 Shortlist',
+    shortTitle: 'RRB ALP CBT-1 Result 2026',
+    organization: 'Railway Recruitment Boards (RRB)',
+    category: 'railway',
+    type: 'result',
+    badgeStatus: 'Result Declared',
+    badgeColor: 'emerald',
+    vacancies: '18,799 Posts',
+    qualification: 'Matriculation (10th) + ITI / Diploma in Engineering',
+    qualificationLevel: 'diploma',
+    ageLimit: '18 - 30 Years',
+    payScale: 'Level 2 (7th CPC) Basic Rs 19,900',
+    applicationFee: {
+      generalOBC: 'Rs 500 (Refundable upon CBT appearance)',
+      scStPh: 'Rs 250 (Refundable upon CBT appearance)',
+      female: 'Rs 250 (Refundable upon CBT appearance)',
+    },
+    importantDates: {
+      examDate: 'August 28 to September 04, 2025',
+      answerKeyDate: 'September 18, 2025',
+      resultDate: 'Declared Officially',
+    },
+    location: 'All India (21 RRB Zones)',
+    summary: 'Railway Recruitment Boards (RRB) have officially declared the CBT-1 examination results for 18,799 Assistant Loco Pilot (ALP) vacancies under CEN 01/2024. Candidates can check their normalized marks, qualifying status, category-wise cutoff thresholds, and download the official merit list PDF of roll numbers shortlisted for CBT-2.',
+    keyHighlights: [
+      'Official CBT-1 Result and Scorecard portal active across all 21 RRB regional websites',
+      'Shortlisted candidates qualified to appear for 2nd Stage Computer Based Test (CBT-2)',
+      'Category-wise cutoff marks published in official commission writeup notice',
+      'Individual normalized marks accessible via RRB candidate login'
+    ],
+    selectionProcess: [
+      '1st Stage CBT (Screening Examination)',
+      '2nd Stage CBT (Part A & Part B Technical)',
+      'Computer Based Aptitude Test (CBAT)',
+      'Document Verification (DV) & Medical Examination'
+    ],
+    officialPdfUrl: 'https://rrbcdg.gov.in',
+    applyUrl: 'https://rrbcdg.gov.in',
+    updatedAt: 'Live Gazette Verified',
+    isTrending: true,
+  },
+  {
+    id: 'ssc-cgl-tier-1-result-2026',
+    slug: 'ssc-cgl-tier-1-result-2026',
+    title: 'SSC CGL Tier 1 Result 2026 Declared: Check Category Cutoff & Qualified List PDF',
+    shortTitle: 'SSC CGL Tier 1 Result 2026',
+    organization: 'Staff Selection Commission (SSC)',
+    category: 'central',
+    type: 'result',
+    badgeStatus: 'Result Declared',
+    badgeColor: 'emerald',
+    vacancies: '17,727 Posts',
+    qualification: "Bachelor's Degree in any discipline from a recognized University",
+    qualificationLevel: 'graduate',
+    ageLimit: '18 - 32 Years',
+    payScale: 'Pay Level 4 to Level 8 (7th CPC)',
+    applicationFee: {
+      generalOBC: 'Rs 100',
+      scStPh: 'Exempted',
+      female: 'Exempted',
+    },
+    importantDates: {
+      examDate: 'September 09 to 26, 2025',
+      answerKeyDate: 'October 03, 2025',
+      resultDate: 'Declared Officially',
+    },
+    location: 'All India',
+    summary: 'Staff Selection Commission (SSC) has officially declared the Combined Graduate Level (CGL) Tier-1 Examination results. Candidates can check their roll number in the official merit list PDFs for List 1, List 2, and List 3, view normalized cutoffs, and prepare for the upcoming Tier-2 examination.',
+    keyHighlights: [
+      'Official Tier-1 Result writeup and roll number merit lists published on ssc.gov.in',
+      'Candidates shortlisted category-wise for Tier-2 examination',
+      'Category-wise cutoff marks released for UR, OBC, SC, ST, and EWS',
+      'Individual marks and final answer keys to be uploaded shortly'
+    ],
+    selectionProcess: [
+      'Tier-1 Examination (Computer Based Examination)',
+      'Tier-2 Examination (Paper-I Compulsory & Paper-II for Specific Posts)',
+      'Document Verification by User Departments'
+    ],
+    officialPdfUrl: 'https://ssc.gov.in',
+    applyUrl: 'https://ssc.gov.in',
+    updatedAt: 'Live Gazette Verified',
+    isTrending: true,
   }
 ];
 

@@ -7,10 +7,12 @@ import {
 } from "@/lib/gov-jobs-data";
 import { 
   normalizeToUniversalNotice,
-  normalizeToUniversalRecruitment 
+  normalizeToUniversalRecruitment,
+  normalizeToUniversalResult
 } from "@/lib/universal-notice-model";
 import { UniversalAdmitCardPage } from "@/components/gov/admit-card/UniversalAdmitCardPage";
 import { UniversalRecruitmentPage } from "@/components/gov/recruitment/UniversalRecruitmentPage";
+import { UniversalResultPage } from "@/components/gov/result/UniversalResultPage";
 
 interface PageProps {
   params: Promise<{
@@ -95,6 +97,37 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const isResultNotice = job.type === 'result' || 
+    /result|scorecard|merit list|cut off|cutoff|selection list/i.test(job.title);
+
+  if (isResultNotice) {
+    return {
+      title: `${job.title} - Check Result, Scorecard, Cutoff Marks & Merit List | HireOrbitAI`,
+      description: `${job.summary} Direct verified links to check ${job.title}, download scorecard, view category cutoff marks, and official merit list PDF.`,
+      keywords: [
+        job.title,
+        job.shortTitle,
+        job.organization,
+        "Result 2026",
+        "Scorecard Download",
+        "Category Cutoff Marks",
+        "Merit List PDF",
+        "Sarkari Result 2026",
+        "Official Commission Portal"
+      ],
+      openGraph: {
+        title: `${job.title} | HireOrbitAI Result Desk`,
+        description: job.summary,
+        url: `https://hireorbitai.in/gov/${job.slug}`,
+        siteName: "HireOrbitAI Government Careers",
+        type: "article",
+      },
+      alternates: {
+        canonical: `https://hireorbitai.in/gov/${job.slug}`,
+      },
+    };
+  }
+
   const isAdmitNotice = job.type === 'admit-card' || 
     /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar/i.test(job.title);
 
@@ -162,6 +195,15 @@ export default async function GovJobDetailPage({ params }: PageProps) {
   }
 
   const relatedJobs = GOV_JOB_NOTIFICATIONS.filter((j) => j.id !== job.id).slice(0, 3);
+
+  // 🌟 UNIVERSAL RESULT / SCORECARD / MERIT LIST SYSTEM
+  const isResultNotice = job.type === 'result' || 
+    /result|scorecard|merit list|cut off|cutoff|selection list/i.test(job.title);
+
+  if (isResultNotice) {
+    const resultNotice = normalizeToUniversalResult(job);
+    return <UniversalResultPage notice={resultNotice} allNotices={GOV_JOB_NOTIFICATIONS} />;
+  }
 
   // 🌟 UNIVERSAL ADMIT CARD / EXAM SCHEDULE SYSTEM
   const isAdmitNotice = job.type === 'admit-card' || 
