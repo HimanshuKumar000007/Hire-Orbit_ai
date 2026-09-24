@@ -367,6 +367,350 @@ export const CURATED_JOB_DETAILS: Record<string, Partial<EnrichedJobDetails>> = 
     ]
   },
 
+  // 2b. Railway RRB NTPC 10+2 Inter Level 2026 (CEN 07/2026)
+  'rrb-ntpc-10-plus-2-2026': {
+    postWiseDetails: [
+      {
+        postName: "Commercial Cum Ticket Clerk",
+        department: "Commercial Department (Indian Railways)",
+        classification: "Pay Level 3 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with min 50% Marks (SC/ST/PH/PwBD: Pass Only)",
+        payScale: "Pay Level 3 (₹21,700 - ₹69,100) + DA, HRA, Transport Allowance"
+      },
+      {
+        postName: "Accounts Clerk Cum Typist",
+        department: "Accounts & Finance Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Junior Clerk Cum Typist",
+        department: "Operating / Personnel / Engineering Divisions",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Trains Clerk",
+        department: "Traffic & Operating Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with not less than 50% Marks (Pass for SC/ST)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Running Allowances"
+      }
+    ],
+    isVacancyKnown: true,
+    categoryDistribution: {
+      ur: "680",
+      obc: "455",
+      sc: "253",
+      st: "127",
+      ews: "173",
+      total: "1,688"
+    },
+    examPatterns: [
+      {
+        tierName: "1st Stage Computer Based Test (CBT-1) - Common Screening Test",
+        mode: "Online CBT (Objective MCQ)",
+        totalQuestions: 100,
+        totalMarks: 100,
+        duration: "90 Minutes (120 Mins for PwBD)",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness (Current Affairs, Railway History, General Science)", questions: 40, marks: 40 },
+          { name: "Mathematics (Arithmetic, Algebra, Number System, Mensuration)", questions: 30, marks: 30 },
+          { name: "General Intelligence & Reasoning (Analogies, Coding, Syllogisms)", questions: 30, marks: 30 }
+        ]
+      },
+      {
+        tierName: "2nd Stage Computer Based Test (CBT-2) - Merit Determining",
+        mode: "Online CBT (Separately conducted for Pay Level 2 and Level 3)",
+        totalQuestions: 120,
+        totalMarks: 120,
+        duration: "90 Minutes",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness", questions: 50, marks: 50 },
+          { name: "Mathematics", questions: 35, marks: 35 },
+          { name: "General Intelligence & Reasoning", questions: 35, marks: 35 }
+        ]
+      },
+      {
+        tierName: "3rd Stage: Typing Skill Test (Qualifying Nature)",
+        mode: "Computer Typing Test (No spell check / editing tools allowed)",
+        totalQuestions: "10 Minutes Test",
+        totalMarks: "Qualifying (Speed & Accuracy)",
+        duration: "10 Minutes",
+        negativeMarking: "5% mistakes allowed; excess deducted from speed",
+        subjects: [
+          { name: "English Typing (Minimum 30 Words Per Minute)", questions: 1, marks: "Qualifying" },
+          { name: "Hindi Typing on KrutiDev / Mangal font (Minimum 25 Words Per Minute)", questions: 1, marks: "Qualifying" }
+        ]
+      }
+    ],
+    applicationSteps: [
+      "Step 1: Go to the official unified Railway portal (rrbapply.gov.in) and click on 'Apply' -> 'Create an Account'.",
+      "Step 2: Enter Aadhaar number (or approved photo ID), candidate name, date of birth, mobile number, and active email ID.",
+      "Step 3: Complete Mobile and Email OTP verification to generate your unique Railway Registration ID.",
+      "Step 4: Log in to your portal and choose CEN 07/2026 (NTPC 10+2 Under Graduate Recruitment).",
+      "Step 5: Select your preferred Railway Recruitment Board (RRB Zone - only 1 zone selection permitted).",
+      "Step 6: Enter priority preferences for Level 3 and Level 2 posts according to your qualification.",
+      "Step 7: Upload passport-size color photograph (30-70 KB) and signature (30-70 KB) taken against a plain white background.",
+      "Step 8: Pay the application fee (₹500 for UR/OBC with ₹400 refundable after CBT-1; ₹250 for SC/ST/Female with full refund) through online gateway.",
+      "Step 9: Download and securely print the finalized confirmation application page."
+    ],
+    faqs: [
+      { question: "What is the fee refund policy in RRB NTPC 10+2 Recruitment?", answer: "Candidates who appear in the 1st Stage Computer Based Test (CBT-1) get their fees refunded: UR and OBC candidates receive ₹400 refund back to their bank account (after ₹100 bank charges), while SC, ST, Female, Ex-Servicemen, and PwBD candidates receive the full ₹250 refund." },
+      { question: "Can a candidate appearing in 12th board exams apply?", answer: "No. Candidates must have already passed 10+2 Intermediate on or before the closing date of application (13 November 2026)." },
+      { question: "Is the typing test mandatory for all posts in RRB NTPC 10+2?", answer: "No. Typing test is ONLY required for Accounts Clerk Cum Typist and Junior Clerk Cum Typist. Posts like Commercial Cum Ticket Clerk and Trains Clerk do NOT require a typing test." },
+      { question: "Can I apply to multiple RRB zones?", answer: "No. Each candidate can select only ONE RRB zone. Multiple applications across zones will lead to automatic rejection of all applications." }
+    ],
+    usefulLinks: [
+      { title: "Apply Online Registration Link (rrbapply.gov.in)", description: "Direct application portal for CEN 07/2026", url: "https://rrbapply.gov.in", isExternal: true, badge: "Link Activate Oct 15", badgeColor: "emerald" },
+      { title: "Download Official Short Notice PDF", description: "Official Railway Board Employment Notice", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Notice", badgeColor: "blue" },
+      { title: "Download Detailed Notification (CEN 07/2026)", description: "Full eligibility, vacancies & zone rules", url: "https://rrbapply.gov.in", isExternal: true, badge: "Gazette PDF", badgeColor: "blue" },
+      { title: "Check RRB NTPC Syllabus & Exam Scheme", description: "Subject-wise topic distribution for CBT-1 & CBT-2", url: "https://indianrailways.gov.in", isExternal: true, badge: "Syllabus", badgeColor: "purple" },
+      { title: "Indian Railways Official Headquarters Website", description: "Ministry of Railways official portal", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Portal", badgeColor: "blue" },
+      { title: "Check Eligibility & Generate 60-Day Study Plan with AI", description: "Instant 5-second compatibility scan with HireOrbitAI", url: "/onboarding", isExternal: false, badge: "AI Powered", badgeColor: "emerald" }
+    ]
+  },
+  'rrb-ntpc-10-plus-2-inter-level-recruitment-2026': {
+    postWiseDetails: [
+      {
+        postName: "Commercial Cum Ticket Clerk",
+        department: "Commercial Department (Indian Railways)",
+        classification: "Pay Level 3 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with min 50% Marks (SC/ST/PH/PwBD: Pass Only)",
+        payScale: "Pay Level 3 (₹21,700 - ₹69,100) + DA, HRA, Transport Allowance"
+      },
+      {
+        postName: "Accounts Clerk Cum Typist",
+        department: "Accounts & Finance Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Junior Clerk Cum Typist",
+        department: "Operating / Personnel / Engineering Divisions",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Trains Clerk",
+        department: "Traffic & Operating Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with not less than 50% Marks (Pass for SC/ST)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Running Allowances"
+      }
+    ],
+    isVacancyKnown: true,
+    categoryDistribution: {
+      ur: "680",
+      obc: "455",
+      sc: "253",
+      st: "127",
+      ews: "173",
+      total: "1,688"
+    },
+    examPatterns: [
+      {
+        tierName: "1st Stage Computer Based Test (CBT-1) - Common Screening Test",
+        mode: "Online CBT (Objective MCQ)",
+        totalQuestions: 100,
+        totalMarks: 100,
+        duration: "90 Minutes (120 Mins for PwBD)",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness (Current Affairs, Railway History, General Science)", questions: 40, marks: 40 },
+          { name: "Mathematics (Arithmetic, Algebra, Number System, Mensuration)", questions: 30, marks: 30 },
+          { name: "General Intelligence & Reasoning (Analogies, Coding, Syllogisms)", questions: 30, marks: 30 }
+        ]
+      },
+      {
+        tierName: "2nd Stage Computer Based Test (CBT-2) - Merit Determining",
+        mode: "Online CBT (Separately conducted for Pay Level 2 and Level 3)",
+        totalQuestions: 120,
+        totalMarks: 120,
+        duration: "90 Minutes",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness", questions: 50, marks: 50 },
+          { name: "Mathematics", questions: 35, marks: 35 },
+          { name: "General Intelligence & Reasoning", questions: 35, marks: 35 }
+        ]
+      },
+      {
+        tierName: "3rd Stage: Typing Skill Test (Qualifying Nature)",
+        mode: "Computer Typing Test (No spell check / editing tools allowed)",
+        totalQuestions: "10 Minutes Test",
+        totalMarks: "Qualifying (Speed & Accuracy)",
+        duration: "10 Minutes",
+        negativeMarking: "5% mistakes allowed; excess deducted from speed",
+        subjects: [
+          { name: "English Typing (Minimum 30 Words Per Minute)", questions: 1, marks: "Qualifying" },
+          { name: "Hindi Typing on KrutiDev / Mangal font (Minimum 25 Words Per Minute)", questions: 1, marks: "Qualifying" }
+        ]
+      }
+    ],
+    applicationSteps: [
+      "Step 1: Go to the official unified Railway portal (rrbapply.gov.in) and click on 'Apply' -> 'Create an Account'.",
+      "Step 2: Enter Aadhaar number (or approved photo ID), candidate name, date of birth, mobile number, and active email ID.",
+      "Step 3: Complete Mobile and Email OTP verification to generate your unique Railway Registration ID.",
+      "Step 4: Log in to your portal and choose CEN 07/2026 (NTPC 10+2 Under Graduate Recruitment).",
+      "Step 5: Select your preferred Railway Recruitment Board (RRB Zone - only 1 zone selection permitted).",
+      "Step 6: Enter priority preferences for Level 3 and Level 2 posts according to your qualification.",
+      "Step 7: Upload passport-size color photograph (30-70 KB) and signature (30-70 KB) taken against a plain white background.",
+      "Step 8: Pay the application fee (₹500 for UR/OBC with ₹400 refundable after CBT-1; ₹250 for SC/ST/Female with full refund) through online gateway.",
+      "Step 9: Download and securely print the finalized confirmation application page."
+    ],
+    faqs: [
+      { question: "What is the fee refund policy in RRB NTPC 10+2 Recruitment?", answer: "Candidates who appear in the 1st Stage Computer Based Test (CBT-1) get their fees refunded: UR and OBC candidates receive ₹400 refund back to their bank account (after ₹100 bank charges), while SC, ST, Female, Ex-Servicemen, and PwBD candidates receive the full ₹250 refund." },
+      { question: "Can a candidate appearing in 12th board exams apply?", answer: "No. Candidates must have already passed 10+2 Intermediate on or before the closing date of application (13 November 2026)." },
+      { question: "Is the typing test mandatory for all posts in RRB NTPC 10+2?", answer: "No. Typing test is ONLY required for Accounts Clerk Cum Typist and Junior Clerk Cum Typist. Posts like Commercial Cum Ticket Clerk and Trains Clerk do NOT require a typing test." },
+      { question: "Can I apply to multiple RRB zones?", answer: "No. Each candidate can select only ONE RRB zone. Multiple applications across zones will lead to automatic rejection of all applications." }
+    ],
+    usefulLinks: [
+      { title: "Apply Online Registration Link (rrbapply.gov.in)", description: "Direct application portal for CEN 07/2026", url: "https://rrbapply.gov.in", isExternal: true, badge: "Link Activate Oct 15", badgeColor: "emerald" },
+      { title: "Download Official Short Notice PDF", description: "Official Railway Board Employment Notice", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Notice", badgeColor: "blue" },
+      { title: "Download Detailed Notification (CEN 07/2026)", description: "Full eligibility, vacancies & zone rules", url: "https://rrbapply.gov.in", isExternal: true, badge: "Gazette PDF", badgeColor: "blue" },
+      { title: "Check RRB NTPC Syllabus & Exam Scheme", description: "Subject-wise topic distribution for CBT-1 & CBT-2", url: "https://indianrailways.gov.in", isExternal: true, badge: "Syllabus", badgeColor: "purple" },
+      { title: "Indian Railways Official Headquarters Website", description: "Ministry of Railways official portal", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Portal", badgeColor: "blue" },
+      { title: "Check Eligibility & Generate 60-Day Study Plan with AI", description: "Instant 5-second compatibility scan with HireOrbitAI", url: "/onboarding", isExternal: false, badge: "AI Powered", badgeColor: "emerald" }
+    ]
+  },
+  'rrb-ntpc-inter-level-07-2026': {
+    postWiseDetails: [
+      {
+        postName: "Commercial Cum Ticket Clerk",
+        department: "Commercial Department (Indian Railways)",
+        classification: "Pay Level 3 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with min 50% Marks (SC/ST/PH/PwBD: Pass Only)",
+        payScale: "Pay Level 3 (₹21,700 - ₹69,100) + DA, HRA, Transport Allowance"
+      },
+      {
+        postName: "Accounts Clerk Cum Typist",
+        department: "Accounts & Finance Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Junior Clerk Cum Typist",
+        department: "Operating / Personnel / Engineering Divisions",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate with 50% Marks + Computer Typing (English: 30 WPM OR Hindi: 25 WPM)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Central Allowances"
+      },
+      {
+        postName: "Trains Clerk",
+        department: "Traffic & Operating Department",
+        classification: "Pay Level 2 (Undergraduate)",
+        vacancies: "As per Zone Roster",
+        ageLimit: "18 - 30 Years (as on 01/01/2027)",
+        qualification: "10+2 Intermediate Exam from recognized Board with not less than 50% Marks (Pass for SC/ST)",
+        payScale: "Pay Level 2 (₹19,900 - ₹63,200) + Running Allowances"
+      }
+    ],
+    isVacancyKnown: true,
+    categoryDistribution: {
+      ur: "680",
+      obc: "455",
+      sc: "253",
+      st: "127",
+      ews: "173",
+      total: "1,688"
+    },
+    examPatterns: [
+      {
+        tierName: "1st Stage Computer Based Test (CBT-1) - Common Screening Test",
+        mode: "Online CBT (Objective MCQ)",
+        totalQuestions: 100,
+        totalMarks: 100,
+        duration: "90 Minutes (120 Mins for PwBD)",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness (Current Affairs, Railway History, General Science)", questions: 40, marks: 40 },
+          { name: "Mathematics (Arithmetic, Algebra, Number System, Mensuration)", questions: 30, marks: 30 },
+          { name: "General Intelligence & Reasoning (Analogies, Coding, Syllogisms)", questions: 30, marks: 30 }
+        ]
+      },
+      {
+        tierName: "2nd Stage Computer Based Test (CBT-2) - Merit Determining",
+        mode: "Online CBT (Separately conducted for Pay Level 2 and Level 3)",
+        totalQuestions: 120,
+        totalMarks: 120,
+        duration: "90 Minutes",
+        negativeMarking: "1/3rd (0.33) Marks deduction per wrong answer",
+        subjects: [
+          { name: "General Awareness", questions: 50, marks: 50 },
+          { name: "Mathematics", questions: 35, marks: 35 },
+          { name: "General Intelligence & Reasoning", questions: 35, marks: 35 }
+        ]
+      },
+      {
+        tierName: "3rd Stage: Typing Skill Test (Qualifying Nature)",
+        mode: "Computer Typing Test (No spell check / editing tools allowed)",
+        totalQuestions: "10 Minutes Test",
+        totalMarks: "Qualifying (Speed & Accuracy)",
+        duration: "10 Minutes",
+        negativeMarking: "5% mistakes allowed; excess deducted from speed",
+        subjects: [
+          { name: "English Typing (Minimum 30 Words Per Minute)", questions: 1, marks: "Qualifying" },
+          { name: "Hindi Typing on KrutiDev / Mangal font (Minimum 25 Words Per Minute)", questions: 1, marks: "Qualifying" }
+        ]
+      }
+    ],
+    applicationSteps: [
+      "Step 1: Go to the official unified Railway portal (rrbapply.gov.in) and click on 'Apply' -> 'Create an Account'.",
+      "Step 2: Enter Aadhaar number (or approved photo ID), candidate name, date of birth, mobile number, and active email ID.",
+      "Step 3: Complete Mobile and Email OTP verification to generate your unique Railway Registration ID.",
+      "Step 4: Log in to your portal and choose CEN 07/2026 (NTPC 10+2 Under Graduate Recruitment).",
+      "Step 5: Select your preferred Railway Recruitment Board (RRB Zone - only 1 zone selection permitted).",
+      "Step 6: Enter priority preferences for Level 3 and Level 2 posts according to your qualification.",
+      "Step 7: Upload passport-size color photograph (30-70 KB) and signature (30-70 KB) taken against a plain white background.",
+      "Step 8: Pay the application fee (₹500 for UR/OBC with ₹400 refundable after CBT-1; ₹250 for SC/ST/Female with full refund) through online gateway.",
+      "Step 9: Download and securely print the finalized confirmation application page."
+    ],
+    faqs: [
+      { question: "What is the fee refund policy in RRB NTPC 10+2 Recruitment?", answer: "Candidates who appear in the 1st Stage Computer Based Test (CBT-1) get their fees refunded: UR and OBC candidates receive ₹400 refund back to their bank account (after ₹100 bank charges), while SC, ST, Female, Ex-Servicemen, and PwBD candidates receive the full ₹250 refund." },
+      { question: "Can a candidate appearing in 12th board exams apply?", answer: "No. Candidates must have already passed 10+2 Intermediate on or before the closing date of application (13 November 2026)." },
+      { question: "Is the typing test mandatory for all posts in RRB NTPC 10+2?", answer: "No. Typing test is ONLY required for Accounts Clerk Cum Typist and Junior Clerk Cum Typist. Posts like Commercial Cum Ticket Clerk and Trains Clerk do NOT require a typing test." },
+      { question: "Can I apply to multiple RRB zones?", answer: "No. Each candidate can select only ONE RRB zone. Multiple applications across zones will lead to automatic rejection of all applications." }
+    ],
+    usefulLinks: [
+      { title: "Apply Online Registration Link (rrbapply.gov.in)", description: "Direct application portal for CEN 07/2026", url: "https://rrbapply.gov.in", isExternal: true, badge: "Link Activate Oct 15", badgeColor: "emerald" },
+      { title: "Download Official Short Notice PDF", description: "Official Railway Board Employment Notice", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Notice", badgeColor: "blue" },
+      { title: "Download Detailed Notification (CEN 07/2026)", description: "Full eligibility, vacancies & zone rules", url: "https://rrbapply.gov.in", isExternal: true, badge: "Gazette PDF", badgeColor: "blue" },
+      { title: "Check RRB NTPC Syllabus & Exam Scheme", description: "Subject-wise topic distribution for CBT-1 & CBT-2", url: "https://indianrailways.gov.in", isExternal: true, badge: "Syllabus", badgeColor: "purple" },
+      { title: "Indian Railways Official Headquarters Website", description: "Ministry of Railways official portal", url: "https://indianrailways.gov.in", isExternal: true, badge: "Official Portal", badgeColor: "blue" },
+      { title: "Check Eligibility & Generate 60-Day Study Plan with AI", description: "Instant 5-second compatibility scan with HireOrbitAI", url: "/onboarding", isExternal: false, badge: "AI Powered", badgeColor: "emerald" }
+    ]
+  },
+
   // 3. UP Police Constable 2026
   'up-police-constable-2026': {
     postWiseDetails: [

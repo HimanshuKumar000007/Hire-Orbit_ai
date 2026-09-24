@@ -58,8 +58,14 @@ export async function generateStaticParams() {
 
 async function getJobBySlug(slug: string): Promise<GovJobNotification | null> {
   // Check static data first
-  const staticJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug);
+  const staticJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === slug || j.id === slug);
   if (staticJob) return staticJob;
+
+  // Handle common Sarkari Result permalink aliases
+  if (slug === 'rrb-ntpc-inter-level-07-2026' || slug === 'rrb-ntpc-10-plus-2-2026') {
+    const aliasJob = GOV_JOB_NOTIFICATIONS.find((j) => j.slug === 'rrb-ntpc-10-plus-2-inter-level-recruitment-2026');
+    if (aliasJob) return aliasJob;
+  }
 
   // Fallback to Supabase live database
   try {
@@ -341,18 +347,23 @@ export default async function GovJobDetailPage({ params }: PageProps) {
             {job.title}
           </h1>
 
-          {/* Sanitized Summary Description */}
-          <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 text-zinc-300 text-sm sm:text-base leading-relaxed">
-            {(job.summary || "")
-              .replace(/<[^>]*>/g, " ")
-              .replace(/&amp;/g, "&")
-              .replace(/&lt;/g, "<")
-              .replace(/&gt;/g, ">")
-              .replace(/&quot;/g, '"')
-              .replace(/&#39;/g, "'")
-              .replace(/&nbsp;/g, " ")
-              .replace(/\s{2,}/g, " ")
-              .trim()}
+          {/* Sanitized Summary Description / Short Notice Box */}
+          <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 text-zinc-300 text-sm sm:text-base leading-relaxed space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
+              <FileText className="w-3.5 h-3.5" /> Short Description &amp; Notification Summary
+            </div>
+            <p>
+              {(job.summary || "")
+                .replace(/<[^>]*>/g, " ")
+                .replace(/&amp;/g, "&")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">")
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&nbsp;/g, " ")
+                .replace(/\s{2,}/g, " ")
+                .trim()}
+            </p>
           </div>
         </header>
 
@@ -475,6 +486,21 @@ export default async function GovJobDetailPage({ params }: PageProps) {
                         <span className="text-zinc-300 font-medium">As per Commission Policy</span>
                       </div>
                     </div>
+
+                    {/* Official Fee Refund Callout (Crucial for Railway / RRB exams) */}
+                    {(job.organization.toLowerCase().includes('railway') || 
+                      job.category === 'railway' ||
+                      JSON.stringify(job.applicationFee).toLowerCase().includes('refund')) && (
+                      <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <div className="text-[11px] leading-snug">
+                          <span className="font-bold text-emerald-400 block mb-0.5">Official Fee Refund Rule:</span>
+                          <span className="text-zinc-300">
+                            General / OBC candidates receive ₹400 refund, and SC / ST / Female / PwBD candidates receive full ₹250 refund in their bank account after appearing in Stage 1 CBT examination.
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* BOX 3: AGE LIMIT & ELIGIBILITY CRITERIA */}
@@ -921,6 +947,34 @@ export default async function GovJobDetailPage({ params }: PageProps) {
               </div>
             )}
 
+            {/* 🌟 CANDIDATE CAUTION ADVISORY BANNER (Sarkari Result Standard Instructions) */}
+            <div className="glass p-6 rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-zinc-950 to-zinc-950 space-y-3">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4" /> महत्वपूर्ण निर्देश | Candidate Caution &amp; Advisory Notice
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-white">
+                उम्मीदवारों के लिए अनिवार्य दिशा-निर्देश (Read Carefully Before Applying)
+              </h4>
+              <ul className="space-y-2 text-xs sm:text-sm text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-2" />
+                  <span><strong className="text-white">अधिसूचना जांचें (Check Notification):</strong> सभी उम्मीदवार ऑनलाइन आवेदन पत्र भरने से पहले आधिकारिक भर्ती विज्ञापन (Official Gazette Circular) को ध्यानपूर्वक पढ़ें।</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-2" />
+                  <span><strong className="text-white">पात्रता एवं विवरण (Eligibility &amp; Details):</strong> कृपया सभी दस्तावेज - पात्रता (Eligibility), आईडी प्रमाण (Aadhaar / Voter ID / PAN), पता विवरण और मूल विवरण की जांच और सत्यापन करें।</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-2" />
+                  <span><strong className="text-white">स्कैन दस्तावेज (Scanned Files):</strong> कृपया भर्ती फॉर्म से संबंधित स्कैन दस्तावेज तैयार रखें - फोटो (सादा सफेद पृष्ठभूमि), हस्ताक्षर, जन्मतिथि प्रमाणपत्र व शैक्षणिक अंकपत्र।</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-2" />
+                  <span><strong className="text-white">फाइनल सबमिशन (Final Submission):</strong> आवेदन पत्र जमा करने से पहले पूर्वावलोकन (Preview) और सभी कॉलम को ध्यानपूर्वक जांचना आवश्यक है। अंतिम रूप से सबमिट किए गए फॉर्म का प्रिंट आउट अवश्य निकालें।</span>
+                </li>
+              </ul>
+            </div>
+
             {/* 🌟 5. STEP-BY-STEP HOW TO APPLY ONLINE GUIDE */}
             <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
               <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
@@ -940,47 +994,76 @@ export default async function GovJobDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* 🌟 6. USEFUL IMPORTANT LINKS TABLE (Sarkari Result Style Command Center) */}
+            {/* 🌟 6. USEFUL IMPORTANT LINKS TABLE (Sarkari Result Command Center) */}
             <div className="glass p-6 sm:p-8 rounded-3xl border border-white/10 space-y-4">
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                <FileCheck className="w-4 h-4" /> Official Gazette Access
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white">Some Useful Important Links</h3>
-
-              <div className="overflow-hidden rounded-2xl border border-white/10 divide-y divide-white/10 bg-zinc-950/60">
-                {enriched.usefulLinks.map((link, idx) => (
-                  <div key={idx} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors">
-                    <div>
-                      <div className="font-bold text-white text-sm flex items-center gap-2">
-                        <span>{link.title}</span>
-                        {link.badge && (
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getBadgeStyle(link.badgeColor || 'emerald')}`}>
-                            {link.badge}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-zinc-400 mt-0.5">{link.description}</p>
-                    </div>
-
-                    {link.isExternal ? (
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white/10 hover:bg-emerald-500 hover:text-zinc-950 text-white text-xs font-bold transition-all shrink-0 border border-white/10"
-                      >
-                        Click Here <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    ) : (
-                      <Link
-                        href={link.url}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 text-zinc-950 hover:bg-emerald-400 text-xs font-bold transition-all shrink-0 shadow-glow-sm"
-                      >
-                        Verify with AI <Sparkles className="w-3.5 h-3.5" />
-                      </Link>
-                    )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1">
+                    <FileCheck className="w-4 h-4" /> Official Gazette Command Center
                   </div>
-                ))}
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">Some Useful Important Links</h3>
+                </div>
+                <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Direct Verified Portals
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/80">
+                {/* Table Header */}
+                <div className="hidden sm:grid sm:grid-cols-12 px-5 py-3 bg-white/[0.04] border-b border-white/10 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  <div className="sm:col-span-8">Document / Official Resource</div>
+                  <div className="sm:col-span-4 sm:text-right">Action / Direct Link</div>
+                </div>
+
+                <div className="divide-y divide-white/5">
+                  {enriched.usefulLinks.map((link, idx) => {
+                    const isUpcoming = link.badge?.toLowerCase().includes('activate');
+                    const isPrimary = !isUpcoming && (link.title.toLowerCase().includes('apply') || link.badge?.toLowerCase().includes('apply'));
+
+                    return (
+                      <div key={idx} className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors">
+                        <div className="sm:max-w-[65%]">
+                          <div className="font-bold text-white text-sm flex flex-wrap items-center gap-2">
+                            <span>{link.title}</span>
+                            {link.badge && (
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getBadgeStyle(link.badgeColor || 'emerald')}`}>
+                                {link.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-zinc-400 mt-1">{link.description}</p>
+                        </div>
+
+                        <div className="shrink-0 sm:text-right">
+                          {link.isExternal ? (
+                            <a
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                                isUpcoming
+                                  ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30'
+                                  : isPrimary
+                                  ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-glow-sm'
+                                  : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                              }`}
+                            >
+                              <span>{isUpcoming ? (link.badge || "Click Here") : "Click Here"}</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          ) : (
+                            <Link
+                              href={link.url}
+                              className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-500 text-zinc-950 hover:bg-emerald-400 text-xs font-bold transition-all shadow-glow-sm"
+                            >
+                              Verify with AI <Sparkles className="w-3.5 h-3.5" />
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
