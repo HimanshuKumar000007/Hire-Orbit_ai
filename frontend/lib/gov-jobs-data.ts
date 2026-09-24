@@ -22,7 +22,9 @@ export interface GovJobNotification {
     startDate?: string;
     lastDate?: string;
     feeLastDate?: string;
+    citySlipDate?: string;
     examDate?: string;
+    shiftTimings?: string;
     admitCardDate?: string;
     resultDate?: string;
   };
@@ -587,6 +589,53 @@ export const GOV_JOB_NOTIFICATIONS: GovJobNotification[] = [
     officialPdfUrl: 'https://ssc.gov.in',
     applyUrl: 'https://ssc.gov.in',
     updatedAt: '15 mins ago',
+    isTrending: true,
+  },
+  {
+    id: 'ugc-net-admit-card-2026',
+    slug: 'ugc-net-admit-card-2026',
+    title: 'UGC NET Admit Card 2026 Released, Download Exam Hall Ticket & City Slip',
+    shortTitle: 'UGC NET Admit Card 2026',
+    organization: 'National Testing Agency (NTA)',
+    category: 'teaching',
+    type: 'admit-card',
+    badgeStatus: 'Admit Card Live',
+    badgeColor: 'emerald',
+    vacancies: 'Eligibility Test (N/A)',
+    qualification: "Master's Degree with minimum 55% marks (50% for SC/ST/OBC/PwD)",
+    qualificationLevel: 'postgraduate',
+    ageLimit: 'JRF: Max 30 Years | Assistant Professor: No Upper Age Limit',
+    payScale: 'JRF Fellowship ₹37,000/pm + HRA | Asst Professor Pay Level 10',
+    applicationFee: {
+      generalOBC: '₹1,150 (UR) / ₹600 (EWS/OBC-NCL)',
+      scStPh: '₹325 (SC/ST/PwD/Third Gender)',
+      female: 'As per Category',
+    },
+    importantDates: {
+      startDate: 'Completed',
+      lastDate: 'Registration Closed',
+      citySlipDate: 'Available Now',
+      admitCardDate: 'Available Now',
+      examDate: 'June 22 to 30, 2026 (CBT)',
+      resultDate: 'To be Announced Post-Exam'
+    },
+    location: 'All India (National Testing Agency Venues)',
+    summary: 'National Testing Agency (NTA) has officially released the Admit Card and Advance City Intimation slip for the UGC NET 2026 examination for Assistant Professor eligibility and Junior Research Fellowship (JRF). Candidates can download their hall ticket by logging in with their Application Number and Date of Birth.',
+    keyHighlights: [
+      'Official Hall Ticket released by National Testing Agency (NTA)',
+      'Examination conducted across 83 subjects in Computer Based Test (CBT) mode',
+      'Mandatory to carry printed admit card and original government photo identity proof',
+      'Advance Exam City intimation slip active on official portal ugcnet.nta.ac.in'
+    ],
+    selectionProcess: [
+      'Paper 1: General Teaching & Research Aptitude (50 Questions / 100 Marks)',
+      'Paper 2: Selected Subject Domain (100 Questions / 200 Marks)',
+      'Total Duration: 3 Hours (180 Minutes, No Break Between Papers)',
+      'No Negative Marking for Incorrect Answers'
+    ],
+    officialPdfUrl: 'https://ugcnet.nta.ac.in',
+    applyUrl: 'https://ugcnet.nta.ac.in',
+    updatedAt: 'Official Gazette Verified',
     isTrending: true,
   }
 ];

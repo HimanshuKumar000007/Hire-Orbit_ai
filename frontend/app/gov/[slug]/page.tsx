@@ -9,6 +9,8 @@ import {
   GovJobNotification 
 } from "@/lib/gov-jobs-data";
 import { getEnrichedJobDetails } from "@/lib/gov-job-details";
+import { normalizeToUniversalNotice } from "@/lib/universal-notice-model";
+import { UniversalAdmitCardPage } from "@/components/gov/admit-card/UniversalAdmitCardPage";
 import { 
   Building2, 
   Calendar, 
@@ -67,6 +69,11 @@ async function getJobBySlug(slug: string): Promise<GovJobNotification | null> {
     if (aliasJob) return aliasJob;
   }
 
+  if (slug === 'ugc-net-admit-card-2026' || slug === 'ugc-net-2026-admit-card' || slug === 'ugc-net-june-2026-schedule-released-nta-to-conduct-exam-from-june-22-to-30-check') {
+    const aliasJob = GOV_JOB_NOTIFICATIONS.find((j) => j.id === 'ugc-net-admit-card-2026' || j.slug === 'ugc-net-admit-card-2026');
+    if (aliasJob) return aliasJob;
+  }
+
   // Fallback to Supabase live database
   try {
     const supabase = getSupabaseClient();
@@ -122,6 +129,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const isAdmitNotice = job.type === 'admit-card' || 
+    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar/i.test(job.title);
+
+  if (isAdmitNotice) {
+    return {
+      title: `${job.title} - Download Hall Ticket, Exam Date & City Slip | HireOrbitAI`,
+      description: `${job.summary} Download official admit card, check exam date, shift timings, hall guidelines, and verified portal link.`,
+      keywords: [
+        job.title,
+        job.shortTitle,
+        job.organization,
+        "Admit Card 2026",
+        "Hall Ticket Download",
+        "Exam City Intimation Slip",
+        "Sarkari Result Admit Card 2026",
+        "Official Exam Schedule PDF"
+      ],
+      openGraph: {
+        title: `${job.title} | HireOrbitAI Exam Desk`,
+        description: job.summary,
+        url: `https://hireorbitai.in/gov/${job.slug}`,
+        siteName: "HireOrbitAI Government Careers",
+        type: "article",
+      },
+      alternates: {
+        canonical: `https://hireorbitai.in/gov/${job.slug}`,
+      },
+    };
+  }
+
   const enriched = getEnrichedJobDetails(job);
 
   return {
@@ -160,8 +197,18 @@ export default async function GovJobDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const enriched = getEnrichedJobDetails(job);
   const relatedJobs = GOV_JOB_NOTIFICATIONS.filter((j) => j.id !== job.id).slice(0, 3);
+
+  // 🌟 UNIVERSAL ADMIT CARD / EXAM SCHEDULE SYSTEM
+  const isAdmitNotice = job.type === 'admit-card' || 
+    /admit card|hall ticket|call letter|city slip|city intimation|exam date|exam schedule|exam calendar/i.test(job.title);
+
+  if (isAdmitNotice) {
+    const universalNotice = normalizeToUniversalNotice(job);
+    return <UniversalAdmitCardPage notice={universalNotice} relatedJobs={relatedJobs} />;
+  }
+
+  const enriched = getEnrichedJobDetails(job);
 
   const getBadgeStyle = (color: string) => {
     switch (color) {

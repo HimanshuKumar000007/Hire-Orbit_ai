@@ -117,6 +117,9 @@ const OFFICIAL_PORTAL_MAP: Record<string, string> = {
   "Reserve Bank of India (RBI)": "https://opportunities.rbi.org.in",
   "CTET / CBSE": "https://ctet.nic.in",
   "AIIMS": "https://aiimsexams.ac.in",
+  "UGC NET": "https://ugcnet.nta.ac.in",
+  "National Testing Agency (NTA)": "https://nta.ac.in",
+  "NTA": "https://nta.ac.in",
 };
 
 // ─── ROBUST HTML SANITIZER & ENTITY DECODER ──────────────────────────────
@@ -494,7 +497,7 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     summary,
     key_highlights: highlights,
     selection_process,
-    official_pdf_url: raw.link || (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
+    official_pdf_url: (raw.link && !raw.link.includes("news.google.com")) ? raw.link : (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
     apply_url: (raw.link && !raw.link.includes("news.google.com")) ? raw.link : (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
     slug
   };
