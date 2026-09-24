@@ -341,8 +341,18 @@ export default async function GovJobDetailPage({ params }: PageProps) {
             {job.title}
           </h1>
 
+          {/* Sanitized Summary Description */}
           <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 text-zinc-300 text-sm sm:text-base leading-relaxed">
-            {job.summary}
+            {(job.summary || "")
+              .replace(/<[^>]*>/g, " ")
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&nbsp;/g, " ")
+              .replace(/\s{2,}/g, " ")
+              .trim()}
           </div>
         </header>
 
@@ -351,6 +361,20 @@ export default async function GovJobDetailPage({ params }: PageProps) {
           const isExamNotice = job.type === 'admit-card' || /exam date|exam schedule|hall ticket|admit card|city slip|exam calendar/i.test(job.title);
           const isResultNotice = job.type === 'result' || /result|merit list|cut.?off|scorecard/i.test(job.title);
           const isAnswerKeyNotice = job.type === 'answer-key' || /answer key|objection/i.test(job.title);
+          const isExamOrAdmitNotice = isExamNotice || isResultNotice || isAnswerKeyNotice;
+
+          // Safe, authoritative date presentation (never shows N/A or raw error text)
+          const displayStartDate = (!job.importantDates.startDate || job.importantDates.startDate === "Announced" || job.importantDates.startDate.includes("N/A"))
+            ? (isExamOrAdmitNotice ? "Advt Released (Completed)" : "Check Official Portal")
+            : job.importantDates.startDate;
+
+          const displayLastDate = (!job.importantDates.lastDate || job.importantDates.lastDate.includes("N/A") || job.importantDates.lastDate === "Announced")
+            ? (isExamOrAdmitNotice ? "Registration Window Closed" : "Check Official Gazette Window")
+            : job.importantDates.lastDate;
+
+          const displayFeeLastDate = (job.importantDates.feeLastDate && !job.importantDates.feeLastDate.includes("N/A"))
+            ? job.importantDates.feeLastDate
+            : (isExamOrAdmitNotice ? "Registration Window Closed" : (displayLastDate !== "Check Official Gazette Window" ? displayLastDate : "As per Commission Schedule"));
 
           return (
             <>
@@ -382,22 +406,24 @@ export default async function GovJobDetailPage({ params }: PageProps) {
                     <div className="space-y-2 text-xs divide-y divide-white/5">
                       <div className="flex justify-between items-center pt-1.5">
                         <span className="text-zinc-400">Application Begin:</span>
-                        <span className="font-semibold text-white">{job.importantDates.startDate || "Check Official Portal"}</span>
+                        <span className="font-semibold text-white">{displayStartDate}</span>
                       </div>
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-zinc-400">Last Date to Apply:</span>
-                        <span className="font-bold text-amber-400">{job.importantDates.lastDate || "As per Notification"}</span>
+                        <span className={`font-bold ${isExamOrAdmitNotice ? 'text-zinc-300' : 'text-amber-400'}`}>
+                          {displayLastDate}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-zinc-400">Fee Payment Last Date:</span>
-                        <span className="font-semibold text-zinc-200">{job.importantDates.feeLastDate || job.importantDates.lastDate || "As per Notification"}</span>
+                        <span className="font-semibold text-zinc-300">{displayFeeLastDate}</span>
                       </div>
                       <div className="flex justify-between items-center pt-2">
                         <span className="text-zinc-400 flex items-center gap-1">
                           <Flame className="w-3 h-3 text-blue-400" /> Exam Date:
                         </span>
                         <span className="font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                          {job.importantDates.examDate || (isExamNotice ? "Announced (Check Below)" : "To be Notified Soon")}
+                          {job.importantDates.examDate || (isExamNotice ? "Announced (Check Schedule Notice Below)" : "To be Notified Soon")}
                         </span>
                       </div>
                       <div className="flex justify-between items-center pt-2">

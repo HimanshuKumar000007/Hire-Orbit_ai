@@ -576,9 +576,9 @@ export function getEnrichedJobDetails(job: GovJobNotification): EnrichedJobDetai
   } else if (/nurse|nursing|pharmacist|lab technician|medical officer|doctor|health|anm|gnm|arogya|physician/i.test(textToScan)) {
     domain = 'medical';
     domainName = "Medical & Healthcare Services";
-  } else if (/engineer|je\b|\bae\b|technician|loco pilot|\balp\b|\biti\b|polytechnic|technical assistant/i.test(textToScan)) {
+  } else if (/scientist|engineer|\bisro\b|\bdrdo\b|\bbarc\b|je\b|\bae\b|technician|loco pilot|\balp\b|\biti\b|polytechnic|technical assistant/i.test(textToScan)) {
     domain = 'engineering';
-    domainName = "Engineering & Technical Cadre";
+    domainName = "Engineering & Scientific Cadre";
   } else if (/patwari|lekhpal|\bvdo\b|gram sachiv|revenue inspector|kanungo|amin\b/i.test(textToScan)) {
     domain = 'patwari';
     domainName = "Revenue & Rural Administration";
@@ -636,12 +636,26 @@ export function getEnrichedJobDetails(job: GovJobNotification): EnrichedJobDetai
       derivedPayScale = "Pay Level 7 (₹44,900 - ₹1,42,400)";
       break;
     case 'engineering':
-      derivedPostName += /alp|loco/i.test(job.title) ? "Assistant Loco Pilot (ALP)" : "Junior Engineer (JE) — Civil / Electrical / Mechanical";
-      derivedClassification = "Technical & Engineering Cadre";
-      derivedQualification = /alp|loco/i.test(job.title) 
+      derivedPostName += /scientist/i.test(job.title)
+        ? "Scientist / Engineer 'SC' (Scientific Cadre)"
+        : /alp|loco/i.test(job.title)
+        ? "Assistant Loco Pilot (ALP)"
+        : /technician|trade/i.test(job.title)
+        ? "Technician / Technical Assistant"
+        : "Junior Engineer (JE) — Civil / Electrical / Mechanical";
+      derivedClassification = /scientist/i.test(job.title)
+        ? "Group A Gazetted (Central Scientific & Technical Service)"
+        : "Technical & Engineering Cadre";
+      derivedQualification = /scientist/i.test(job.title)
+        ? "B.E / B.Tech / M.Sc in relevant Engineering or Science discipline (First Class / 65% Marks or 6.84 CGPA)"
+        : /alp|loco/i.test(job.title)
         ? "Matriculation (10th) + ITI in relevant trade or Diploma in Mechanical/Electrical/Automobile Engineering"
+        : /technician|trade/i.test(job.title)
+        ? "10th Pass + ITI / Diploma in Engineering"
         : "Diploma / B.Tech / B.E. in relevant Engineering branch from an AICTE recognized institution";
-      derivedPayScale = "Pay Level 6 (₹35,400 - ₹1,12,400)";
+      derivedPayScale = /scientist/i.test(job.title)
+        ? "Pay Level 10 (₹56,100 - ₹1,77,500) + HRA & Special Allowances"
+        : "Pay Level 6 (₹35,400 - ₹1,12,400)";
       break;
     case 'patwari':
       derivedPostName += /vdo/i.test(job.title) ? "Village Development Officer (VDO)" : "Rajasva Lekhpal / Patwari";

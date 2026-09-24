@@ -119,11 +119,139 @@ const OFFICIAL_PORTAL_MAP: Record<string, string> = {
   "AIIMS": "https://aiimsexams.ac.in",
 };
 
+// ─── ROBUST HTML SANITIZER & ENTITY DECODER ──────────────────────────────
+function stripHtmlAndDecode(rawText: string): string {
+  if (!rawText) return "";
+  let text = rawText
+    // 1. Decode entities
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)));
+
+  // 2. Decode double-escaped entities
+  text = text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+
+  // 3. Strip all HTML tags
+  text = text.replace(/<[^>]*>/g, " ");
+
+  // 4. Strip raw URLs
+  text = text.replace(/https?:\/\/\S+/g, " ");
+
+  // 5. Strip news aggregator brand footprints
+  text = text.replace(/\s*[-|]\s*(?:PW|Physics\s*Wallah|Sarkari\s*Result|Adda247|Adda\s*247|Testbook|Jagran\s*Josh|Careers360|Shiksha|India\s*Today|TOI|Hindustan\s*Times|Sakshi\s*Education|Amar\s*Ujala|Dainik\s*Bhaskar)\b.*$/i, "");
+  text = text.replace(/\b(?:PW|Physics\s*Wallah|Sarkari\s*Result|Adda247|Testbook)\b\s*$/i, "");
+
+  // 6. Normalize whitespace
+  return text.replace(/\s{2,}/g, " ").trim();
+}
+
+// ─── CONTEXT-AWARE DATE EXTRACTION ENGINE ─────────────────────────────────
+function extractDatesFromNotice(
+  title: string,
+  desc: string,
+  type: "job" | "admit-card" | "result" | "answer-key",
+  year: string
+) {
+  const combined = `${title} ${desc}`;
+  const MONTHS = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?";
+
+  const formatExtractedDate = (p1: string, p2: string, p3?: string) => {
+    const y = p3 && p3.match(/20\d\d/) ? p3.trim() : (year || "2026");
+    if (isNaN(Number(p1.replace(/\D/g, "")))) {
+      const d = p2.replace(/\D/g, "");
+      return `${d} ${p1} ${y}`.trim();
+    } else {
+      const d = p1.replace(/\D/g, "");
+      return `${d} ${p2} ${y}`.trim();
+    }
+  };
+
+  // 1. Exam Date Extraction (e.g., "CBT on October 19", "Exam on 15 March", "19th October 2026")
+  let examDate: string | null = null;
+  const examDateMatch = combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:on|from)\\s+([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:on|from)\\s+(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(/([0-3]?\d[./-][0-1]?\d[./-](?:20\d\d))/);
+
+  if (examDateMatch) {
+    if (examDateMatch[0].includes("/") || examDateMatch[0].includes("-")) {
+      examDate = examDateMatch[1] || examDateMatch[0];
+    } else {
+      examDate = formatExtractedDate(examDateMatch[1], examDateMatch[2], examDateMatch[3]);
+    }
+  }
+
+  // 2. Last Date to Apply (e.g., "Apply by October 5", "last date 15th Nov")
+  let lastDate: string | null = null;
+  const lastDateMatch = combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(/(?:apply by|last date)\s*([0-3]?\d[./-][0-1]?\d[./-](?:20\d\d))/i);
+
+  if (lastDateMatch) {
+    if (lastDateMatch[0].includes("/") || lastDateMatch[0].includes("-")) {
+      lastDate = lastDateMatch[1];
+    } else {
+      lastDate = formatExtractedDate(lastDateMatch[1], lastDateMatch[2], lastDateMatch[3]);
+    }
+  }
+
+  // 3. Start Date
+  let startDate: string | null = null;
+  const startDateMatch = combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
+    || combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
+
+  if (startDateMatch) {
+    startDate = formatExtractedDate(startDateMatch[1], startDateMatch[2], startDateMatch[3]);
+  }
+
+  const isExamOrAdmitNotice = type === "admit-card" || /exam date|exam schedule|hall ticket|admit card|city slip/i.test(title);
+  const isResultNotice = type === "result";
+  const isAnswerKeyNotice = type === "answer-key";
+
+  const finalExamDate = examDate 
+    ? examDate 
+    : (isExamOrAdmitNotice ? "Announced (Check Schedule Notice Below)" : "To be Notified Soon");
+
+  const finalStartDate = startDate
+    ? startDate
+    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Advt Released (Completed)" : "Active / Check Official Portal");
+
+  const finalLastDate = lastDate
+    ? lastDate
+    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Check Official Gazette Window");
+
+  const finalFeeLastDate = lastDate
+    ? lastDate
+    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Same as Application Last Date");
+
+  const finalAdmitCardDate = type === "admit-card"
+    ? "Available Now / Upcoming"
+    : (isExamOrAdmitNotice ? "7 - 10 Days Before Examination" : "Before Examination");
+
+  return {
+    startDate: finalStartDate,
+    lastDate: finalLastDate,
+    feeLastDate: finalFeeLastDate,
+    examDate: finalExamDate,
+    admitCardDate: finalAdmitCardDate,
+    resultDate: isResultNotice ? "Available Now (Declared)" : "To be Announced Post-Exam"
+  };
+}
+
 // ─── SMART RULE-BASED PARSER (no AI, instant) ─────────────────────────────
 function quickParseNotice(raw: { title: string; link: string; pubDate: string; description: string }) {
   const t = raw.title;
-  const tl = t.toLowerCase();
-  const desc = raw.description || "";
+  const desc = stripHtmlAndDecode(raw.description || "");
 
   // Determine type
   let type: "job" | "admit-card" | "result" | "answer-key" = "job";
@@ -165,7 +293,7 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   // Build clean title — strip ALL news source attribution tags
   const cleanTitle = t
     .replace(/\s*[-|]\s*(Sarkari Result|Sarkari Naukri|Fresherslive|Employment News|Govt Jobs|Naukri Uday|Job Alert|Jagran Josh|Careers360|Adda247|Adda 247|PW|Physics Wallah|Shiksha\.com|Shiksha|India Today|Hindustan Times|Times of India|TOI|NDTV|News18|Amar Ujala|Dainik Bhaskar|Navbharat Times|Oneindia|Zee News|ABP Live|Patrika|LiveMint|Economic Times|The Hindu|Indian Express|Firstpost|Scroll\.in|Wire|Quint|Print|Tribune|Pioneer|Statesman|Outlook|Deccan Herald|Deccan Chronicle|Hans India|Sakshi Education|Mathrubhumi|Malayala Manorama|Dinamalar|Dinamani|Ananda Bazar)[^-|]*$/i, "")
-    .replace(/\s*\|\s*[^|]{5,50}$/, "") // strip "| Source Name" at end
+    .replace(/\s*\|\s*[^|]{5,50}$/, "")
     .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
@@ -181,45 +309,69 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   // Build short title
   const short_title = cleanTitle.length > 55 ? cleanTitle.slice(0, 55).trim() + "…" : cleanTitle;
 
-  // Clean description — strip HTML tags, Google News URLs, and garbage
-  const cleanDesc = desc
-    ? desc
-        .replace(/<a\s[^>]*href="https?:\/\/news\.google\.com[^"]*"[^>]*>([^<]*)<\/a>/gi, "$1") // strip GNews hrefs
-        .replace(/<[^>]+>/g, " ")      // strip all HTML tags
-        .replace(/https?:\/\/\S+/g, "") // strip raw URLs
-        .replace(/&amp;/g, "&")
-        .replace(/&#39;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/\s{2,}/g, " ")
-        .trim()
-    : "";
-
-  let qualification = "Graduate / 12th Pass";
+  // Stream-Aligned Qualification Matrix
+  let qualification = "Bachelor's Degree in any discipline / Relevant Qualification";
   let qualification_level: "10th" | "12th" | "graduate" | "diploma" | "postgraduate" = "graduate";
-  if (/\bapp\b|prosecutor|law officer|\bllb\b|civil judge|advocate|judicial/i.test(t + desc)) {
-    qualification = "Bachelor's Degree in Law (LL.B)"; qualification_level = "graduate";
+
+  if (/scientist|engineer|\bicrb\b|drdo|barc|isro\b/i.test(t + desc)) {
+    if (/technical assistant|technician|trade|iti|cook|fireman|draughtsman/i.test(t + desc)) {
+      qualification = "Diploma in Engineering / ITI Certificate in Relevant Trade";
+      qualification_level = "diploma";
+    } else {
+      qualification = "B.E / B.Tech / M.Sc in relevant Engineering / Science discipline (First Class / 65% Marks)";
+      qualification_level = "graduate";
+    }
+  } else if (/technical assistant|junior engineer|\bje\b|diploma engineer/i.test(t + desc)) {
+    qualification = "Diploma in Engineering (3 Years) / B.Sc in Relevant Discipline";
+    qualification_level = "diploma";
+  } else if (/technician|iti\b|trade apprentice|fitter|electrician|welder/i.test(t + desc)) {
+    qualification = "10th (Matriculation) + ITI Certificate in Relevant Trade (NCVT/SCVT)";
+    qualification_level = "10th";
+  } else if (/\bapp\b|prosecutor|law officer|\bllb\b|civil judge|advocate|judicial/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in Law (LL.B)";
+    qualification_level = "graduate";
   } else if (/nurse|nursing|gnm|b\.?sc nursing/i.test(t + desc)) {
-    qualification = "B.Sc Nursing / GNM Diploma with Council Registration"; qualification_level = "graduate";
+    qualification = "B.Sc Nursing / GNM Diploma with State/INC Nursing Council Registration";
+    qualification_level = "graduate";
   } else if (/pharmacist|b\.?pharm|d\.?pharm/i.test(t + desc)) {
-    qualification = "Degree / Diploma in Pharmacy (B.Pharm / D.Pharm)"; qualification_level = "diploma";
+    qualification = "Degree / Diploma in Pharmacy (B.Pharm / D.Pharm) with Council Registration";
+    qualification_level = "diploma";
   } else if (/ctet|stet|teacher|tre\b|kvs|nvs|b\.?ed|d\.?el\.?ed/i.test(t + desc)) {
-    qualification = "Graduate / Post Graduate with B.Ed / D.El.Ed / TET"; qualification_level = "graduate";
-  } else if (/constable/i.test(t + desc)) {
-    qualification = "10+2 (Intermediate) Pass"; qualification_level = "12th";
-  } else if (/lekhpal|patwari|\bvdo\b/i.test(t + desc)) {
-    qualification = "10+2 Intermediate + State PET / Eligibility Score"; qualification_level = "12th";
-  } else if (/10th|matriculation|class 10|sslc/i.test(t + desc)) {
-    qualification = "10th Pass (Matriculation)"; qualification_level = "10th";
-  } else if (/12th|intermediate|class 12|higher secondary/i.test(t + desc)) {
-    qualification = "12th Pass (Intermediate)"; qualification_level = "12th";
-  } else if (/b\.?sc|b\.?tech|b\.?e\b|engineering|graduate|degree/i.test(t + desc)) {
-    qualification = "Bachelor's Degree in relevant discipline"; qualification_level = "graduate";
+    qualification = "Graduation / Post Graduation with B.Ed / D.El.Ed & State/Central TET Scorecard";
+    qualification_level = "graduate";
+  } else if (/sub inspector|\bsi\b|daroga/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in any discipline from a recognized University";
+    qualification_level = "graduate";
+  } else if (/constable|sepoy|rifleman|guard/i.test(t + desc)) {
+    qualification = "10+2 (Intermediate / Higher Secondary) Pass from a recognized Board";
+    qualification_level = "12th";
+  } else if (/lekhpal|patwari|\bvdo\b|gram sachiv/i.test(t + desc)) {
+    qualification = "10+2 (Intermediate) + State PET Eligibility Scorecard / CCC Certificate";
+    qualification_level = "12th";
+  } else if (/civil services|ias|ips|pcs|uppsc|bpsc cce|ras|mpsc|wbcs|opsc ocs/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in any discipline from a recognized Indian University";
+    qualification_level = "graduate";
+  } else if (/probationary officer|\bpo\b|\bclerk\b|banking|ibps|sbi po|rbi grade b/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in any discipline from a recognized University";
+    qualification_level = "graduate";
+  } else if (/assistant professor|lecturer|ugc net/i.test(t + desc)) {
+    qualification = "Master's Degree with minimum 55% marks + UGC NET / CSIR NET / SET";
+    qualification_level = "postgraduate";
+  } else if (/10th|matriculation|class 10|sslc|group d|mts/i.test(t + desc)) {
+    qualification = "10th Pass (Matriculation) from a recognized Board";
+    qualification_level = "10th";
+  } else if (/12th|intermediate|class 12|higher secondary|\bchsl\b/i.test(t + desc)) {
+    qualification = "10+2 (Intermediate) Pass from a recognized Board";
+    qualification_level = "12th";
+  } else if (/post.?graduate|master|m\.?sc|m\.?tech|m\.?com|m\.?a\b/i.test(t + desc)) {
+    qualification = "Postgraduate Master's Degree in relevant subject";
+    qualification_level = "postgraduate";
+  } else if (/b\.?sc|b\.?tech|b\.?e\b|engineering|graduate|degree|\bcgl\b/i.test(t + desc)) {
+    qualification = "Bachelor's Degree in relevant discipline from a recognized University";
+    qualification_level = "graduate";
   } else if (/diploma/i.test(t + desc)) {
-    qualification = "Diploma in relevant trade"; qualification_level = "diploma";
-  } else if (/post.?graduate|master|m\.?sc|m\.?tech/i.test(t + desc)) {
-    qualification = "Postgraduate Degree"; qualification_level = "postgraduate";
+    qualification = "Diploma (3 Years) in relevant engineering or technical trade";
+    qualification_level = "diploma";
   }
 
   // Location guess
@@ -247,7 +399,7 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   else if (/jammu|kashmir|jkssb|jkpsc/i.test(t + desc)) location = "J&K / Ladakh";
   else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
 
-  // Summary — use cleaned description or generate one (AFTER qualification is determined)
+  // Summary generation (authoritative, clean, zero raw HTML)
   const isExamDateNotice = /exam date|exam schedule|exam calendar|city slip/i.test(t);
   const noticeTypeLabel = isExamDateNotice 
     ? "Official Examination Schedule Notice" 
@@ -256,12 +408,13 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     : type === "result" 
     ? "Result / Merit List" 
     : type === "answer-key" 
-    ? "Answer Key" 
+    ? "Provisional Answer Key" 
     : "Recruitment Notification";
 
-  const summary = cleanDesc && cleanDesc.length > 30
-    ? cleanDesc.slice(0, 300).trim() + (cleanDesc.length > 300 ? "…" : "")
-    : `${organization} has officially released the ${noticeTypeLabel} for ${year}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates with ${qualification} are advised to review the official schedule and examination guidelines.`;
+  const isDuplicateOfTitle = desc.toLowerCase().includes(cleanTitle.toLowerCase().slice(0, 30));
+  const summary = (!desc || desc.length < 40 || isDuplicateOfTitle)
+    ? `${organization} has officially announced the ${noticeTypeLabel} for ${cleanTitle}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates possessing ${qualification} are advised to review the comprehensive examination scheme, reporting guidelines, and official schedule.`
+    : desc.slice(0, 350).trim() + (desc.length > 350 ? "…" : "");
 
   // Key highlights
   const highlights: string[] = [
@@ -283,13 +436,44 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   const ageMatch = (t + " " + desc).match(/(\d{2})\s*(?:to|-)\s*(\d{2})\s*years?/i);
   const age_limit = ageMatch ? `${ageMatch[1]} - ${ageMatch[2]} Years (relaxation as per rules)` : "18 - 40 Years (as per category)";
 
-  // Extract application fee if mentioned in text (e.g., "Rs. 700" or "₹100")
+  // Extract application fee or use commission defaults
   const feeMatch = (t + " " + desc).match(/(?:rs\.?|₹)\s*(\d+)/i);
-  const generalFee = feeMatch ? `₹${feeMatch[1]}` : "See notification";
+  let generalFee = "See notification";
+  let scStFee = "Exempted / See notification";
+  let femaleFee = "See notification";
 
-  // Extract pay scale if mentioned in text (e.g., "Level 10" or "Pay Matrix Rs. 44,900")
+  if (feeMatch) {
+    generalFee = `₹${feeMatch[1]}`;
+    scStFee = "Exempted / As per rules";
+    femaleFee = generalFee;
+  } else if (/isro|drdo|barc/i.test(t + desc)) {
+    generalFee = "₹250 (₹100 non-refundable / ₹250 refundable on CBT appearance)";
+    scStFee = "Exempted / Full Refund";
+    femaleFee = "Exempted / Full Refund";
+  } else if (/\bssc\b/i.test(t + desc)) {
+    generalFee = "₹100";
+    scStFee = "Exempted / Nil";
+    femaleFee = "Exempted / Nil";
+  } else if (/\bupsc\b/i.test(t + desc)) {
+    generalFee = "₹100";
+    scStFee = "Exempted / Nil";
+    femaleFee = "Exempted / Nil";
+  } else if (/railway|\brrb\b|\brrc\b/i.test(t + desc)) {
+    generalFee = "₹500 (₹400 refunded after CBT)";
+    scStFee = "₹250 (Full ₹250 refunded after CBT)";
+    femaleFee = "₹250 (Full ₹250 refunded after CBT)";
+  } else if (/banking|ibps|\bsbi\b|\brbi\b/i.test(t + desc)) {
+    generalFee = "₹850 (Application + Intimation)";
+    scStFee = "₹175 (Intimation charges only)";
+    femaleFee = "₹850";
+  }
+
+  // Extract dates accurately from text
+  const important_dates = extractDatesFromNotice(t, desc, type, year);
+
+  // Pay scale
   const payMatch = (t + " " + desc).match(/(?:level\s*\d+|pay matrix\s*(?:rs\.?)?\s*[\d,]+|rs\.?\s*[\d,]+(?:\s*to\s*[\d,]+)?\s*per\s*month)/i);
-  const pay_scale = payMatch ? payMatch[0] : "As per Government Pay Scale";
+  const pay_scale = payMatch ? payMatch[0] : (/scientist|engineer/i.test(t + desc) ? "Level 10 (Rs. 56,100 - 1,77,500)" : "As per Government Pay Scale");
 
   return {
     title: cleanTitle,
@@ -304,12 +488,8 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     qualification_level,
     age_limit,
     pay_scale,
-    application_fee: { generalOBC: generalFee, scStPh: "Exempted / See notification", female: generalFee },
-    important_dates: {
-      startDate: type === "job" ? "Check Official Website" : "Announced",
-      lastDate: type === "job" ? "As per notification" : "N/A (Exam Phase)",
-      examDate: isExamDateNotice ? "Announced (Check Schedule Notice)" : type === "admit-card" ? "Upcoming" : "As per schedule"
-    },
+    application_fee: { generalOBC: generalFee, scStPh: scStFee, female: femaleFee },
+    important_dates,
     location,
     summary,
     key_highlights: highlights,
@@ -334,7 +514,8 @@ function extractRssItems(xmlText: string): Array<{ title: string; link: string; 
     const title = (titleMatch ? titleMatch[1] || titleMatch[2] : "").trim();
     const link = (linkMatch ? linkMatch[1] || linkMatch[2] : "").trim();
     const pubDate = (dateMatch ? dateMatch[1] : "").trim();
-    const description = (descMatch ? descMatch[1] || descMatch[2] : "").replace(/<[^>]*>?/gm, "").trim();
+    const rawDesc = descMatch ? descMatch[1] || descMatch[2] : "";
+    const description = stripHtmlAndDecode(rawDesc);
 
     if (!title || title.length < 15) continue;
 
