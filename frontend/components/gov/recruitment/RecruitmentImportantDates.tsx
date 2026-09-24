@@ -19,11 +19,12 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
   }
 
   if (dates.applicationLastDate) {
+    const isClosed = dates.applicationLastStatus === 'closed';
     items.push({
       label: "Last Date to Apply Online",
       date: dates.applicationLastDate,
-      tag: "Final Deadline",
-      tagColor: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+      tag: isClosed ? "Registration Closed" : "Final Deadline",
+      tagColor: isClosed ? "text-rose-400 bg-rose-500/10 border-rose-500/20" : "text-amber-400 bg-amber-500/10 border-amber-500/20",
       isImportant: true
     });
   }

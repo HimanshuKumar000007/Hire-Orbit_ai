@@ -1,7 +1,7 @@
 import { GovJobNotification } from "./gov-jobs-data";
 import { CURATED_JOB_DETAILS } from "./gov-job-details";
 
-export type NoticeType = 'admit_card' | 'job' | 'result' | 'answer_key' | 'exam_date';
+export type NoticeType = 'admit_card' | 'job' | 'result' | 'answer_key' | 'exam_date' | 'admit-card' | 'answer-key' | 'exam-date';
 
 export type AdmitCardState =
   | 'ADMIT_CARD_AVAILABLE'
@@ -89,20 +89,132 @@ export function isRealDateString(val?: string | null): boolean {
   return !!cleanDateValue(val);
 }
 
+export type DateStatus = 
+  | "not_announced"
+  | "announced"
+  | "released"
+  | "available"
+  | "closed"
+  | "completed"
+  | "upcoming"
+  | "not_declared"
+  | "unknown";
+
 export interface UniversalNoticeDates {
-  applicationStart?: string;
-  applicationLastDate?: string;
-  feeLastDate?: string;
-  correctionLastDate?: string;
-  citySlipDate?: string;
-  admitCardDate?: string;
-  examDate?: string;
-  shiftTimings?: string;
-  answerKeyDate?: string;
-  resultDate?: string;
-  // Explicit status indicators (strictly decoupled from date values)
-  examDateStatus?: 'ANNOUNCED' | 'NOTIFIED_SOON' | 'EXACT_DATE';
-  admitCardStatus?: 'AVAILABLE_NOW' | 'CITY_SLIP_OUT' | 'EXPECTED_SOON' | 'NOT_RELEASED';
+  applicationStart?: string | null;
+  applicationStartStatus?: DateStatus;
+  applicationLastDate?: string | null;
+  applicationLastStatus?: DateStatus;
+  feeLastDate?: string | null;
+  feePaymentStatus?: DateStatus;
+  correctionLastDate?: string | null;
+  correctionStatus?: DateStatus;
+  citySlipDate?: string | null;
+  examCityStatus?: DateStatus;
+  examDate?: string | null;
+  examDateStatus?: DateStatus | 'ANNOUNCED' | 'NOTIFIED_SOON' | 'EXACT_DATE';
+  admitCardDate?: string | null;
+  admitCardStatus?: DateStatus | 'AVAILABLE_NOW' | 'CITY_SLIP_OUT' | 'EXPECTED_SOON' | 'NOT_RELEASED';
+  resultDate?: string | null;
+  resultStatus?: DateStatus;
+  shiftTimings?: string | null;
+  answerKeyDate?: string | null;
+}
+
+export function deriveUniversalNoticeDates(
+  rawDates: Record<string, any> = {},
+  noticeType: NoticeType,
+  title: string,
+  badgeStatus?: string
+): UniversalNoticeDates {
+  const t = (title || "").toLowerCase();
+  const b = (badgeStatus || "").toLowerCase();
+
+  const isAdmitNotice = noticeType === "admit-card" || noticeType === "admit_card" || /admit card|hall ticket|call letter|e-admit/i.test(t + b);
+  const isCitySlipNotice = /city slip|city intimation|exam city/i.test(t + b);
+  const isResultNotice = noticeType === "result" || /result|merit list|scorecard/i.test(t + b);
+  const isAnswerKeyNotice = noticeType === "answer-key" || noticeType === "answer_key" || /answer key|objection/i.test(t + b);
+
+  // Clean pure dates (never UI sentences)
+  const examDate = cleanDateValue(rawDates.examDate) || null;
+  const admitCardDate = cleanDateValue(rawDates.admitCardDate) || null;
+  const applicationStart = cleanDateValue(rawDates.startDate || rawDates.applicationStart) || null;
+  const applicationLastDate = cleanDateValue(rawDates.lastDate || rawDates.applicationLastDate) || null;
+  const feeLastDate = cleanDateValue(rawDates.feeLastDate) || applicationLastDate || null;
+  const correctionLastDate = cleanDateValue(rawDates.correctionLastDate) || null;
+  const citySlipDate = cleanDateValue(rawDates.citySlipDate) || null;
+  const resultDate = cleanDateValue(rawDates.resultDate) || null;
+
+  // Universal Status Derivations (Pure logic, ZERO exam-specific hardcoding)
+  let admitCardStatus: DateStatus = "not_announced";
+  if (isAdmitNotice) {
+    if (/out|released|download|available|live/i.test(t + b)) {
+      admitCardStatus = "released";
+    } else if (/expected soon|coming soon|likely/i.test(t + b)) {
+      admitCardStatus = "upcoming";
+    } else {
+      admitCardStatus = "released";
+    }
+  } else if (isResultNotice || isAnswerKeyNotice) {
+    admitCardStatus = "completed";
+  } else if (admitCardDate) {
+    admitCardStatus = "released";
+  }
+
+  let examDateStatus: DateStatus = "not_announced";
+  if (examDate) {
+    examDateStatus = "announced";
+  } else if (isAdmitNotice || isCitySlipNotice || /exam date|exam schedule|exam calendar|timetable/i.test(t + b)) {
+    examDateStatus = "announced";
+  } else if (isResultNotice || isAnswerKeyNotice) {
+    examDateStatus = "completed";
+  }
+
+  let examCityStatus: DateStatus = "not_announced";
+  if (citySlipDate || isCitySlipNotice) {
+    examCityStatus = "available";
+  } else if (isAdmitNotice || isResultNotice) {
+    examCityStatus = "completed";
+  }
+
+  let applicationLastStatus: DateStatus = "available";
+  if (isAdmitNotice || isResultNotice || isAnswerKeyNotice || /registration closed|closed|ended|expired/i.test(b)) {
+    applicationLastStatus = "closed";
+  } else if (applicationLastDate) {
+    const parsed = Date.parse(applicationLastDate);
+    if (!isNaN(parsed) && parsed < Date.now()) {
+      applicationLastStatus = "closed";
+    }
+  }
+
+  let applicationStartStatus: DateStatus = "available";
+  if (isAdmitNotice || isResultNotice || isAnswerKeyNotice) {
+    applicationStartStatus = "completed";
+  }
+
+  let feePaymentStatus: DateStatus = applicationLastStatus;
+  let correctionStatus: DateStatus = correctionLastDate ? "available" : (isAdmitNotice || isResultNotice ? "closed" : "not_announced");
+  let resultStatus: DateStatus = isResultNotice ? (resultDate || /out|declared|released/i.test(t + b) ? "released" : "announced") : "not_declared";
+
+  return {
+    applicationStart,
+    applicationStartStatus,
+    applicationLastDate,
+    applicationLastStatus,
+    feeLastDate,
+    feePaymentStatus,
+    correctionLastDate,
+    correctionStatus,
+    citySlipDate,
+    examCityStatus,
+    examDate,
+    examDateStatus,
+    admitCardDate,
+    admitCardStatus,
+    resultDate,
+    resultStatus,
+    shiftTimings: rawDates.shiftTimings || null
+  };
 }
 
 export interface CredentialRule {
@@ -297,50 +409,23 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
 
   // 4. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
   const rawDates = job.importantDates || {};
-  const dates: UniversalNoticeDates = {};
-
-  const cleanStart = cleanDateValue(rawDates.startDate);
-  if (cleanStart) dates.applicationStart = cleanStart;
-
-  const cleanLast = cleanDateValue(rawDates.lastDate);
-  if (cleanLast) dates.applicationLastDate = cleanLast;
-
-  const cleanFeeLast = cleanDateValue(rawDates.feeLastDate);
-  if (cleanFeeLast) dates.feeLastDate = cleanFeeLast;
-
-  const cleanCorrection = cleanDateValue(rawDates.correctionLastDate);
-  if (cleanCorrection) dates.correctionLastDate = cleanCorrection;
-
-  const cleanCitySlip = cleanDateValue(rawDates.citySlipDate);
-  if (cleanCitySlip) dates.citySlipDate = cleanCitySlip;
-
-  const cleanExam = cleanDateValue(rawDates.examDate);
-  if (cleanExam) dates.examDate = cleanExam;
-
-  const cleanAdmit = cleanDateValue(rawDates.admitCardDate);
-  if (cleanAdmit) dates.admitCardDate = cleanAdmit;
-
-  const cleanResult = cleanDateValue(rawDates.resultDate);
-  if (cleanResult) dates.resultDate = cleanResult;
-
-  // Derive explicit, unambiguous status flags
-  const isAdmitReleasedSignal = status === 'ADMIT_CARD_AVAILABLE';
-  const isCitySlipSignal = status === 'EXAM_CITY_SLIP_AVAILABLE';
-  const isExamAnnouncedSignal = status === 'EXAM_DATE_ANNOUNCED' || !!dates.examDate || isAdmitReleasedSignal;
-
-  dates.admitCardStatus = isAdmitReleasedSignal
-    ? 'AVAILABLE_NOW'
-    : isCitySlipSignal
-    ? 'CITY_SLIP_OUT'
-    : status === 'EXPECTED_SOON'
-    ? 'EXPECTED_SOON'
-    : 'NOT_RELEASED';
-
-  dates.examDateStatus = dates.examDate
-    ? 'EXACT_DATE'
-    : isExamAnnouncedSignal
-    ? 'ANNOUNCED'
-    : 'NOTIFIED_SOON';
+  const derivedDates = deriveUniversalNoticeDates(rawDates, noticeType, title, job.badgeStatus);
+  const dates: UniversalNoticeDates = {
+    ...derivedDates,
+    // Maintain backward-compatible status strings for components expecting legacy enums
+    admitCardStatus: derivedDates.admitCardStatus === 'released'
+      ? 'AVAILABLE_NOW'
+      : derivedDates.admitCardStatus === 'upcoming'
+      ? 'EXPECTED_SOON'
+      : derivedDates.examCityStatus === 'available'
+      ? 'CITY_SLIP_OUT'
+      : derivedDates.admitCardStatus,
+    examDateStatus: derivedDates.examDate
+      ? 'EXACT_DATE'
+      : derivedDates.examDateStatus === 'announced'
+      ? 'ANNOUNCED'
+      : derivedDates.examDateStatus
+  };
 
   // 5. Build Verified Links
   const links: UniversalNoticeLink[] = [];
@@ -814,6 +899,7 @@ export function generateRecruitmentFingerprint(
 
 
 // ─── AUTHENTIC NORMALIZATION ENGINE FOR RECRUITMENT ─────────────────────────
+export const normalizeToUniversalRecruitmentNotice = (job: GovJobNotification) => normalizeToUniversalRecruitment(job);
 export function normalizeToUniversalRecruitment(job: GovJobNotification): UniversalRecruitmentNotice {
   const title = job.title;
   const rawCombined = `${job.title} ${job.shortTitle} ${job.organization} ${job.summary} ${job.location}`.toLowerCase();
@@ -884,31 +970,11 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   }
 
   // 5. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
-  const dates: UniversalNoticeDates = {};
-  const cleanStart = cleanDateValue(rawDates.startDate);
-  if (cleanStart) dates.applicationStart = cleanStart;
-
-  const cleanLast = cleanDateValue(rawDates.lastDate);
-  if (cleanLast) dates.applicationLastDate = cleanLast;
-
-  const cleanFeeLast = cleanDateValue(rawDates.feeLastDate);
-  if (cleanFeeLast) dates.feeLastDate = cleanFeeLast;
-  else if (dates.applicationLastDate) dates.feeLastDate = dates.applicationLastDate;
-
-  const cleanCorrection = cleanDateValue(rawDates.correctionLastDate);
-  if (cleanCorrection) dates.correctionLastDate = cleanCorrection;
-
-  const cleanExam = cleanDateValue(rawDates.examDate);
-  if (cleanExam) dates.examDate = cleanExam;
-
-  const cleanAdmit = cleanDateValue(rawDates.admitCardDate);
-  if (cleanAdmit) dates.admitCardDate = cleanAdmit;
-
-  const cleanAnswerKey = cleanDateValue(rawDates.answerKeyDate);
-  if (cleanAnswerKey) dates.answerKeyDate = cleanAnswerKey;
-
-  const cleanResult = cleanDateValue(rawDates.resultDate);
-  if (cleanResult) dates.resultDate = cleanResult;
+  const derivedDates = deriveUniversalNoticeDates(rawDates, 'job', title, job.badgeStatus);
+  const dates: UniversalNoticeDates = {
+    ...derivedDates,
+    answerKeyDate: cleanDateValue(rawDates.answerKeyDate) || null
+  };
 
   // 6. Curated Fallback Details (Strictly secondary fallback)
   const curated = CURATED_JOB_DETAILS[job.id] || CURATED_JOB_DETAILS[job.slug];

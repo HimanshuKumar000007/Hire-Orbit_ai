@@ -18,11 +18,12 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
   }
 
   if (dates.applicationLastDate && isRealDateString(dates.applicationLastDate)) {
+    const isClosed = dates.applicationLastStatus === 'closed';
     items.push({
       label: "Registration Last Date",
-      value: dates.applicationLastDate,
+      value: isClosed ? `${dates.applicationLastDate} (Closed)` : dates.applicationLastDate,
       isHighlight: true,
-      highlightColor: "text-amber-400"
+      highlightColor: isClosed ? "text-zinc-400" : "text-amber-400"
     });
   }
 
@@ -41,7 +42,7 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-blue-400",
       icon: MapPin
     });
-  } else if (dates.admitCardStatus === 'CITY_SLIP_OUT') {
+  } else if (dates.admitCardStatus === 'CITY_SLIP_OUT' || dates.examCityStatus === 'available') {
     items.push({
       label: "Exam City Slip",
       value: "City Intimation Active",
@@ -59,7 +60,7 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-emerald-400",
       icon: CheckCircle2
     });
-  } else if (dates.admitCardStatus === 'AVAILABLE_NOW') {
+  } else if (dates.admitCardStatus === 'AVAILABLE_NOW' || dates.admitCardStatus === 'released') {
     items.push({
       label: "Admit Card Download",
       value: "Available Now",
@@ -77,7 +78,7 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-blue-400",
       icon: Flame
     });
-  } else if (dates.examDateStatus === 'ANNOUNCED') {
+  } else if (dates.examDateStatus === 'ANNOUNCED' || dates.examDateStatus === 'announced') {
     items.push({
       label: "Examination Schedule",
       value: "Official Schedule Announced",
