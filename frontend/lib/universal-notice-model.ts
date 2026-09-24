@@ -672,29 +672,79 @@ export interface UniversalRecruitmentNotice {
   fingerprint: string;
 }
 
-// ─── RECRUITMENT FINGERPRINT GENERATOR ─────────────────────────────────────
+// ─── CANONICAL RECRUITMENT FINGERPRINT GENERATOR ───────────────────────────
+export function getCanonicalAuthorityKey(auth: string): string {
+  const a = (auth || "").toLowerCase();
+  if (/rrb|rrc|railway|indian\s*railways/i.test(a)) return "rrb";
+  if (/\bssc\b|staff\s*selection/i.test(a)) return "ssc";
+  if (/\bupsc\b|union\s*public/i.test(a)) return "upsc";
+  if (/upsssc/i.test(a)) return "upsssc";
+  if (/uppsc/i.test(a)) return "uppsc";
+  if (/upprpb|up\s*police/i.test(a)) return "up_police";
+  if (/\bbpsc\b/i.test(a)) return "bpsc";
+  if (/\bbssc\b/i.test(a)) return "bssc";
+  if (/rpsc|rsmssb/i.test(a)) return "rpsc";
+  if (/mpesb|mppsc|vyapam/i.test(a)) return "mpesb";
+  if (/\bhssc\b/i.test(a)) return "hssc";
+  if (/\bmpsc\b/i.test(a)) return "mpsc";
+  if (/gpsc|gsssb/i.test(a)) return "gpsc";
+  if (/wbpsc/i.test(a)) return "wbpsc";
+  if (/kpsc|karnataka\s*police|ksp/i.test(a)) return "kpsc";
+  if (/tnpsc|tnusrb/i.test(a)) return "tnpsc";
+  if (/tspsc/i.test(a)) return "tspsc";
+  if (/appsc/i.test(a)) return "appsc";
+  if (/kerala\s*psc/i.test(a)) return "kerala_psc";
+  if (/hppsc/i.test(a)) return "hppsc";
+  if (/apsc/i.test(a)) return "apsc";
+  if (/jkssb|jkpsc/i.test(a)) return "jkssb";
+  if (/ukpsc/i.test(a)) return "ukpsc";
+  if (/opsc/i.test(a)) return "opsc";
+  if (/jpsc/i.test(a)) return "jpsc";
+  if (/cgpsc/i.test(a)) return "cgpsc";
+  if (/\bibps\b/i.test(a)) return "ibps";
+  if (/\bsbi\b/i.test(a)) return "sbi";
+  if (/\brbi\b/i.test(a)) return "rbi";
+  if (/ctet|cbse/i.test(a)) return "ctet";
+  if (/ugc\s*net|nta\b/i.test(a)) return "nta";
+  if (/aiims/i.test(a)) return "aiims";
+  if (/isro/i.test(a)) return "isro";
+  if (/drdo/i.test(a)) return "drdo";
+  if (/barc/i.test(a)) return "barc";
+  if (/agniveer|army|navy|air\s*force|afcat|crpf|bsf|cisf|itbp/i.test(a)) return "defense";
+  return a.replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_").slice(0, 15);
+}
+
 export function generateRecruitmentFingerprint(
   authority: string,
   examName: string,
   year: string = "2026",
   notificationNumber?: string
 ): string {
-  const clean = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_+|_+$/g, "");
+  const authKey = getCanonicalAuthorityKey(authority);
+  
+  let cleanExam = (examName || "")
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/20\d\d/g, " ")
+    .replace(/\b(recruitment|notification|vacancy|vacancies|posts|bharti|online\s*form|apply\s*online|admit\s*card|result|answer\s*key|level|latest|out|released|active|registration|application|cen|advt|advertisement)\b/gi, " ");
 
-  const cleanAuth = clean(authority).slice(0, 15);
-  const cleanExam = clean(examName)
-    .replace(/recruitment|notification|bharti|exam|online_form/g, "")
-    .slice(0, 25);
-  const cleanYear = year.replace(/[^0-9]/g, "");
-  const cleanNotif = notificationNumber ? `_${clean(notificationNumber)}` : "";
+  if (authKey) {
+    cleanExam = cleanExam.replace(new RegExp(`\\b${authKey}\\b`, 'gi'), " ");
+  }
 
-  return `${cleanAuth}_${cleanExam}_${cleanYear}${cleanNotif}`;
+  const examKey = cleanExam
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 30);
+
+  const cleanYear = (year || "2026").replace(/[^0-9]/g, "").slice(0, 4);
+  const cleanNotif = notificationNumber 
+    ? `_${notificationNumber.toLowerCase().replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_")}` 
+    : "";
+
+  return `${authKey}_${examKey || "general"}_${cleanYear}${cleanNotif}`;
 }
+
 
 // ─── AUTHENTIC NORMALIZATION ENGINE FOR RECRUITMENT ─────────────────────────
 export function normalizeToUniversalRecruitment(job: GovJobNotification): UniversalRecruitmentNotice {

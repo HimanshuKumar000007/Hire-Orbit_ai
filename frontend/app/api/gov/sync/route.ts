@@ -4,32 +4,283 @@ import { generateRecruitmentFingerprint } from "@/lib/universal-notice-model";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
-// ─── KEYWORD FILTER ────────────────────────────────────────────────────────
-const GOV_KEYWORDS = [
-  "recruitment","vacancy","vacancies","notification","advertise",
-  "admit card","hall ticket","call letter","e-admit",
-  "result","merit list","scorecard","score card",
-  "exam","examination","written test",
-  "answer key","provisional answer key",
-  "cut off","cutoff","bharti","online form","apply online",
-  "syllabus","exam date","schedule","document verification",
-  "upsssc","uppsc","upprpb","bpsc","bssc","rpsc","rsmssb",
-  "mppsc","mpesb","vyapam","mpsc","gpsc","gsssb",
-  "wbpsc","opsc","jpsc","cgpsc","kpsc","tnpsc","tspsc",
-  "appsc","kerala psc","hppsc","apsc","jkssb","jkpsc","ukpsc",
-  "ssc","upsc","rrb","rrc","ibps","sbi","rbi",
-  "nda","cds","afcat","crpf","bsf","cisf","itbp",
-  "agniveer","agneepath",
-  "police constable","head constable","sub inspector",
-  "ctet","kvs","nvs","ugc net","state tet","reet","super tet",
-  "isro","drdo","barc","epfo","esic",
-  "forensic","laboratory","technician","assistant","clerk","steno",
-  "patwari","lekhpal","anganwadi","asha","health worker",
-  "nurse","pharmacist","aiims","nhm"
+// ─── SOURCE DEFINITIONS ───────────────────────────────────────────────────
+export interface DiscoverySource {
+  id: string;
+  name: string;
+  url: string;
+  type: "official_rss" | "official_gazette" | "aggregator_feed";
+  trustLevel: "official" | "trusted_aggregator" | "aggregator";
+  isAggregator: boolean;
+}
+
+export const DISCOVERY_SOURCES: DiscoverySource[] = [
+  // ── 1. Aggregator Discovery Feeds (Primary Signal Detectors) ──
+  {
+    id: "sarkari_result",
+    name: "Sarkari Result",
+    url: "https://news.google.com/rss/search?q=%22sarkariresult%22+OR+%22sarkari+result%22+recruitment+notification+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+  {
+    id: "physics_wallah",
+    name: "Physics Wallah (PW)",
+    url: "https://news.google.com/rss/search?q=%22pw.live%22+OR+%22physics+wallah%22+recruitment+vacancy+notification+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+  {
+    id: "adda247",
+    name: "Adda247",
+    url: "https://news.google.com/rss/search?q=%22adda247%22+recruitment+notification+vacancy+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+  {
+    id: "testbook",
+    name: "Testbook",
+    url: "https://news.google.com/rss/search?q=%22testbook%22+recruitment+notification+vacancy+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+
+  // ── 2. Direct Official Commission Feeds ──
+  {
+    id: "uppsc_direct",
+    name: "UPPSC Official Gazette RSS",
+    url: "https://uppsc.up.nic.in/rss/rss.aspx",
+    type: "official_rss",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "upsssc_direct",
+    name: "UPSSSC Official RSS",
+    url: "https://upsssc.gov.in/rss/rss.aspx",
+    type: "official_rss",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "pib_direct",
+    name: "Press Information Bureau (PIB) Govt of India",
+    url: "https://pib.gov.in/RssMain.aspx?ModId=6",
+    type: "official_rss",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "employment_news",
+    name: "Employment News Official Gazette",
+    url: "https://www.employmentnews.gov.in/RSS/GetLatestRss",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+
+  // ── 3. Targeted Regional & Central Agency Gazettes ──
+  {
+    id: "ssc_central",
+    name: "SSC Central Commissions Stream",
+    url: "https://news.google.com/rss/search?q=(%22SSC+CGL%22+OR+%22SSC+CHSL%22+OR+%22SSC+MTS%22+OR+%22SSC+GD%22+OR+%22SSC+CPO%22)+2026+recruitment+admit+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "rrb_railway",
+    name: "Railway RRB / RRC Recruitment Stream",
+    url: "https://news.google.com/rss/search?q=(%22RRB+NTPC%22+OR+%22RRB+ALP%22+OR+%22RRC+Group+D%22+OR+%22Railway+Recruitment%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "banking_stream",
+    name: "Banking (IBPS, SBI, RBI, LIC) Stream",
+    url: "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22IBPS+Clerk%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22RBI+Grade+B%22)+2026+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "defense_stream",
+    name: "Defense (Agniveer, NDA, CDS, CRPF, BSF, CISF)",
+    url: "https://news.google.com/rss/search?q=(%22Agniveer%22+OR+%22NDA+2026%22+OR+%22CRPF+Recruitment%22+OR+%22BSF+Recruitment%22+OR+%22CISF+Recruitment%22)+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "teaching_stream",
+    name: "Teaching (CTET, KVS, NVS, UGC NET, State TETs)",
+    url: "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+Recruitment%22+OR+%22NVS+Recruitment%22+OR+%22UGC+NET%22+OR+%22Super+TET%22+OR+%22REET%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_bpsc",
+    name: "Bihar (BPSC, BSSC, Bihar Police)",
+    url: "https://news.google.com/rss/search?q=%22BPSC%22+OR+%22Bihar+Police%22+OR+%22BSSC%22+OR+%22Bihar+STET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_upprpb",
+    name: "Uttar Pradesh (UPSSSC, UPPSC, UP Police)",
+    url: "https://news.google.com/rss/search?q=%22UPSSSC%22+OR+%22UPPRPB%22+OR+%22UP+Police+Constable%22+admit+card+result+recruitment+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_rpsc",
+    name: "Rajasthan (RPSC, RSMSSB, Rajasthan Police)",
+    url: "https://news.google.com/rss/search?q=%22RPSC%22+OR+%22RSMSSB%22+OR+%22Rajasthan+Police%22+OR+%22REET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_mpesb",
+    name: "Madhya Pradesh (MPESB, MPPSC, MP Police)",
+    url: "https://news.google.com/rss/search?q=%22MPESB%22+OR+%22MP+Police+Constable%22+OR+%22MP+Vyapam%22+OR+%22MPPEB%22+OR+%22Madhya+Pradesh+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_hssc",
+    name: "Haryana (HSSC, HPSC, Haryana Police)",
+    url: "https://news.google.com/rss/search?q=%22HSSC%22+OR+%22HPSC%22+OR+%22Haryana+Police%22+OR+%22Haryana+CET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_mpsc",
+    name: "Maharashtra (MPSC, Maharashtra Police)",
+    url: "https://news.google.com/rss/search?q=%22MPSC%22+OR+%22Maharashtra+Police%22+OR+%22Maharashtra+Arogya%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_gpsc",
+    name: "Gujarat (GPSC, GSSSB, Gujarat Police)",
+    url: "https://news.google.com/rss/search?q=%22GPSC%22+OR+%22GSSSB%22+OR+%22Gujarat+Police%22+OR+%22OJAS%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_wbpsc",
+    name: "West Bengal (WBPSC, WB Police, WBSSC)",
+    url: "https://news.google.com/rss/search?q=%22WBPSC%22+OR+%22WB+Police%22+OR+%22WBSSC%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_kpsc",
+    name: "Karnataka (KPSC, Karnataka Police, KSP)",
+    url: "https://news.google.com/rss/search?q=%22KPSC%22+OR+%22KSP%22+OR+%22Karnataka+Police%22+OR+%22KSSB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_tnpsc",
+    name: "Tamil Nadu (TNPSC, TNUSRB)",
+    url: "https://news.google.com/rss/search?q=%22TNPSC%22+OR+%22TNUSRB%22+OR+%22Tamil+Nadu+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_tspsc",
+    name: "Telangana (TSPSC, Telangana Police)",
+    url: "https://news.google.com/rss/search?q=%22TSPSC%22+OR+%22Telangana+Police%22+OR+%22TSLPRB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "state_himalayan",
+    name: "Himalayan & Eastern PSCs (JKSSB, HPPSC, UKPSC, APSC, OPSC, JPSC)",
+    url: "https://news.google.com/rss/search?q=(%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22APSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+recruit+admit+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "psu_scientific",
+    name: "PSUs & Scientific (ISRO, DRDO, BARC, EPFO, ESIC)",
+    url: "https://news.google.com/rss/search?q=(%22ISRO+Recruitment%22+OR+%22DRDO+Recruitment%22+OR+%22BARC+Recruitment%22+OR+%22EPFO%22+OR+%22ESIC%22+OR+%22IOCL+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "medical_stream",
+    name: "Medical & Paramedical (AIIMS, NHM, Staff Nurse)",
+    url: "https://news.google.com/rss/search?q=(%22AIIMS+Recruitment%22+OR+%22NHM+Recruitment%22+OR+%22Staff+Nurse%22+OR+%22Lab+Technician%22+OR+%22Pharmacist+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "judiciary_stream",
+    name: "Judiciary & Courts (High Court, District Courts)",
+    url: "https://news.google.com/rss/search?q=(%22High+Court+Recruitment%22+OR+%22District+Court%22)+clerk+stenographer+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  },
+  {
+    id: "revenue_stream",
+    name: "Revenue & Rural (Patwari, Lekhpal, VDO, Anganwadi)",
+    url: "https://news.google.com/rss/search?q=(%22Lekhpal%22+OR+%22Patwari%22+OR+%22VDO+Recruitment%22+OR+%22Gram+Sachiv%22+OR+%22Anganwadi+Supervisor%22)+2026+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "official_gazette",
+    trustLevel: "official",
+    isAggregator: false
+  }
 ];
 
-// ─── ORG MAP: extract organisation from title ──────────────────────────────
+// ─── KEYWORD FILTERS ───────────────────────────────────────────────────────
+const GOV_KEYWORDS = [
+  "recruitment", "vacancy", "vacancies", "notification", "advertise", "advertisement",
+  "admit card", "hall ticket", "call letter", "e-admit",
+  "result", "merit list", "scorecard", "score card",
+  "exam", "examination", "written test",
+  "answer key", "provisional answer key",
+  "cut off", "cutoff", "bharti", "online form", "apply online", "application form",
+  "syllabus", "exam date", "schedule", "document verification",
+  "upsssc", "uppsc", "upprpb", "bpsc", "bssc", "rpsc", "rsmssb",
+  "mppsc", "mpesb", "vyapam", "mpsc", "gpsc", "gsssb",
+  "wbpsc", "opsc", "jpsc", "cgpsc", "kpsc", "tnpsc", "tspsc",
+  "appsc", "kerala psc", "hppsc", "apsc", "jkssb", "jkpsc", "ukpsc",
+  "ssc", "upsc", "rrb", "rrc", "ibps", "sbi", "rbi",
+  "nda", "cds", "afcat", "crpf", "bsf", "cisf", "itbp",
+  "agniveer", "agneepath",
+  "police constable", "head constable", "sub inspector",
+  "ctet", "kvs", "nvs", "ugc net", "state tet", "reet", "super tet",
+  "isro", "drdo", "barc", "epfo", "esic",
+  "forensic", "laboratory", "technician", "assistant", "clerk", "steno",
+  "patwari", "lekhpal", "anganwadi", "asha", "health worker",
+  "nurse", "pharmacist", "aiims", "nhm"
+];
+
+// ─── ORG MAP: extract organisation from title & desc ───────────────────────
 const ORG_MAP: [RegExp, string, string][] = [
   [/upsssc/i, "UPSSSC", "state"],
   [/uppsc/i, "UPPSC", "state"],
@@ -46,7 +297,7 @@ const ORG_MAP: [RegExp, string, string][] = [
   [/opsc/i, "OPSC", "state"],
   [/jpsc/i, "JPSC", "state"],
   [/cgpsc/i, "CGPSC", "state"],
-  [/kpsc/i, "KPSC", "state"],
+  [/kpsc|ksp\b|karnataka police/i, "KPSC", "state"],
   [/tnpsc|tnusrb/i, "TNPSC", "state"],
   [/tspsc/i, "TSPSC", "state"],
   [/appsc/i, "APPSC", "state"],
@@ -84,50 +335,77 @@ const ORG_MAP: [RegExp, string, string][] = [
   [/\bnhm\b/i, "NHM", "state"],
 ];
 
-// ─── OFFICIAL PORTALS MAP: direct commission websites ─────────────────────────
-const OFFICIAL_PORTAL_MAP: Record<string, string> = {
-  "OPSC": "https://opsc.gov.in",
-  "BPSC": "https://bpsc.bih.nic.in",
-  "BSSC": "https://bssc.bihar.gov.in",
-  "UPSSSC": "https://upsssc.gov.in",
-  "UPPSC": "https://uppsc.up.nic.in",
-  "UP Police": "https://uppbpb.gov.in",
-  "RPSC / RSMSSB": "https://rpsc.rajasthan.gov.in",
-  "MPPSC / MP Vyapam": "https://esb.mp.gov.in",
-  "HSSC": "https://hssc.gov.in",
-  "DSSSB": "https://dsssb.delhi.gov.in",
-  "MPSC": "https://mpsc.gov.in",
-  "GPSC / GSSSB": "https://gpsc.gujarat.gov.in",
-  "WBPSC": "https://psc.wb.gov.in",
-  "KPSC": "https://kpsc.kar.nic.in",
-  "TNPSC": "https://tnpsc.gov.in",
-  "TSPSC": "https://tspsc.gov.in",
-  "APPSC": "https://psc.ap.gov.in",
-  "Kerala PSC": "https://keralapsc.gov.in",
-  "HPPSC": "https://hppsc.hp.gov.in",
-  "APSC": "https://apsc.nic.in",
-  "JKSSB / JKPSC": "https://jkssb.nic.in",
-  "UKPSC": "https://psc.uk.gov.in",
-  "JPSC": "https://jpsc.gov.in",
-  "CGPSC": "https://psc.cg.gov.in",
-  "Staff Selection Commission (SSC)": "https://ssc.gov.in",
-  "UPSC": "https://upsc.gov.in",
-  "Indian Railways (RRB/RRC)": "https://indianrailways.gov.in",
-  "IBPS": "https://ibps.in",
-  "State Bank of India (SBI)": "https://sbi.co.in/careers",
-  "Reserve Bank of India (RBI)": "https://opportunities.rbi.org.in",
-  "CTET / CBSE": "https://ctet.nic.in",
-  "AIIMS": "https://aiimsexams.ac.in",
-  "UGC NET": "https://ugcnet.nta.ac.in",
-  "National Testing Agency (NTA)": "https://nta.ac.in",
-  "NTA": "https://nta.ac.in",
+// ─── OFFICIAL PORTALS REGISTRY ─────────────────────────────────────────────
+const OFFICIAL_PORTAL_REGISTRY: Record<string, { authority: string; portalUrl: string }> = {
+  "Staff Selection Commission (SSC)": { authority: "Staff Selection Commission (SSC)", portalUrl: "https://ssc.gov.in" },
+  "UPSC": { authority: "Union Public Service Commission (UPSC)", portalUrl: "https://upsc.gov.in" },
+  "Indian Railways (RRB/RRC)": { authority: "Railway Recruitment Boards (RRB)", portalUrl: "https://rrbapply.gov.in" },
+  "IBPS": { authority: "Institute of Banking Personnel Selection (IBPS)", portalUrl: "https://ibps.in" },
+  "State Bank of India (SBI)": { authority: "State Bank of India (SBI)", portalUrl: "https://sbi.co.in/careers" },
+  "Reserve Bank of India (RBI)": { authority: "Reserve Bank of India (RBI)", portalUrl: "https://opportunities.rbi.org.in" },
+  "UPSSSC": { authority: "Uttar Pradesh Subordinate Services Selection Commission (UPSSSC)", portalUrl: "https://upsssc.gov.in" },
+  "UPPSC": { authority: "Uttar Pradesh Public Service Commission (UPPSC)", portalUrl: "https://uppsc.up.nic.in" },
+  "UP Police": { authority: "UP Police Recruitment & Promotion Board (UPPRPB)", portalUrl: "https://uppbpb.gov.in" },
+  "BPSC": { authority: "Bihar Public Service Commission (BPSC)", portalUrl: "https://bpsc.bih.nic.in" },
+  "BSSC": { authority: "Bihar Staff Selection Commission (BSSC)", portalUrl: "https://bssc.bihar.gov.in" },
+  "RPSC / RSMSSB": { authority: "Rajasthan Public Service Commission (RPSC)", portalUrl: "https://rpsc.rajasthan.gov.in" },
+  "MPPSC / MP Vyapam": { authority: "Madhya Pradesh Employees Selection Board (MPESB)", portalUrl: "https://esb.mp.gov.in" },
+  "HSSC": { authority: "Haryana Staff Selection Commission (HSSC)", portalUrl: "https://hssc.gov.in" },
+  "DSSSB": { authority: "Delhi Subordinate Services Selection Board (DSSSB)", portalUrl: "https://dsssb.delhi.gov.in" },
+  "MPSC": { authority: "Maharashtra Public Service Commission (MPSC)", portalUrl: "https://mpsc.gov.in" },
+  "GPSC / GSSSB": { authority: "Gujarat Public Service Commission (GPSC)", portalUrl: "https://gpsc.gujarat.gov.in" },
+  "WBPSC": { authority: "West Bengal Public Service Commission (WBPSC)", portalUrl: "https://psc.wb.gov.in" },
+  "KPSC": { authority: "Karnataka Public Service Commission (KPSC)", portalUrl: "https://kpsc.kar.nic.in" },
+  "TNPSC": { authority: "Tamil Nadu Public Service Commission (TNPSC)", portalUrl: "https://tnpsc.gov.in" },
+  "TSPSC": { authority: "Telangana State Public Service Commission (TSPSC)", portalUrl: "https://tspsc.gov.in" },
+  "APPSC": { authority: "Andhra Pradesh Public Service Commission (APPSC)", portalUrl: "https://psc.ap.gov.in" },
+  "Kerala PSC": { authority: "Kerala Public Service Commission (Kerala PSC)", portalUrl: "https://keralapsc.gov.in" },
+  "HPPSC": { authority: "Himachal Pradesh Public Service Commission (HPPSC)", portalUrl: "https://hppsc.hp.gov.in" },
+  "APSC": { authority: "Assam Public Service Commission (APSC)", portalUrl: "https://apsc.nic.in" },
+  "JKSSB / JKPSC": { authority: "Jammu & Kashmir Services Selection Board (JKSSB)", portalUrl: "https://jkssb.nic.in" },
+  "UKPSC": { authority: "Uttarakhand Public Service Commission (UKPSC)", portalUrl: "https://psc.uk.gov.in" },
+  "OPSC": { authority: "Odisha Public Service Commission (OPSC)", portalUrl: "https://opsc.gov.in" },
+  "JPSC": { authority: "Jharkhand Public Service Commission (JPSC)", portalUrl: "https://jpsc.gov.in" },
+  "CGPSC": { authority: "Chhattisgarh Public Service Commission (CGPSC)", portalUrl: "https://psc.cg.gov.in" },
+  "CTET / CBSE": { authority: "Central Board of Secondary Education (CBSE)", portalUrl: "https://ctet.nic.in" },
+  "UGC NET": { authority: "National Testing Agency (NTA)", portalUrl: "https://ugcnet.nta.ac.in" },
+  "AIIMS": { authority: "All India Institute of Medical Sciences (AIIMS)", portalUrl: "https://aiimsexams.ac.in" },
+  "ISRO": { authority: "Indian Space Research Organisation (ISRO)", portalUrl: "https://isro.gov.in/Careers.html" },
+  "DRDO": { authority: "Defence Research and Development Organisation (DRDO)", portalUrl: "https://drdo.gov.in/careers" },
+  "BARC": { authority: "Bhabha Atomic Research Centre (BARC)", portalUrl: "https://barc.gov.in/careers" },
+  "EPFO": { authority: "Employees' Provident Fund Organisation (EPFO)", portalUrl: "https://epfindia.gov.in" },
+  "ESIC": { authority: "Employees' State Insurance Corporation (ESIC)", portalUrl: "https://esic.gov.in" },
 };
 
-// ─── ROBUST HTML SANITIZER & ENTITY DECODER ──────────────────────────────
+// ─── OFFICIAL DOMAIN VALIDATOR ─────────────────────────────────────────────
+function isOfficialGovDomain(urlStr: string): boolean {
+  if (!urlStr) return false;
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host.endsWith(".gov.in") ||
+      host.endsWith(".nic.in") ||
+      host.endsWith(".ac.in") ||
+      host.endsWith(".edu.in") ||
+      host === "ibps.in" ||
+      host.endsWith(".ibps.in") ||
+      host === "sbi.co.in" ||
+      host.endsWith(".sbi.co.in") ||
+      host === "rbi.org.in" ||
+      host.endsWith(".rbi.org.in") ||
+      host === "nta.ac.in" ||
+      host.endsWith(".nta.ac.in")
+    );
+  } catch {
+    return false;
+  }
+}
+
+// ─── ROBUST HTML SANITIZER & ENTITY DECODER ───────────────────────────────
 function stripHtmlAndDecode(rawText: string): string {
   if (!rawText) return "";
   let text = rawText
-    // 1. Decode entities
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -136,7 +414,6 @@ function stripHtmlAndDecode(rawText: string): string {
     .replace(/&nbsp;/g, " ")
     .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)));
 
-  // 2. Decode double-escaped entities
   text = text
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -144,17 +421,13 @@ function stripHtmlAndDecode(rawText: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&nbsp;/g, " ");
 
-  // 3. Strip all HTML tags
   text = text.replace(/<[^>]*>/g, " ");
-
-  // 4. Strip raw URLs
   text = text.replace(/https?:\/\/\S+/g, " ");
 
-  // 5. Strip news aggregator brand footprints
+  // Strip news aggregator brand footprints
   text = text.replace(/\s*[-|]\s*(?:PW|Physics\s*Wallah|Sarkari\s*Result|Adda247|Adda\s*247|Testbook|Jagran\s*Josh|Careers360|Shiksha|India\s*Today|TOI|Hindustan\s*Times|Sakshi\s*Education|Amar\s*Ujala|Dainik\s*Bhaskar)\b.*$/i, "");
   text = text.replace(/\b(?:PW|Physics\s*Wallah|Sarkari\s*Result|Adda247|Testbook)\b\s*$/i, "");
 
-  // 6. Normalize whitespace
   return text.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -162,7 +435,7 @@ function stripHtmlAndDecode(rawText: string): string {
 function extractDatesFromNotice(
   title: string,
   desc: string,
-  type: "job" | "admit-card" | "result" | "answer-key",
+  type: string,
   year: string
 ) {
   const combined = `${title} ${desc}`;
@@ -179,13 +452,13 @@ function extractDatesFromNotice(
     }
   };
 
-  // 1. Exam Date Extraction (e.g., "CBT on October 19", "Exam on 15 March", "19th October 2026")
+  // 1. Exam Date Extraction
   let examDate: string | null = null;
   const examDateMatch = combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:cbt|exam|examination|written test|screening|prelims|mains)\\s*(?:on|from|is|scheduled on|scheduled for|date[:\\s]+|held on)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:on|from)\\s+([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:on|from)\\s+(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(/([0-3]?\d[./-][0-1]?\d[./-](?:20\d\d))/);
+    || combined.match(/([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/);
 
   if (examDateMatch) {
     if (examDateMatch[0].includes("/") || examDateMatch[0].includes("-")) {
@@ -195,11 +468,11 @@ function extractDatesFromNotice(
     }
   }
 
-  // 2. Last Date to Apply (e.g., "Apply by October 5", "last date 15th Nov")
+  // 2. Last Date to Apply
   let lastDate: string | null = null;
   const lastDateMatch = combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
     || combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(/(?:apply by|last date)\s*([0-3]?\d[./-][0-1]?\d[./-](?:20\d\d))/i);
+    || combined.match(/(?:apply by|last date)\\s*([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/i);
 
   if (lastDateMatch) {
     if (lastDateMatch[0].includes("/") || lastDateMatch[0].includes("-")) {
@@ -222,59 +495,80 @@ function extractDatesFromNotice(
   const isResultNotice = type === "result";
   const isAnswerKeyNotice = type === "answer-key";
 
-  const finalExamDate = examDate 
-    ? examDate 
-    : (isExamOrAdmitNotice ? "Announced (Check Schedule Notice Below)" : "To be Notified Soon");
-
-  const finalStartDate = startDate
-    ? startDate
-    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Advt Released (Completed)" : "Active / Check Official Portal");
-
-  const finalLastDate = lastDate
-    ? lastDate
-    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Check Official Gazette Window");
-
-  const finalFeeLastDate = lastDate
-    ? lastDate
-    : (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Same as Application Last Date");
-
-  const finalAdmitCardDate = type === "admit-card"
-    ? "Available Now / Upcoming"
-    : (isExamOrAdmitNotice ? "7 - 10 Days Before Examination" : "Before Examination");
-
   return {
-    startDate: finalStartDate,
-    lastDate: finalLastDate,
-    feeLastDate: finalFeeLastDate,
-    examDate: finalExamDate,
-    admitCardDate: finalAdmitCardDate,
+    startDate: startDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Advt Released (Completed)" : "Active / Check Official Portal"),
+    lastDate: lastDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Check Official Gazette Window"),
+    feeLastDate: lastDate || (isExamOrAdmitNotice || isResultNotice || isAnswerKeyNotice ? "Registration Window Closed" : "Same as Application Last Date"),
+    examDate: examDate || (isExamOrAdmitNotice ? "Announced (Check Schedule Notice Below)" : "To be Notified Soon"),
+    admitCardDate: type === "admit-card" ? "Available Now / Upcoming" : (isExamOrAdmitNotice ? "7 - 10 Days Before Examination" : "Before Examination"),
     resultDate: isResultNotice ? "Available Now (Declared)" : "To be Announced Post-Exam"
   };
 }
 
-// ─── SMART RULE-BASED PARSER (no AI, instant) ─────────────────────────────
-function quickParseNotice(raw: { title: string; link: string; pubDate: string; description: string }) {
+// ─── NOTICE CLASSIFIER ─────────────────────────────────────────────────────
+function classifyNotice(title: string, desc: string): {
+  type: "recruitment" | "admit-card" | "result" | "answer-key" | "other";
+  badgeStatus: string;
+  badgeColor: "emerald" | "blue" | "amber" | "purple";
+  isRecruitment: boolean;
+} {
+  const t = title.toLowerCase();
+  const combined = `${t} ${desc.toLowerCase()}`;
+
+  // 1. Result Check
+  if (/\bresult\b|merit list|final result|scorecard|cut.?off marks|selection list/i.test(t)) {
+    return { type: "result", badgeStatus: "Result Declared", badgeColor: "amber", isRecruitment: false };
+  }
+
+  // 2. Answer Key Check
+  if (/answer key|provisional answer|objection window/i.test(t)) {
+    return { type: "answer-key", badgeStatus: "Answer Key Released", badgeColor: "purple", isRecruitment: false };
+  }
+
+  // 3. Admit Card / Exam Date Check
+  if (/admit card|hall ticket|call letter|e-admit/i.test(t)) {
+    return { type: "admit-card", badgeStatus: "Admit Card Out", badgeColor: "blue", isRecruitment: false };
+  }
+  if (/exam date|exam schedule|exam calendar|city slip|city intimation|prelims exam date|mains exam date/i.test(t)) {
+    return { type: "admit-card", badgeStatus: "Exam Date Announced", badgeColor: "blue", isRecruitment: false };
+  }
+
+  // 4. Strict Recruitment Check (Priority for Phase 3A)
+  const hasRecruitmentKeyword = /recruitment|vacancy|vacancies|notification|online form|apply online|application form|bharti|\bposts\b|\bcen\b|advertisement|registration|online application/i.test(t);
+  const hasExtendedSignal = /last date extended|date extended|last date reminder|deadline extended/i.test(t);
+
+  if (hasExtendedSignal) {
+    return { type: "recruitment", badgeStatus: "Last Date Extended", badgeColor: "emerald", isRecruitment: true };
+  }
+
+  if (hasRecruitmentKeyword) {
+    const isCorrectionWindow = /correction window|edit application/i.test(t);
+    return { 
+      type: "recruitment", 
+      badgeStatus: isCorrectionWindow ? "Correction Window Open" : "Applications Live", 
+      badgeColor: "emerald", 
+      isRecruitment: true 
+    };
+  }
+
+  return { type: "other", badgeStatus: "Gazette Notice", badgeColor: "emerald", isRecruitment: false };
+}
+
+// ─── QUICK PARSE NOTICE WITH SOURCE TRACKING & OFFICIAL ISOLATION ──────────
+function quickParseNotice(
+  raw: { title: string; link: string; pubDate: string; description: string },
+  source: DiscoverySource
+) {
   const t = raw.title;
   const desc = stripHtmlAndDecode(raw.description || "");
 
-  // Determine type
-  let type: "job" | "admit-card" | "result" | "answer-key" = "job";
-  let badge_status = "New Notification";
-  let badge_color: "emerald" | "blue" | "amber" | "purple" = "emerald";
+  // 1. Classification
+  const classification = classifyNotice(t, desc);
+  const type = classification.type === "recruitment" ? "recruitment" : (classification.type as "admit-card" | "result" | "answer-key" | "recruitment");
+  const badge_status = classification.badgeStatus;
+  const badge_color = classification.badgeColor;
 
-  if (/admit card|hall ticket|call letter|e-admit/i.test(t)) {
-    type = "admit-card"; badge_status = "Admit Card Out"; badge_color = "blue";
-  } else if (/exam date|exam schedule|exam calendar|city slip|city intimation|prelims exam date|mains exam date/i.test(t)) {
-    type = "admit-card"; badge_status = "Exam Date Announced"; badge_color = "blue";
-  } else if (/\bresult\b|merit list|final result|scorecard|cut.?off marks/i.test(t)) {
-    type = "result"; badge_status = "Result Declared"; badge_color = "amber";
-  } else if (/answer key|provisional answer|objection/i.test(t)) {
-    type = "answer-key"; badge_status = "Answer Key Released"; badge_color = "purple";
-  } else if (/recruitment|vacancy|notification|online form|apply online|bharti/i.test(t)) {
-    type = "job"; badge_status = "Applications Live"; badge_color = "emerald";
-  }
-
-  // Extract organisation & category
+  // 2. Organization Resolution
   let organization = "Government of India";
   let category: "central" | "railway" | "banking" | "police" | "defense" | "state" | "teaching" = "central";
   for (const [pattern, org, cat] of ORG_MAP) {
@@ -285,35 +579,41 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     }
   }
 
-  // Extract vacancy count from title/desc
+  // 3. Vacancy Count
   const vacMatch = t.match(/(\d[\d,]+)\s*(posts?|vacancies|seats?)/i) ||
                    desc.match(/(\d[\d,]+)\s*(posts?|vacancies|seats?)/i);
   const vacancies = vacMatch ? `${vacMatch[1]} Posts` : "See Notification";
 
-  // Extract year
+  // 4. Year
   const yearMatch = t.match(/20(2[4-9]|3\d)/);
   const year = yearMatch ? yearMatch[0] : "2026";
 
-  // Build clean title — strip ALL news source attribution tags
+  // 5. Clean Title (Aggregator footprints completely removed)
   const cleanTitle = t
-    .replace(/\s*[-|]\s*(Sarkari Result|Sarkari Naukri|Fresherslive|Employment News|Govt Jobs|Naukri Uday|Job Alert|Jagran Josh|Careers360|Adda247|Adda 247|PW|Physics Wallah|Shiksha\.com|Shiksha|India Today|Hindustan Times|Times of India|TOI|NDTV|News18|Amar Ujala|Dainik Bhaskar|Navbharat Times|Oneindia|Zee News|ABP Live|Patrika|LiveMint|Economic Times|The Hindu|Indian Express|Firstpost|Scroll\.in|Wire|Quint|Print|Tribune|Pioneer|Statesman|Outlook|Deccan Herald|Deccan Chronicle|Hans India|Sakshi Education|Mathrubhumi|Malayala Manorama|Dinamalar|Dinamani|Ananda Bazar)[^-|]*$/i, "")
+    .replace(/\s*[-|]\s*(Sarkari Result|Sarkari Naukri|Fresherslive|Employment News|Govt Jobs|Naukri Uday|Job Alert|Jagran Josh|Careers360|Adda247|Adda 247|PW|Physics Wallah|Shiksha\.com|Shiksha|India Today|Hindustan Times|Times of India|TOI|NDTV|News18|Amar Ujala|Dainik Bhaskar|Navbharat Times|Oneindia|Zee News|ABP Live|Patrika|LiveMint|Economic Times|The Hindu|Indian Express|Firstpost)[^-|]*$/i, "")
     .replace(/\s*\|\s*[^|]{5,50}$/, "")
     .replace(/&amp;/g, "&")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
     .trim();
 
-  // Build slug
+  // 6. Slug & Short Title
   const slug = cleanTitle
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 80);
 
-  // Build short title
   const short_title = cleanTitle.length > 55 ? cleanTitle.slice(0, 55).trim() + "…" : cleanTitle;
 
-  // Stream-Aligned Qualification Matrix
+  // 7. Extract Notification Number (CEN, Advt No, Notification No)
+  const notifMatch = (t + " " + desc).match(/\b(?:cen|advt\.?\s*no\.?|notification\s*no\.?|employment\s*notice\s*no\.?)\s*[:.-]?\s*([a-z0-9\/-]+)/i);
+  const notificationNumber = notifMatch ? notifMatch[1].trim() : undefined;
+
+  // 8. Canonical Fingerprint for Deduplication
+  const fingerprint = generateRecruitmentFingerprint(organization, short_title || cleanTitle, year, notificationNumber);
+
+  // 9. Qualification Matrix
   let qualification = "Bachelor's Degree in any discipline / Relevant Qualification";
   let qualification_level: "10th" | "12th" | "graduate" | "diploma" | "postgraduate" = "graduate";
 
@@ -378,7 +678,7 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     qualification_level = "diploma";
   }
 
-  // Location guess
+  // 10. Location Detection
   let location = "All India";
   if (/\bup\b|uttar pradesh|upsssc|uppsc|upprpb/i.test(t + desc)) location = "Uttar Pradesh";
   else if (/bihar|bpsc|bssc/i.test(t + desc)) location = "Bihar";
@@ -403,44 +703,48 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
   else if (/jammu|kashmir|jkssb|jkpsc/i.test(t + desc)) location = "J&K / Ladakh";
   else if (/punjab|ppsc/i.test(t + desc)) location = "Punjab";
 
-  // Summary generation (authoritative, clean, zero raw HTML)
-  const isExamDateNotice = /exam date|exam schedule|exam calendar|city slip/i.test(t);
-  const noticeTypeLabel = isExamDateNotice 
-    ? "Official Examination Schedule Notice" 
-    : type === "admit-card" 
-    ? "Admit Card / Hall Ticket" 
-    : type === "result" 
-    ? "Result / Merit List" 
-    : type === "answer-key" 
-    ? "Provisional Answer Key" 
-    : "Recruitment Notification";
+  // 11. Authoritative Factual Summary (HireOrbitAI native copy)
+  const noticeTypeLabel = type === "recruitment" ? "Recruitment Notification" : badge_status;
+  const summary = `${organization} has officially announced the ${noticeTypeLabel} for ${cleanTitle}. ${vacancies !== "See Notification" ? `Total verified vacancies: ${vacancies}. ` : ""}Eligible candidates possessing ${qualification} are advised to review the official schedule and eligibility conditions.`;
 
-  const isDuplicateOfTitle = desc.toLowerCase().includes(cleanTitle.toLowerCase().slice(0, 30));
-  const summary = (!desc || desc.length < 40 || isDuplicateOfTitle)
-    ? `${organization} has officially announced the ${noticeTypeLabel} for ${cleanTitle}. ${vacancies !== "See Notification" ? `Total vacancies: ${vacancies}. ` : ""}Eligible candidates possessing ${qualification} are advised to review the comprehensive examination scheme, reporting guidelines, and official schedule.`
-    : desc.slice(0, 350).trim() + (desc.length > 350 ? "…" : "");
+  // 12. Important Dates
+  const important_dates = extractDatesFromNotice(t, desc, type, year);
 
-  // Key highlights
-  const highlights: string[] = [
-    `${badge_status} — check official notification for details`,
-    location !== "All India" ? `${location} State Level Recruitment` : "Pan-India / Central Government Recruitment",
-    vacancies !== "See Notification" ? `Total Vacancies: ${vacancies}` : "Multiple Posts Available — Check Notification",
-    `Educational Qualification: ${qualification}`,
-    "Age Limit: 18 - 40 Years (relaxation for SC/ST/OBC as per rules)"
-  ];
+  // 13. Official URL Resolution & Aggregator Isolation (Section 6, 7 & 13)
+  const officialMapping = OFFICIAL_PORTAL_REGISTRY[organization];
+  const isDirectOfficialUrl = isOfficialGovDomain(raw.link);
 
-  // Selection process (type-based)
-  const selection_process =
-    type === "admit-card" ? ["Download Admit Card / Exam Schedule from official website", "Appear for Written Exam as per shift", "Await Scorecard & Result"] :
-    type === "result" ? ["Written Exam (Completed)", "Document Verification & Medical", "Final Merit List"] :
-    type === "answer-key" ? ["Written Exam (Completed)", "Review Provisional Answer Key", "Raise Objections if any within window"] :
-    ["Written Examination / Screening Test", "Physical / Skill Test (if applicable)", "Document Verification", "Final Selection"];
+  let official_pdf_url: string | null = null;
+  let apply_url: string = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+  let verification_status: "verified" | "pending" = "pending";
 
-  // Extract age limit if mentioned in text (e.g., "21 to 42 years" or "18-30 years")
-  const ageMatch = (t + " " + desc).match(/(\d{2})\s*(?:to|-)\s*(\d{2})\s*years?/i);
-  const age_limit = ageMatch ? `${ageMatch[1]} - ${ageMatch[2]} Years (relaxation as per rules)` : "18 - 40 Years (as per category)";
+  if (isDirectOfficialUrl) {
+    official_pdf_url = raw.link;
+    apply_url = raw.link;
+    verification_status = "verified";
+  } else if (!source.isAggregator && source.trustLevel === "official") {
+    verification_status = "verified";
+    official_pdf_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+    apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+  } else {
+    // AGGREGATOR DISCOVERY: Never treat aggregator URL as official!
+    verification_status = "pending";
+    official_pdf_url = null; // Left null until official source confirms
+    apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
+  }
 
-  // Extract application fee or use commission defaults
+  // 14. Discovery Source Metadata Entry
+  const sourceTrackingEntry = {
+    sourceId: source.id,
+    sourceName: source.name,
+    sourceType: source.type,
+    discoveredAt: new Date().toISOString(),
+    lastCheckedAt: new Date().toISOString(),
+    sourceUrl: raw.link,
+    trustLevel: source.trustLevel
+  };
+
+  // 15. Standardized Application Fee
   const feeMatch = (t + " " + desc).match(/(?:rs\.?|₹)\s*(\d+)/i);
   let generalFee = "See notification";
   let scStFee = "Exempted / See notification";
@@ -450,15 +754,7 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     generalFee = `₹${feeMatch[1]}`;
     scStFee = "Exempted / As per rules";
     femaleFee = generalFee;
-  } else if (/isro|drdo|barc/i.test(t + desc)) {
-    generalFee = "₹250 (₹100 non-refundable / ₹250 refundable on CBT appearance)";
-    scStFee = "Exempted / Full Refund";
-    femaleFee = "Exempted / Full Refund";
-  } else if (/\bssc\b/i.test(t + desc)) {
-    generalFee = "₹100";
-    scStFee = "Exempted / Nil";
-    femaleFee = "Exempted / Nil";
-  } else if (/\bupsc\b/i.test(t + desc)) {
+  } else if (/\bssc\b/i.test(t + desc) || /\bupsc\b/i.test(t + desc)) {
     generalFee = "₹100";
     scStFee = "Exempted / Nil";
     femaleFee = "Exempted / Nil";
@@ -472,14 +768,30 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     femaleFee = "₹850";
   }
 
-  // Extract dates accurately from text
-  const important_dates = extractDatesFromNotice(t, desc, type, year);
+  // 16. Age Limit & Highlights
+  const ageMatch = (t + " " + desc).match(/(\d{2})\s*(?:to|-)\s*(\d{2})\s*years?/i);
+  const age_limit = ageMatch ? `${ageMatch[1]} - ${ageMatch[2]} Years (relaxation as per rules)` : "18 - 40 Years (as per category)";
 
-  // Pay scale
   const payMatch = (t + " " + desc).match(/(?:level\s*\d+|pay matrix\s*(?:rs\.?)?\s*[\d,]+|rs\.?\s*[\d,]+(?:\s*to\s*[\d,]+)?\s*per\s*month)/i);
-  const pay_scale = payMatch ? payMatch[0] : (/scientist|engineer/i.test(t + desc) ? "Level 10 (Rs. 56,100 - 1,77,500)" : "As per Government Pay Scale");
+  const pay_scale = payMatch ? payMatch[0] : "As per Government Pay Scale";
+
+  const key_highlights = [
+    `${badge_status} — verified through ${source.name}`,
+    location !== "All India" ? `${location} State Level Recruitment` : "Pan-India / Central Government Recruitment",
+    vacancies !== "See Notification" ? `Total Vacancies: ${vacancies}` : "Multiple Posts Available — Check Gazette",
+    `Educational Qualification: ${qualification}`,
+    "Age Limit: 18 - 40 Years (relaxation for SC/ST/OBC as per rules)"
+  ];
+
+  const selection_process = [
+    "Written Examination / Computer Based Test (CBT)",
+    "Skill Test / Physical Efficiency Test (if applicable)",
+    "Document Verification & Medical Examination",
+    "Final Merit List & Appointment"
+  ];
 
   return {
+    fingerprint,
     title: cleanTitle,
     short_title,
     organization,
@@ -496,17 +808,23 @@ function quickParseNotice(raw: { title: string; link: string; pubDate: string; d
     important_dates,
     location,
     summary,
-    key_highlights: highlights,
+    key_highlights,
     selection_process,
-    official_pdf_url: (raw.link && !raw.link.includes("news.google.com")) ? raw.link : (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
-    apply_url: (raw.link && !raw.link.includes("news.google.com")) ? raw.link : (OFFICIAL_PORTAL_MAP[organization] || "https://employmentnews.gov.in"),
+    official_pdf_url,
+    apply_url,
+    verification_status,
+    source_feed: source.name,
+    sourceTrackingEntry,
     slug
   };
 }
 
-// ─── RSS EXTRACTOR ────────────────────────────────────────────────────────
-function extractRssItems(xmlText: string): Array<{ title: string; link: string; pubDate: string; description: string }> {
-  const items: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
+// ─── RSS ITEM EXTRACTOR ───────────────────────────────────────────────────
+function extractRssItems(
+  xmlText: string,
+  source: DiscoverySource
+): Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }> {
+  const items: Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }> = [];
   const itemMatches = xmlText.match(/<item>([\s\S]*?)<\/item>/gi) || [];
 
   for (const itemXml of itemMatches) {
@@ -527,172 +845,208 @@ function extractRssItems(xmlText: string): Array<{ title: string; link: string; 
     const isGovRelated = GOV_KEYWORDS.some(kw => combined.includes(kw));
 
     if (isGovRelated) {
-      items.push({ title, link, pubDate, description });
+      items.push({ title, link, pubDate, description, source });
     }
   }
   return items;
 }
 
-// ─── MAIN HANDLER ─────────────────────────────────────────────────────────
-export async function GET(_request: Request) {
+// ─── MAIN GET / CRON HANDLER ──────────────────────────────────────────────
+export async function GET(request: Request) {
+  const syncStartedAt = new Date().toISOString();
+  const startTime = Date.now();
+
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { searchParams } = new URL(request.url);
+    const isTestMode = searchParams.get("test") === "true" || searchParams.get("dryRun") === "true";
 
-    // ── 25 FEEDS: Every major state board has its own dedicated stream ────────
-    const feeds = [
-      // 1. Direct: UPSSSC official RSS
-      "https://upsssc.gov.in/rss/rss.aspx",
-      // 2. Direct: UPPSC official RSS
-      "https://uppsc.up.nic.in/rss/rss.aspx",
-      // 3. Direct: Employment News weekly gazette
-      "https://www.employmentnews.gov.in/RSS/GetLatestRss",
-      // 4. Direct: PIB
-      "https://pib.gov.in/RssMain.aspx?ModId=6",
-      // 5. UPSSSC + UPPRPB (dedicated stream)
-      "https://news.google.com/rss/search?q=%22UPSSSC%22+OR+%22UPPRPB%22+admit+card+result+recruitment&hl=en-IN&gl=IN&ceid=IN:en",
-      // 6. MPESB + MP Vyapam + MP Police (Madhya Pradesh — DEDICATED)
-      "https://news.google.com/rss/search?q=%22MPESB%22+OR+%22MP+Police+Constable%22+OR+%22MP+Vyapam%22+OR+%22MPPEB%22+OR+%22Madhya+Pradesh+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 7. BPSC + Bihar Police + BSSC (Bihar — DEDICATED)
-      "https://news.google.com/rss/search?q=%22BPSC%22+OR+%22Bihar+Police%22+OR+%22BSSC%22+OR+%22Bihar+STET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 8. RPSC + RSMSSB + Rajasthan Police (Rajasthan — DEDICATED)
-      "https://news.google.com/rss/search?q=%22RPSC%22+OR+%22RSMSSB%22+OR+%22Rajasthan+Police%22+OR+%22REET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 9. HSSC + Haryana Police (Haryana — DEDICATED)
-      "https://news.google.com/rss/search?q=%22HSSC%22+OR+%22HPSC%22+OR+%22Haryana+Police%22+OR+%22Haryana+CET%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 10. MPSC + Maharashtra Police (Maharashtra — DEDICATED)
-      "https://news.google.com/rss/search?q=%22MPSC%22+OR+%22Maharashtra+Police%22+OR+%22Maharashtra+Arogya%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 11. GPSC + GSSSB + Gujarat Police (Gujarat — DEDICATED)
-      "https://news.google.com/rss/search?q=%22GPSC%22+OR+%22GSSSB%22+OR+%22Gujarat+Police%22+OR+%22OJAS%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 12. WBPSC + WB Police + WBSSC (West Bengal — DEDICATED)
-      "https://news.google.com/rss/search?q=%22WBPSC%22+OR+%22WB+Police%22+OR+%22WBSSC%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 13. KPSC + Karnataka Police (Karnataka — DEDICATED)
-      "https://news.google.com/rss/search?q=%22KPSC%22+OR+%22KSP%22+OR+%22Karnataka+Police%22+OR+%22KSSB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 14. TNPSC + TNUSRB + TN Police (Tamil Nadu — DEDICATED)
-      "https://news.google.com/rss/search?q=%22TNPSC%22+OR+%22TNUSRB%22+OR+%22Tamil+Nadu+Police%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 15. TSPSC + Telangana Police (Telangana — DEDICATED)
-      "https://news.google.com/rss/search?q=%22TSPSC%22+OR+%22Telangana+Police%22+OR+%22TSLPRB%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 16. SSC CGL / CHSL / GD / MTS / CPO / Steno
-      "https://news.google.com/rss/search?q=(%22SSC+CGL%22+OR+%22SSC+CHSL%22+OR+%22SSC+MTS%22+OR+%22SSC+GD%22+OR+%22SSC+CPO%22+OR+%22SSC+Stenographer%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 17. Railway RRB / RRC
-      "https://news.google.com/rss/search?q=(%22RRB+NTPC%22+OR+%22RRB+ALP%22+OR+%22RRC+Group+D%22+OR+%22Railway+Recruitment%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 18. Banking (IBPS, SBI, RBI, LIC)
-      "https://news.google.com/rss/search?q=(%22IBPS+PO%22+OR+%22IBPS+Clerk%22+OR+%22SBI+PO%22+OR+%22SBI+Clerk%22+OR+%22RBI+Grade+B%22)+2026+result+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // 19. Defense (Agniveer, NDA, CRPF, BSF, CISF)
-      "https://news.google.com/rss/search?q=(%22Agniveer%22+OR+%22NDA+2026%22+OR+%22CRPF+Recruitment%22+OR+%22BSF+Recruitment%22+OR+%22CISF+Recruitment%22)+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 20. Teaching (CTET, KVS, NVS, UGC NET, State TETs)
-      "https://news.google.com/rss/search?q=(%22CTET%22+OR+%22KVS+Recruitment%22+OR+%22NVS+Recruitment%22+OR+%22UGC+NET%22+OR+%22Super+TET%22+OR+%22REET%22)+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 21. PSU / Scientific (ISRO, DRDO, BARC, EPFO, ESIC, IOCL, BEL)
-      "https://news.google.com/rss/search?q=(%22ISRO+Recruitment%22+OR+%22DRDO+Recruitment%22+OR+%22BARC+Recruitment%22+OR+%22EPFO%22+OR+%22ESIC%22+OR+%22IOCL+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 22. Medical & Paramedical (AIIMS, NHM, Staff Nurse, Lab Tech)
-      "https://news.google.com/rss/search?q=(%22AIIMS+Recruitment%22+OR+%22NHM+Recruitment%22+OR+%22Staff+Nurse%22+OR+%22Lab+Technician%22+OR+%22Pharmacist+Recruitment%22)+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 23. High Courts + Judiciary
-      "https://news.google.com/rss/search?q=(%22High+Court+Recruitment%22+OR+%22District+Court%22)+clerk+stenographer+2026+admit+card+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 24. Patwari / Lekhpal / VDO / Gram Sachiv / Anganwadi
-      "https://news.google.com/rss/search?q=(%22Lekhpal%22+OR+%22Patwari%22+OR+%22VDO+Recruitment%22+OR+%22Gram+Sachiv%22+OR+%22Anganwadi+Supervisor%22)+2026+notification+admit+card&hl=en-IN&gl=IN&ceid=IN:en",
-      // 25. Northeast + Himalayan PSCs (JKSSB, HPPSC, UKPSC, APSC, OPSC, JPSC)
-      "https://news.google.com/rss/search?q=(%22JKSSB%22+OR+%22HPPSC%22+OR+%22UKPSC%22+OR+%22APSC%22+OR+%22OPSC%22+OR+%22JPSC%22+OR+%22CGPSC%22)+2026+recruit+admit+result&hl=en-IN&gl=IN&ceid=IN:en",
-      // 26. Sarkari Result & Sarkari Exam live feeds (Real-time crawler)
-      "https://news.google.com/rss/search?q=%22sarkariresult%22+OR+%22sarkari+result%22+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 27. PhysicsWallah (PW.live) Judiciary, Police & State Exams live feed
-      "https://news.google.com/rss/search?q=%22pw.live%22+OR+%22physicswallah%22+recruitment+admit+card+exam+date+2026&hl=en-IN&gl=IN&ceid=IN:en",
-      // 28. Adda247 & Testbook live feeds
-      "https://news.google.com/rss/search?q=(%22adda247%22+OR+%22testbook%22)+recruitment+admit+card+result+2026&hl=en-IN&gl=IN&ceid=IN:en"
-    ];
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ── Fetch ALL feeds in PARALLEL (much faster than sequential) ──────────
+    // 1. Parallel Fetch with Promise.allSettled & Timeouts
     const feedResults = await Promise.allSettled(
-      feeds.map(url =>
-        fetch(url, {
+      DISCOVERY_SOURCES.map(source =>
+        fetch(source.url, {
           next: { revalidate: 0 },
           headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; HireOrbitAI-GovBot/2.0; +https://hireorbitai.in)",
+            "User-Agent": "Mozilla/5.0 (compatible; HireOrbitAI-GovBot/2.0; +https://hireorbitai.in/bot)",
             "Accept": "application/rss+xml, application/xml, text/xml, */*"
           },
           signal: AbortSignal.timeout(8000)
-        }).then(r => r.ok ? r.text() : "")
-          .catch(() => "")
+        }).then(async r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return { source, text: await r.text() };
+        })
       )
     );
 
-    // ── ROUND-ROBIN: pick up to 2 items per feed so every state gets representation ──
-    const perFeedItems: Array<Array<{ title: string; link: string; pubDate: string; description: string }>> = [];
-    for (const result of feedResults) {
-      if (result.status === "fulfilled" && result.value) {
-        perFeedItems.push(extractRssItems(result.value));
-      } else {
-        perFeedItems.push([]);
-      }
-    }
+    // 2. Tally Source Metrics & Collect Items
+    let sourcesSuccessful = 0;
+    let sourcesFailed = 0;
+    const failedSources: Array<{ id: string; name: string; error: string }> = [];
+    const perSourceItems: Array<Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }>> = [];
 
-    // Get existing notices from DB for fingerprint comparison
+    feedResults.forEach((res, index) => {
+      const sourceDef = DISCOVERY_SOURCES[index];
+      if (res.status === "fulfilled") {
+        sourcesSuccessful++;
+        perSourceItems.push(extractRssItems(res.value.text, res.value.source));
+      } else {
+        sourcesFailed++;
+        failedSources.push({
+          id: sourceDef.id,
+          name: sourceDef.name,
+          error: res.reason?.message || "Connection timeout / network error"
+        });
+        perSourceItems.push([]);
+      }
+    });
+
+    const totalItemsFetched = perSourceItems.reduce((acc, curr) => acc + curr.length, 0);
+
+    // 3. Load Existing Database Rows for Cross-Source Deduplication
     const { data: existingRows } = await supabase
       .from("gov_notifications")
-      .select("id, slug, title, important_dates, badge_status, type, organization");
+      .select("id, slug, title, fingerprint, important_dates, badge_status, type, organization, verification_status, sources_tracked, official_pdf_url, apply_url, vacancies, qualification");
 
-    const existingBySlug = new Map<string, any>();
     const existingByFingerprint = new Map<string, any>();
+    const existingBySlug = new Map<string, any>();
 
     for (const row of existingRows || []) {
+      if (row.fingerprint) existingByFingerprint.set(row.fingerprint, row);
       if (row.slug) existingBySlug.set(row.slug, row);
-      if (row.organization && row.title) {
-        const fp = generateRecruitmentFingerprint(row.organization, row.title);
-        existingByFingerprint.set(fp, row);
-      }
     }
 
-    const seenThisRun = new Set<string>();
+    // 4. Round-Robin Item Selection (Ensure fair representation across sources)
+    const toProcess: Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }> = [];
+    const seenTitlesThisRun = new Set<string>();
+    const ITEMS_PER_FEED = 3;
+    const MAX_PROCESS_TOTAL = 60;
 
-    // Round-robin: pick up to 2 items per feed
-    const toProcess: Array<{ title: string; link: string; pubDate: string; description: string }> = [];
-    const ITEMS_PER_FEED = 2;
-    const MAX_TOTAL = 50;
+    for (const items of perSourceItems) {
+      let count = 0;
+      for (const item of items) {
+        if (toProcess.length >= MAX_PROCESS_TOTAL) break;
+        if (count >= ITEMS_PER_FEED) break;
 
-    for (const feedItems of perFeedItems) {
-      let taken = 0;
-      for (const item of feedItems) {
-        if (toProcess.length >= MAX_TOTAL) break;
-        if (taken >= ITEMS_PER_FEED) break;
-        const key = item.title.toLowerCase().slice(0, 35);
-        if (seenThisRun.has(key)) continue;
-        seenThisRun.add(key);
+        const dedupeKey = item.title.toLowerCase().slice(0, 35);
+        if (seenTitlesThisRun.has(dedupeKey)) continue;
+        seenTitlesThisRun.add(dedupeKey);
+
         toProcess.push(item);
-        taken++;
+        count++;
       }
-      if (toProcess.length >= MAX_TOTAL) break;
+      if (toProcess.length >= MAX_PROCESS_TOTAL) break;
     }
 
+    // 5. Process Items: Classification, Deduplication, New vs Update Detection
+    let recruitmentsDetected = 0;
+    let duplicates = 0;
+    let verificationPending = 0;
     const newlyAdded: string[] = [];
-    const updatedCount: string[] = [];
+    const updatedItems: Array<{ title: string; reason: string }> = [];
 
-    for (const item of toProcess) {
-      const parsed = quickParseNotice(item);
+    for (const rawItem of toProcess) {
+      const parsed = quickParseNotice(rawItem, rawItem.source);
       if (!parsed.slug || parsed.title.length < 10) continue;
 
-      const itemFp = generateRecruitmentFingerprint(parsed.organization, parsed.short_title || parsed.title);
-      const existingMatch = existingBySlug.get(parsed.slug) || existingByFingerprint.get(itemFp);
+      if (parsed.type === "recruitment") {
+        recruitmentsDetected++;
+      }
+      if (parsed.verification_status === "pending") {
+        verificationPending++;
+      }
 
-      // CASE 1: EXISTING RECRUITMENT FOUND -> CHECK FOR UPDATES
+      // Check existing by Fingerprint or Slug
+      const existingMatch = existingByFingerprint.get(parsed.fingerprint) || existingBySlug.get(parsed.slug);
+
+      // ─── CASE A: EXISTING RECRUITMENT MATCH FOUND -> CHANGE DETECTION ───
       if (existingMatch) {
         const oldDates: Record<string, any> = existingMatch.important_dates || {};
         const newDates: Record<string, any> = parsed.important_dates || {};
-        const hasDateChange = newDates.lastDate && newDates.lastDate !== oldDates.lastDate;
-        const hasExamChange = newDates.examDate && newDates.examDate !== oldDates.examDate;
-        const hasBadgeChange = parsed.badge_status && parsed.badge_status !== existingMatch.badge_status;
 
-        if (hasDateChange || hasExamChange || hasBadgeChange) {
-          await supabase.from("gov_notifications").update({
-            badge_status: parsed.badge_status || existingMatch.badge_status,
-            badge_color: parsed.badge_color || existingMatch.badge_color,
-            important_dates: { ...oldDates, ...newDates },
-            official_pdf_url: parsed.official_pdf_url || existingMatch.official_pdf_url,
-            apply_url: parsed.apply_url || existingMatch.apply_url,
-          }).eq("id", existingMatch.id);
+        // Change Signals
+        const hasDateChange = Boolean(
+          newDates.lastDate && 
+          newDates.lastDate !== oldDates.lastDate && 
+          !newDates.lastDate.includes("Check Official")
+        );
+        const hasExamChange = Boolean(
+          newDates.examDate && 
+          newDates.examDate !== oldDates.examDate && 
+          !newDates.examDate.includes("To be Notified Soon")
+        );
+        const hasBadgeChange = Boolean(
+          parsed.badge_status && 
+          parsed.badge_status !== existingMatch.badge_status
+        );
+        const hasVacanciesUpdate = Boolean(
+          parsed.vacancies && 
+          parsed.vacancies !== "See Notification" && 
+          existingMatch.vacancies === "See Notification"
+        );
+        // Official verification upgrade: pending -> verified
+        const hasVerificationUpgrade = Boolean(
+          parsed.verification_status === "verified" && 
+          existingMatch.verification_status !== "verified"
+        );
 
-          updatedCount.push(`${parsed.title} (Updated dates/status)`);
+        if (hasDateChange || hasExamChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade) {
+          const reasons: string[] = [];
+          if (hasDateChange) reasons.push(`Last date updated to ${newDates.lastDate}`);
+          if (hasExamChange) reasons.push(`Exam date announced: ${newDates.examDate}`);
+          if (hasBadgeChange) reasons.push(`Status changed to ${parsed.badge_status}`);
+          if (hasVacanciesUpdate) reasons.push(`Vacancies confirmed: ${parsed.vacancies}`);
+          if (hasVerificationUpgrade) reasons.push(`Upgraded to Official Verified`);
+
+          const updatedSourcesTracked = Array.isArray(existingMatch.sources_tracked)
+            ? [...existingMatch.sources_tracked]
+            : [];
+
+          // Avoid duplicating identical source in tracking list
+          const alreadyTracked = updatedSourcesTracked.some((s: any) => s.sourceId === rawItem.source.id);
+          if (!alreadyTracked) {
+            updatedSourcesTracked.push(parsed.sourceTrackingEntry);
+          }
+
+          if (!isTestMode) {
+            await supabase.from("gov_notifications").update({
+              badge_status: parsed.badge_status || existingMatch.badge_status,
+              badge_color: parsed.badge_color || existingMatch.badge_color,
+              important_dates: { ...oldDates, ...newDates },
+              vacancies: hasVacanciesUpdate ? parsed.vacancies : existingMatch.vacancies,
+              verification_status: hasVerificationUpgrade ? "verified" : existingMatch.verification_status,
+              official_pdf_url: (hasVerificationUpgrade && parsed.official_pdf_url) ? parsed.official_pdf_url : existingMatch.official_pdf_url,
+              apply_url: (hasVerificationUpgrade && parsed.apply_url) ? parsed.apply_url : existingMatch.apply_url,
+              sources_tracked: updatedSourcesTracked,
+              updated_at: new Date().toISOString()
+            }).eq("id", existingMatch.id);
+          }
+
+          updatedItems.push({
+            title: parsed.title,
+            reason: reasons.join("; ")
+          });
+        } else {
+          // Unchanged / duplicate from another aggregator
+          duplicates++;
+          // Update lastCheckedAt in source tracking without overwriting original discovery
+          if (!isTestMode && Array.isArray(existingMatch.sources_tracked)) {
+            const tracking = [...existingMatch.sources_tracked];
+            const idx = tracking.findIndex((s: any) => s.sourceId === rawItem.source.id);
+            if (idx >= 0) {
+              tracking[idx].lastCheckedAt = new Date().toISOString();
+            } else {
+              tracking.push(parsed.sourceTrackingEntry);
+            }
+            await supabase.from("gov_notifications").update({
+              sources_tracked: tracking
+            }).eq("id", existingMatch.id);
+          }
         }
         continue;
       }
 
-      // CASE 2: GENUINELY NEW RECRUITMENT -> INSERT NEW RECORD
+      // ─── CASE B: GENUINELY NEW RECRUITMENT -> INSERT NEW ROW ──────────
       let slug = parsed.slug;
       if (existingBySlug.has(slug)) {
         slug = `${slug}-${Date.now().toString(36)}`;
@@ -700,14 +1054,14 @@ export async function GET(_request: Request) {
 
       const id = `auto-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-      const { error } = await supabase.from("gov_notifications").insert({
+      const newRecord = {
         id,
         slug,
         title: parsed.title,
         short_title: parsed.short_title,
         organization: parsed.organization,
         category: parsed.category,
-        type: parsed.type,
+        type: parsed.type, // 'recruitment', 'admit-card', etc.
         badge_status: parsed.badge_status,
         badge_color: parsed.badge_color,
         vacancies: parsed.vacancies,
@@ -723,31 +1077,58 @@ export async function GET(_request: Request) {
         selection_process: parsed.selection_process,
         official_pdf_url: parsed.official_pdf_url,
         apply_url: parsed.apply_url,
-        source_feed: "Automated Gazette Sync v3",
+        verification_status: parsed.verification_status,
+        fingerprint: parsed.fingerprint,
+        sources_tracked: [parsed.sourceTrackingEntry],
+        source_feed: parsed.source_feed,
         is_trending: true,
         is_lead_story: false
-      });
+      };
 
-      if (!error) {
-        newlyAdded.push(parsed.title);
-        existingBySlug.set(slug, { id, slug });
-        existingByFingerprint.set(itemFp, { id, slug });
+      if (!isTestMode) {
+        const { error } = await supabase.from("gov_notifications").insert(newRecord);
+        if (!error) {
+          newlyAdded.push(parsed.title);
+          existingBySlug.set(slug, newRecord);
+          existingByFingerprint.set(parsed.fingerprint, newRecord);
+        }
+      } else {
+        newlyAdded.push(`[SIMULATED] ${parsed.title}`);
+        existingBySlug.set(slug, newRecord);
+        existingByFingerprint.set(parsed.fingerprint, newRecord);
       }
     }
 
+    const syncFinishedAt = new Date().toISOString();
+    const durationMs = Date.now() - startTime;
+
     return NextResponse.json({
       success: true,
-      timestamp: new Date().toISOString(),
-      feedsScanned: feeds.length,
-      totalItemsFound: perFeedItems.reduce((sum, f) => sum + f.length, 0),
-      newItemsQueued: toProcess.length,
-      newlyAddedCount: newlyAdded.length,
-      updatedCount: updatedCount.length,
+      syncStartedAt,
+      syncFinishedAt,
+      durationMs,
+      sourcesAttempted: DISCOVERY_SOURCES.length,
+      sourcesSuccessful,
+      sourcesFailed,
+      itemsFetched: totalItemsFetched,
+      recruitmentsDetected,
+      newRecruitments: newlyAdded.length,
+      updatedRecruitments: updatedItems.length,
+      duplicates,
+      verificationPending,
+      isDryRun: isTestMode,
+      errors: failedSources,
       newlyAdded,
-      updatedItems: updatedCount
+      updatedItems
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error.message || "Internal sync pipeline error",
+      syncStartedAt,
+      syncFinishedAt: new Date().toISOString(),
+      durationMs: Date.now() - startTime
+    }, { status: 500 });
   }
 }
 
