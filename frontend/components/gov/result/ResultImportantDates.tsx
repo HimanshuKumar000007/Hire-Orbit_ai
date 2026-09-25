@@ -1,4 +1,5 @@
 import { Calendar, CheckCircle2, Clock } from 'lucide-react';
+import { isRealDateString } from '@/lib/universal-notice-model';
 
 interface ResultDates {
   examDate?: string;
@@ -8,6 +9,7 @@ interface ResultDates {
   cutoffDate?: string;
   meritListDate?: string;
   nextStageDate?: string;
+  models?: Record<string, any>;
 }
 
 interface ResultImportantDatesProps {
@@ -15,10 +17,10 @@ interface ResultImportantDatesProps {
 }
 
 export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
-  // Collect only valid dates that actually exist (no N/A)
+  // Collect only valid dates that actually exist (no N/A or UI placeholder phrases)
   const items: Array<{ label: string; date: string; tag?: string; tagColor?: string; isImportant?: boolean }> = [];
 
-  if (dates.examDate) {
+  if (dates.examDate && isRealDateString(dates.examDate)) {
     items.push({
       label: "Examination Held On",
       date: dates.examDate,
@@ -27,7 +29,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.answerKeyDate) {
+  if (dates.answerKeyDate && isRealDateString(dates.answerKeyDate)) {
     items.push({
       label: "Provisional Answer Key Release",
       date: dates.answerKeyDate,
@@ -36,7 +38,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.resultDate) {
+  if (dates.resultDate && isRealDateString(dates.resultDate)) {
     items.push({
       label: "Official Result Declaration Date",
       date: dates.resultDate,
@@ -46,7 +48,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.scorecardDate) {
+  if (dates.scorecardDate && isRealDateString(dates.scorecardDate)) {
     items.push({
       label: "Scorecard & Individual Marks Live",
       date: dates.scorecardDate,
@@ -56,7 +58,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.cutoffDate) {
+  if (dates.cutoffDate && isRealDateString(dates.cutoffDate)) {
     items.push({
       label: "Category Cutoff Marks Published",
       date: dates.cutoffDate,
@@ -65,7 +67,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.meritListDate) {
+  if (dates.meritListDate && isRealDateString(dates.meritListDate)) {
     items.push({
       label: "Merit List / Selected Candidates PDF",
       date: dates.meritListDate,
@@ -74,7 +76,7 @@ export function ResultImportantDates({ dates }: ResultImportantDatesProps) {
     });
   }
 
-  if (dates.nextStageDate) {
+  if (dates.nextStageDate && isRealDateString(dates.nextStageDate)) {
     items.push({
       label: "Tentative Date for Next Stage / DV",
       date: dates.nextStageDate,

@@ -67,38 +67,8 @@ export function isOfficialGovDomain(urlStr: string): boolean {
 }
 
 
-const MONTH_NAMES_REGEX = /jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?/i;
-const NUMERIC_DATE_REGEX = /\b[0-3]?\d[./-][0-1]?\d[./-](?:20)?\d\d\b/;
-
-export function cleanDateValue(val: any): string | undefined {
-  if (!val || typeof val !== 'string') return undefined;
-  const s = val.trim();
-  if (s.length < 4) return undefined;
-  // If it matches placeholder phrases without an explicit day + month/year
-  const isPlaceholder = /announced|upcoming|notified|check|available|window closed|as per|active \/|tba|soon|released|completed|same as/i.test(s);
-  if (isPlaceholder && !MONTH_NAMES_REGEX.test(s) && !NUMERIC_DATE_REGEX.test(s)) {
-    return undefined;
-  }
-  if (!MONTH_NAMES_REGEX.test(s) && !NUMERIC_DATE_REGEX.test(s)) {
-    return undefined;
-  }
-  return s;
-}
-
-export function isRealDateString(val?: string | null): boolean {
-  return !!cleanDateValue(val);
-}
-
-export type DateStatus = 
-  | "not_announced"
-  | "announced"
-  | "released"
-  | "available"
-  | "closed"
-  | "completed"
-  | "upcoming"
-  | "not_declared"
-  | "unknown";
+export { cleanDateValue, isRealDateString, type DateStatus } from "./universal-date-normalizer";
+import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus } from "./universal-date-normalizer";
 
 export interface UniversalNoticeDates {
   applicationStart?: string | null;
@@ -111,109 +81,91 @@ export interface UniversalNoticeDates {
   correctionStatus?: DateStatus;
   citySlipDate?: string | null;
   examCityStatus?: DateStatus;
+  citySlipEvidence?: string | null;
   examDate?: string | null;
+  examDateFrom?: string | null;
+  examDateTo?: string | null;
   examDateStatus?: DateStatus | 'ANNOUNCED' | 'NOTIFIED_SOON' | 'EXACT_DATE';
+  examDateEvidence?: string | null;
   admitCardDate?: string | null;
   admitCardStatus?: DateStatus | 'AVAILABLE_NOW' | 'CITY_SLIP_OUT' | 'EXPECTED_SOON' | 'NOT_RELEASED';
+  admitCardEvidence?: string | null;
   resultDate?: string | null;
   resultStatus?: DateStatus;
   shiftTimings?: string | null;
   answerKeyDate?: string | null;
+  scorecardDate?: string | null;
+  cutoffDate?: string | null;
+  documentVerificationDate?: string | null;
+  interviewDate?: string | null;
+  finalResultDate?: string | null;
+  models?: Record<string, any>;
 }
 
 export function deriveUniversalNoticeDates(
   rawDates: Record<string, any> = {},
   noticeType: NoticeType,
   title: string,
-  badgeStatus?: string
+  badgeStatus?: string,
+  summary?: string,
+  sourceText?: string
 ): UniversalNoticeDates {
-  const t = (title || "").toLowerCase();
-  const b = (badgeStatus || "").toLowerCase();
+  const normType = (noticeType === 'admit-card' || noticeType === 'admit_card')
+    ? 'admit-card'
+    : (noticeType === 'result')
+    ? 'result'
+    : (noticeType === 'answer-key' || noticeType === 'answer_key')
+    ? 'answer-key'
+    : 'job';
 
-  const isAdmitNotice = noticeType === "admit-card" || noticeType === "admit_card" || /admit card|hall ticket|call letter|e-admit/i.test(t + b);
-  const isCitySlipNotice = /city slip|city intimation|exam city/i.test(t + b);
-  const isResultNotice = noticeType === "result" || /result|merit list|scorecard/i.test(t + b);
-  const isAnswerKeyNotice = noticeType === "answer-key" || noticeType === "answer_key" || /answer key|objection/i.test(t + b);
-
-  // Clean pure dates (never UI sentences)
-  const examDate = cleanDateValue(rawDates.examDate) || null;
-  const admitCardDate = cleanDateValue(rawDates.admitCardDate) || null;
-  const applicationStart = cleanDateValue(rawDates.startDate || rawDates.applicationStart) || null;
-  const applicationLastDate = cleanDateValue(rawDates.lastDate || rawDates.applicationLastDate) || null;
-  const feeLastDate = cleanDateValue(rawDates.feeLastDate) || applicationLastDate || null;
-  const correctionLastDate = cleanDateValue(rawDates.correctionLastDate) || null;
-  const citySlipDate = cleanDateValue(rawDates.citySlipDate) || null;
-  const resultDate = cleanDateValue(rawDates.resultDate) || null;
-
-  // Universal Status Derivations (Pure logic, ZERO exam-specific hardcoding)
-  let admitCardStatus: DateStatus = "not_announced";
-  if (isAdmitNotice) {
-    if (/out|released|download|available|live/i.test(t + b)) {
-      admitCardStatus = "released";
-    } else if (/expected soon|coming soon|likely/i.test(t + b)) {
-      admitCardStatus = "upcoming";
-    } else {
-      admitCardStatus = "released";
-    }
-  } else if (isResultNotice || isAnswerKeyNotice) {
-    admitCardStatus = "completed";
-  } else if (admitCardDate) {
-    admitCardStatus = "released";
-  }
-
-  let examDateStatus: DateStatus = "not_announced";
-  if (examDate) {
-    examDateStatus = "announced";
-  } else if (isAdmitNotice || isCitySlipNotice || /exam date|exam schedule|exam calendar|timetable/i.test(t + b)) {
-    examDateStatus = "announced";
-  } else if (isResultNotice || isAnswerKeyNotice) {
-    examDateStatus = "completed";
-  }
-
-  let examCityStatus: DateStatus = "not_announced";
-  if (citySlipDate || isCitySlipNotice) {
-    examCityStatus = "available";
-  } else if (isAdmitNotice || isResultNotice) {
-    examCityStatus = "completed";
-  }
-
-  let applicationLastStatus: DateStatus = "available";
-  if (isAdmitNotice || isResultNotice || isAnswerKeyNotice || /registration closed|closed|ended|expired/i.test(b)) {
-    applicationLastStatus = "closed";
-  } else if (applicationLastDate) {
-    const parsed = Date.parse(applicationLastDate);
-    if (!isNaN(parsed) && parsed < Date.now()) {
-      applicationLastStatus = "closed";
-    }
-  }
-
-  let applicationStartStatus: DateStatus = "available";
-  if (isAdmitNotice || isResultNotice || isAnswerKeyNotice) {
-    applicationStartStatus = "completed";
-  }
-
-  let feePaymentStatus: DateStatus = applicationLastStatus;
-  let correctionStatus: DateStatus = correctionLastDate ? "available" : (isAdmitNotice || isResultNotice ? "closed" : "not_announced");
-  let resultStatus: DateStatus = isResultNotice ? (resultDate || /out|declared|released/i.test(t + b) ? "released" : "announced") : "not_declared";
+  const normalized = normalizeGovernmentNoticeDates(rawDates, {
+    title,
+    summary,
+    type: normType,
+    badgeStatus,
+    sourceText
+  });
 
   return {
-    applicationStart,
-    applicationStartStatus,
-    applicationLastDate,
-    applicationLastStatus,
-    feeLastDate,
-    feePaymentStatus,
-    correctionLastDate,
-    correctionStatus,
-    citySlipDate,
-    examCityStatus,
-    examDate,
-    examDateStatus,
-    admitCardDate,
-    admitCardStatus,
-    resultDate,
-    resultStatus,
-    shiftTimings: rawDates.shiftTimings || null
+    applicationStart: normalized.applicationStart,
+    applicationStartStatus: normalized.models.applicationStart.status,
+    applicationLastDate: normalized.applicationLastDate,
+    applicationLastStatus: normalized.applicationLastStatus,
+    feeLastDate: normalized.feeLastDate,
+    feePaymentStatus: normalized.models.feePaymentEnd.status,
+    correctionLastDate: normalized.correctionLastDate,
+    correctionStatus: normalized.models.correctionEnd.status,
+    citySlipDate: normalized.citySlipDate,
+    examCityStatus: normalized.models.examCityDate.status,
+    citySlipEvidence: normalized.models.examCityDate.evidence,
+    examDate: normalized.examDate,
+    examDateFrom: normalized.examDateFrom,
+    examDateTo: normalized.examDateTo,
+    examDateStatus: normalized.examDate
+      ? 'EXACT_DATE'
+      : normalized.examDateStatus === 'announced'
+      ? 'ANNOUNCED'
+      : normalized.examDateStatus,
+    examDateEvidence: normalized.models.examDate.evidence,
+    admitCardDate: normalized.admitCardDate,
+    admitCardStatus: normalized.models.admitCardDate.status === 'released'
+      ? 'AVAILABLE_NOW'
+      : normalized.models.admitCardDate.status === 'upcoming'
+      ? 'EXPECTED_SOON'
+      : normalized.models.examCityDate.status === 'available'
+      ? 'CITY_SLIP_OUT'
+      : normalized.models.admitCardDate.status,
+    admitCardEvidence: normalized.models.admitCardDate.evidence,
+    resultDate: normalized.resultDate,
+    resultStatus: normalized.resultStatus,
+    shiftTimings: normalized.shiftTimings,
+    answerKeyDate: normalized.answerKeyDate,
+    scorecardDate: normalized.scorecardDate,
+    cutoffDate: normalized.cutoffDate,
+    documentVerificationDate: normalized.documentVerificationDate,
+    interviewDate: normalized.interviewDate,
+    finalResultDate: normalized.finalResultDate,
+    models: normalized.models
   };
 }
 
@@ -409,7 +361,7 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
 
   // 4. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
   const rawDates = job.importantDates || {};
-  const derivedDates = deriveUniversalNoticeDates(rawDates, noticeType, title, job.badgeStatus);
+  const derivedDates = deriveUniversalNoticeDates(rawDates, noticeType, title, job.badgeStatus, job.summary);
   const dates: UniversalNoticeDates = {
     ...derivedDates,
     // Maintain backward-compatible status strings for components expecting legacy enums
@@ -970,7 +922,7 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   }
 
   // 5. Sanitize and Filter Dates (Strict Separation of Date Value & Status)
-  const derivedDates = deriveUniversalNoticeDates(rawDates, 'job', title, job.badgeStatus);
+  const derivedDates = deriveUniversalNoticeDates(rawDates, 'job', title, job.badgeStatus, job.summary);
   const dates: UniversalNoticeDates = {
     ...derivedDates,
     answerKeyDate: cleanDateValue(rawDates.answerKeyDate) || null
@@ -1396,6 +1348,7 @@ export interface UniversalResultNotice {
     cutoffDate?: string;
     meritListDate?: string;
     nextStageDate?: string;
+    models?: Record<string, any>;
   };
 
   // Result Details & Formats
@@ -1624,27 +1577,24 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     statusBadgeColor = 'emerald';
   }
 
-  // 4. Sanitize and Filter Dates
+  // 4. Sanitize and Filter Dates (Separation of Date from Status, Zero Placeholders)
   const rawDates = job.importantDates || {};
-  const dates: UniversalResultNotice['dates'] = {};
+  const normalizedResultDates = normalizeGovernmentNoticeDates(rawDates, {
+    title: job.title,
+    summary: job.summary,
+    type: 'result',
+    badgeStatus: job.badgeStatus
+  });
 
-  if (rawDates.examDate && !rawDates.examDate.includes('N/A')) {
-    dates.examDate = rawDates.examDate;
-  }
-  if (rawDates.answerKeyDate && !rawDates.answerKeyDate.includes('N/A')) {
-    dates.answerKeyDate = rawDates.answerKeyDate;
-  }
-  if (rawDates.resultDate && !rawDates.resultDate.includes('N/A')) {
-    dates.resultDate = rawDates.resultDate;
-  } else if (status !== 'EXPECTED_SOON') {
-    dates.resultDate = "Declared (Check Link Below)";
-  }
-  if (isScorecardLive) {
-    dates.scorecardDate = "Available Now";
-  }
-  if (isCutoffLive) {
-    dates.cutoffDate = "Released Along with Result";
-  }
+  const dates: UniversalResultNotice['dates'] = {
+    examDate: normalizedResultDates.examDate || undefined,
+    answerKeyDate: normalizedResultDates.answerKeyDate || undefined,
+    resultDate: normalizedResultDates.resultDate || undefined,
+    scorecardDate: normalizedResultDates.scorecardDate || undefined,
+    cutoffDate: normalizedResultDates.cutoffDate || undefined,
+    meritListDate: normalizedResultDates.finalResultDate || undefined,
+    models: normalizedResultDates.models
+  };
 
   // 5. Clean URLs & Classify Source (Zero-Block Sarkari Result / Aggregator Policy)
   const rawResultUrl = job.applyUrl || "";
