@@ -564,6 +564,8 @@ export function validateNoticeDates(dates: {
   const lastTs = parseSafe(dates.applicationLastDate);
   const admitTs = parseSafe(dates.admitCardDate);
   const examTs = parseSafe(dates.examDateFrom || dates.examDate);
+  const resultTs = parseSafe((dates as any).resultDate);
+  const cityTs = parseSafe((dates as any).citySlipDate);
 
   // 1. Application start <= Application last date
   if (startTs && lastTs && startTs > lastTs) {
@@ -575,12 +577,22 @@ export function validateNoticeDates(dates: {
     warnings.push(`Application deadline (${dates.applicationLastDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
   }
 
-  // 3. Admit card <= Exam date
+  // 3. STRICT CHRONOLOGY: Admit card release date cannot be after exam date
   if (admitTs && examTs && admitTs > examTs) {
-    warnings.push(`Admit card release date (${dates.admitCardDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+    errors.push(`Chronological contradiction: Admit card release date (${dates.admitCardDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
   }
 
-  // 4. Sanity check years (must be between 2020 and 2035)
+  // 4. STRICT CHRONOLOGY: Result date cannot be before exam date
+  if (resultTs && examTs && resultTs < examTs) {
+    errors.push(`Chronological contradiction: Result date (${(dates as any).resultDate}) is before exam date (${dates.examDate || dates.examDateFrom})`);
+  }
+
+  // 5. City slip date should not be after exam date
+  if (cityTs && examTs && cityTs > examTs) {
+    errors.push(`Chronological contradiction: City intimation date (${(dates as any).citySlipDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+  }
+
+  // 6. Sanity check years (must be between 2020 and 2035)
   for (const [name, val] of Object.entries(dates)) {
     if (val && typeof val === 'string') {
       const ym = val.match(/\b(20\d\d)\b/);
@@ -598,4 +610,36 @@ export function validateNoticeDates(dates: {
     warnings,
     errors
   };
+}
+
+export type ExamStage =
+  | 'cbt1'
+  | 'cbt2'
+  | 'cbt3'
+  | 'tier1'
+  | 'tier2'
+  | 'prelims'
+  | 'mains'
+  | 'pet'
+  | 'skill'
+  | 'interview'
+  | 'final'
+  | 'general';
+
+/**
+ * Universal stage detector from notice title, badge or snippet
+ */
+export function detectExamStage(text: string): ExamStage {
+  const t = text.toLowerCase();
+  if (/\bcbt\s*[-]?\s*2\b|stage\s*[-]?\s*2\b|second\s*stage/i.test(t)) return 'cbt2';
+  if (/\bcbt\s*[-]?\s*1\b|stage\s*[-]?\s*1\b|first\s*stage/i.test(t)) return 'cbt1';
+  if (/\btier\s*[-]?\s*2\b/i.test(t)) return 'tier2';
+  if (/\btier\s*[-]?\s*1\b/i.test(t)) return 'tier1';
+  if (/\bmains?\b/i.test(t)) return 'mains';
+  if (/\bprelims?\b|\bpreliminary\b/i.test(t)) return 'prelims';
+  if (/\bpet\b|\bpst\b|physical\s*(?:efficiency|test|endurance|measurement)/i.test(t)) return 'pet';
+  if (/\bskill\s*test\b|\btyping\b|\bsteno/i.test(t)) return 'skill';
+  if (/\binterview\b|\bpersonality\s*test\b|\bviva/i.test(t)) return 'interview';
+  if (/\bfinal\b/i.test(t)) return 'final';
+  return 'general';
 }

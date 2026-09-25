@@ -5,11 +5,12 @@
  * HTML tables, and JSON-LD schemas without authority-specific hardcoding.
  */
 
-import { cleanDateValue, isRealDateString } from "./universal-date-normalizer";
+import { cleanDateValue, isRealDateString, detectExamStage, ExamStage } from "./universal-date-normalizer";
 
 const MONTH_NAMES = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
 
 export interface ExtractedUniversalDates {
+  stage?: ExamStage;
   examDate: string | null;
   examDateFrom: string | null;
   examDateTo: string | null;
@@ -34,6 +35,7 @@ export interface ExtractedUniversalDates {
   resultDateEvidence?: string | null;
   resultStatus: "not_declared" | "announced" | "released";
   confidence: number;
+  stages?: Record<string, any>;
 }
 
 /**
@@ -185,27 +187,71 @@ export function extractDatesFromText(
     ...cleanText.matchAll(new RegExp(admitCardRegex2.source, "gi"))
   ];
 
+  const noticeStage = detectExamStage(noticeTitle);
+  const stages: Record<string, any> = {};
   const candidates: Array<{ day: string; month: string; year?: string; raw: string }> = [];
 
   for (const match of allMatches) {
     if (!match) continue;
     const raw = match[0];
-    // Reject publication dates and non-release contexts
+    // Reject publication dates and non-release contexts (e.g. "hall ticket for September 27" where 'for [Date]' is the exam date)
     if (/posted on|published on|web correspondent|author|updated on|byline/i.test(raw)) continue;
-    if (/\bfor\b/i.test(raw)) continue; // 'for [Date]' introduces the exam date, not release date
+    if (new RegExp(`\\bfor\\s+(?:the\\s+)?(?:${MONTH_NAMES}|[0-3]?\\d(?:st|nd|rd|th)?|exam|cbt|test)\\b`, "i").test(raw)) continue;
+
+    let day = "";
+    let month = "";
+    let yearCandidate: string | undefined;
 
     if (match[1] && match[2]) {
       if (/\d/.test(match[1])) {
-        candidates.push({ day: match[1], month: match[2], year: match[3], raw });
+        day = match[1];
+        month = match[2];
+        yearCandidate = match[3];
       } else {
-        candidates.push({ day: match[2], month: match[1], year: match[3], raw });
+        day = match[2];
+        month = match[1];
+        yearCandidate = match[3];
       }
     }
+
+    if (!day || !month) continue;
+
+    // Check snippet stage with surrounding context (e.g. "CBT 1 admit card")
+    const matchIndex = match.index || 0;
+    const contextStart = Math.max(0, matchIndex - 50);
+    const surroundingText = cleanText.slice(contextStart, matchIndex + raw.length);
+    const snippetStage = detectExamStage(surroundingText);
+    const candidateFormatted = formatCalendarDate(day, month, yearCandidate, establishedYear);
+
+    // If candidate belongs to a different stage than notice target stage, isolate it
+    if (noticeStage !== "general" && snippetStage !== "general" && snippetStage !== noticeStage) {
+      if (!stages[snippetStage]) stages[snippetStage] = {};
+      stages[snippetStage].admitCardDate = candidateFormatted;
+      stages[snippetStage].admitCardEvidence = surroundingText.trim();
+      continue;
+    }
+
+    candidates.push({ day, month, year: yearCandidate, raw });
   }
 
-  if (candidates.length > 0) {
+  // Filter candidates against chronological impossibility: Admit Card CANNOT be after Exam Date!
+  const validCandidates = candidates.filter(c => {
+    const formatted = formatCalendarDate(c.day, c.month, c.year, establishedYear);
+    if (examDate) {
+      const examFirst = examDate.split(/[–—\-]|(\bto\b)/i)[0].trim();
+      const examTs = Date.parse(examFirst);
+      const admitTs = Date.parse(formatted);
+      if (!isNaN(examTs) && !isNaN(admitTs) && admitTs > examTs) {
+        // Chronological impossibility: admit card released after exam date
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (validCandidates.length > 0) {
     // Prefer candidate whose year matches the established year
-    const preferred = candidates.find(c => c.year === establishedYear) || candidates[0];
+    const preferred = validCandidates.find(c => c.year === establishedYear) || validCandidates[0];
     admitCardDate = formatCalendarDate(preferred.day, preferred.month, preferred.year, establishedYear);
     admitCardEvidence = preferred.raw.trim();
   }
@@ -342,7 +388,9 @@ export function extractDatesFromText(
     resultDate: cleanResult,
     resultDateEvidence: cleanResult ? resultDateEvidence : null,
     resultStatus: cleanResult ? "released" : "not_declared",
-    confidence
+    confidence,
+    stage: noticeStage,
+    stages: Object.keys(stages).length > 0 ? stages : undefined
   };
 }
 
@@ -358,7 +406,7 @@ export async function resolveSourceUrl(url: string): Promise<string> {
     const out = execFileSync(
       "python",
       ["-c", "import googlenewsdecoder, sys, json; res = googlenewsdecoder.gnewsdecoder(sys.argv[1]); print(json.dumps(res))", url],
-      { timeout: 6000, encoding: "utf8" }
+      { timeout: 4000, encoding: "utf8" }
     );
     const parsed = JSON.parse(out);
     if (parsed.success && parsed.decoded_url) {
@@ -371,7 +419,7 @@ export async function resolveSourceUrl(url: string): Promise<string> {
 }
 
 /**
- * Safely fetches publisher HTML text with 6s timeout and extracts content + tables + schemas
+ * Safely fetches publisher HTML text with 4.5s timeout and extracts content + tables + schemas
  */
 export async function fetchArticleText(url: string): Promise<string> {
   if (!url || url.includes("news.google.com")) return "";
@@ -382,7 +430,7 @@ export async function fetchArticleText(url: string): Promise<string> {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9"
       },
-      signal: AbortSignal.timeout(6000)
+      signal: AbortSignal.timeout(4500)
     });
     if (!res.ok) return "";
     const html = await res.text();
@@ -454,7 +502,9 @@ export async function deepExtractFromNotice(
           resultDate: deepDates.resultDate || extracted.resultDate,
           resultDateEvidence: deepDates.resultDateEvidence || extracted.resultDateEvidence,
           resultStatus: deepDates.resultDate ? "released" : extracted.resultStatus,
-          confidence: Math.max(deepDates.confidence, extracted.confidence)
+          confidence: Math.max(deepDates.confidence, extracted.confidence),
+          stage: deepDates.stage || extracted.stage,
+          stages: deepDates.stages || extracted.stages
         };
       }
     }

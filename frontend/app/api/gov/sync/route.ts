@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateRecruitmentFingerprint, generateResultFingerprint } from "@/lib/universal-notice-model";
-import { extractDatesFromText } from "@/lib/deep-date-extractor";
+import { extractDatesFromText, deepExtractFromNotice, ExtractedUniversalDates } from "@/lib/deep-date-extractor";
+import { validateNoticeDates, cleanDateValue, isRealDateString } from "@/lib/universal-date-normalizer";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
@@ -432,48 +433,55 @@ function stripHtmlAndDecode(rawText: string): string {
   return text.replace(/\s{2,}/g, " ").trim();
 }
 
-// ─── CONTEXT-AWARE DATE EXTRACTION ENGINE ─────────────────────────────────
-function extractDatesFromNotice(
-  title: string,
-  desc: string,
-  type: string,
-  year: string
-) {
-  // Use universal extractor with date range, evidence, and confidence support
-  const extracted = extractDatesFromText(desc, title, year);
+// ─── PLACEHOLDER TEXT SANITIZER ──────────────────────────────────────────
+export function isPlaceholderText(val: any): boolean {
+  return Boolean(
+    val &&
+    typeof val === "string" &&
+    /announced|upcoming|notified|check|available now \/|window closed|as per|active \/|tba|to be announced/i.test(val)
+  );
+}
 
+// ─── CONTEXT-AWARE DATE FORMATTING & NORMALIZATION ENGINE ─────────────────
+export function formatUniversalDatesObject(
+  extracted: ExtractedUniversalDates,
+  title: string,
+  type: string
+) {
   const isAdmitNotice = type === "admit-card" || /admit card|hall ticket|call letter|city slip|exam date/i.test(title);
   const isResultNotice = type === "result" || /result|merit list|scorecard|cut off/i.test(title);
 
   // Return backward-compatible top-level keys AND complete structured schema
   return {
-    startDate: extracted.applicationStart || null,
-    lastDate: extracted.applicationLastDate || null,
-    feeLastDate: extracted.feeLastDate || extracted.applicationLastDate || null,
-    examDate: extracted.examDate || null,
-    examDateFrom: extracted.examDateFrom || null,
-    examDateTo: extracted.examDateTo || null,
+    startDate: cleanDateValue(extracted.applicationStart) || null,
+    lastDate: cleanDateValue(extracted.applicationLastDate) || null,
+    feeLastDate: cleanDateValue(extracted.feeLastDate || extracted.applicationLastDate) || null,
+    examDate: cleanDateValue(extracted.examDate) || null,
+    examDateFrom: cleanDateValue(extracted.examDateFrom) || null,
+    examDateTo: cleanDateValue(extracted.examDateTo) || null,
     examDateEvidence: extracted.examDateEvidence || null,
-    admitCardDate: extracted.admitCardDate || null,
+    admitCardDate: cleanDateValue(extracted.admitCardDate) || null,
     admitCardEvidence: extracted.admitCardEvidence || null,
-    citySlipDate: extracted.citySlipDate || null,
+    citySlipDate: cleanDateValue(extracted.citySlipDate) || null,
     citySlipEvidence: extracted.citySlipEvidence || null,
-    resultDate: extracted.resultDate || null,
+    resultDate: cleanDateValue(extracted.resultDate) || null,
     resultDateEvidence: extracted.resultDateEvidence || null,
+    stage: extracted.stage || "general",
+    stages: extracted.stages || undefined,
 
     // Universal Structured Model
     application_begin: {
-      date: extracted.applicationStart || null,
+      date: cleanDateValue(extracted.applicationStart) || null,
       status: extracted.applicationStart ? "available" : (isAdmitNotice || isResultNotice ? "completed" : "not_announced"),
       evidence: extracted.applicationStartEvidence || undefined
     },
     application_last_date: {
-      date: extracted.applicationLastDate || null,
+      date: cleanDateValue(extracted.applicationLastDate) || null,
       status: (isAdmitNotice || isResultNotice) ? "closed" : (extracted.applicationLastDate ? "available" : "not_announced"),
       evidence: extracted.applicationLastDateEvidence || undefined
     },
     fee_payment_last_date: {
-      date: extracted.feeLastDate || extracted.applicationLastDate || null,
+      date: cleanDateValue(extracted.feeLastDate || extracted.applicationLastDate) || null,
       status: (isAdmitNotice || isResultNotice) ? "closed" : "available",
       evidence: extracted.feeLastDateEvidence || undefined
     },
@@ -482,19 +490,19 @@ function extractDatesFromNotice(
       status: (isAdmitNotice || isResultNotice) ? "closed" : "not_announced"
     },
     exam_date: {
-      date: extracted.examDate || null,
-      start: extracted.examDateFrom || undefined,
-      end: extracted.examDateTo || undefined,
-      status: extracted.examDate ? "announced" : "not_announced",
+      date: cleanDateValue(extracted.examDate) || null,
+      start: cleanDateValue(extracted.examDateFrom) || undefined,
+      end: cleanDateValue(extracted.examDateTo) || undefined,
+      status: extracted.examDate ? "announced" : (isAdmitNotice ? "announced" : "not_announced"),
       evidence: extracted.examDateEvidence || undefined
     },
     city_intimation_date: {
-      date: extracted.citySlipDate || null,
+      date: cleanDateValue(extracted.citySlipDate) || null,
       status: extracted.citySlipDate ? "available" : "not_announced",
       evidence: extracted.citySlipEvidence || undefined
     },
     admit_card_date: {
-      date: extracted.admitCardDate || null,
+      date: cleanDateValue(extracted.admitCardDate) || null,
       status: extracted.admitCardDate ? "released" : (isAdmitNotice ? "released" : "not_announced"),
       evidence: extracted.admitCardEvidence || undefined
     },
@@ -503,11 +511,22 @@ function extractDatesFromNotice(
       status: "not_announced"
     },
     result_date: {
-      date: extracted.resultDate || null,
+      date: cleanDateValue(extracted.resultDate) || null,
       status: extracted.resultDate ? "released" : "not_declared",
       evidence: extracted.resultDateEvidence || undefined
     }
   };
+}
+
+function extractDatesFromNotice(
+  title: string,
+  desc: string,
+  type: string,
+  year: string
+) {
+  // Use universal extractor with date range, evidence, and confidence support
+  const extracted = extractDatesFromText(desc, title, year);
+  return formatUniversalDatesObject(extracted, title, type);
 }
 
 // ─── NOTICE CLASSIFIER ─────────────────────────────────────────────────────
@@ -986,6 +1005,65 @@ export async function GET(request: Request) {
       const parsed = quickParseNotice(rawItem, rawItem.source);
       if (!parsed.slug || parsed.title.length < 10) continue;
 
+      // ── DEEP EXTRACTION FOR ADMIT CARDS & NOTICES MISSING EXACT DATES ──
+      // If notice is an admit card (or result) and exact date is not in snippet,
+      // fetch article content to extract real dates and stage information.
+      const isAdmitNotice = parsed.type === "admit-card" || /admit card|hall ticket|call letter/i.test(parsed.title);
+      const isMissingCriticalDates = !parsed.important_dates.examDate || (isAdmitNotice && !parsed.important_dates.admitCardDate);
+
+      if (isMissingCriticalDates && rawItem.link) {
+        try {
+          const deepExtracted = await deepExtractFromNotice(
+            parsed.title,
+            rawItem.description,
+            rawItem.link,
+            parsed.title.match(/20(2[4-9]|3\d)/)?.[0] || "2026"
+          );
+          if (deepExtracted) {
+            const deepDates = formatUniversalDatesObject(deepExtracted, parsed.title, parsed.type);
+            const valResult = validateNoticeDates({
+              applicationStart: deepDates.startDate,
+              applicationLastDate: deepDates.lastDate,
+              admitCardDate: deepDates.admitCardDate,
+              examDate: deepDates.examDate,
+              examDateFrom: deepDates.examDateFrom
+            });
+
+            if (valResult.isValid) {
+              if (deepDates.examDate && !parsed.important_dates.examDate) {
+                parsed.important_dates.examDate = deepDates.examDate;
+                parsed.important_dates.examDateFrom = deepDates.examDateFrom;
+                parsed.important_dates.examDateTo = deepDates.examDateTo;
+                parsed.important_dates.examDateEvidence = deepDates.examDateEvidence;
+                parsed.important_dates.exam_date = deepDates.exam_date;
+              }
+              if (deepDates.admitCardDate && !parsed.important_dates.admitCardDate) {
+                parsed.important_dates.admitCardDate = deepDates.admitCardDate;
+                parsed.important_dates.admitCardEvidence = deepDates.admitCardEvidence;
+                parsed.important_dates.admit_card_date = deepDates.admit_card_date;
+              }
+              if (deepDates.citySlipDate && !parsed.important_dates.citySlipDate) {
+                parsed.important_dates.citySlipDate = deepDates.citySlipDate;
+                parsed.important_dates.citySlipEvidence = deepDates.citySlipEvidence;
+                parsed.important_dates.city_intimation_date = deepDates.city_intimation_date;
+              }
+              if (deepDates.startDate && !parsed.important_dates.startDate) {
+                parsed.important_dates.startDate = deepDates.startDate;
+                parsed.important_dates.application_begin = deepDates.application_begin;
+              }
+              if (deepDates.lastDate && !parsed.important_dates.lastDate) {
+                parsed.important_dates.lastDate = deepDates.lastDate;
+                parsed.important_dates.application_last_date = deepDates.application_last_date;
+              }
+              if (deepDates.stage) parsed.important_dates.stage = deepDates.stage;
+              if (deepDates.stages) parsed.important_dates.stages = deepDates.stages;
+            }
+          }
+        } catch (deepErr) {
+          // Graceful fallback to snippet extraction
+        }
+      }
+
       if (parsed.type === "recruitment") {
         recruitmentsDetected++;
       }
@@ -1000,9 +1078,6 @@ export async function GET(request: Request) {
       if (existingMatch) {
         const oldDates: Record<string, any> = existingMatch.important_dates || {};
         const newDates: Record<string, any> = parsed.important_dates || {};
-
-        // Change Signals
-        const isPlaceholderText = (val: any) => Boolean(val && typeof val === "string" && /announced|upcoming|notified|check|available now \/|window closed|as per|active \/|tba/i.test(val));
 
         const hasDateChange = Boolean(
           newDates.lastDate && 
@@ -1061,19 +1136,47 @@ export async function GET(request: Request) {
             updatedSourcesTracked.push(parsed.sourceTrackingEntry);
           }
 
-          // Clean merge: real dates overwrite, placeholders stripped to null
+          // Clean merge: Specific Date > Generic Status, placeholders stripped to null
           const cleanMergedDates: Record<string, any> = { ...oldDates };
-          for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "examDateFrom", "examDateTo", "examDateEvidence", "admitCardDate", "admitCardEvidence", "citySlipDate", "citySlipEvidence", "resultDate", "resultDateEvidence"]) {
-            if (newDates[k]) {
+          for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "examDateFrom", "examDateTo", "examDateEvidence", "admitCardDate", "admitCardEvidence", "citySlipDate", "citySlipEvidence", "resultDate", "resultDateEvidence", "stage", "stages"]) {
+            if (newDates[k] && !isPlaceholderText(newDates[k])) {
               cleanMergedDates[k] = newDates[k];
             } else if (isPlaceholderText(cleanMergedDates[k])) {
               cleanMergedDates[k] = null;
             }
           }
-          // Merge structured schema keys
+          // Merge structured schema keys with SPECIFIC DATE > GENERIC STATUS
           for (const sk of ["application_begin", "application_last_date", "fee_payment_last_date", "correction_last_date", "exam_date", "city_intimation_date", "admit_card_date", "answer_key_date", "result_date"]) {
-            if (newDates[sk]) {
-              cleanMergedDates[sk] = newDates[sk];
+            const existingField = oldDates[sk] || {};
+            const incomingField = newDates[sk] || {};
+            const existingDate = existingField.date && !isPlaceholderText(existingField.date) ? existingField.date : null;
+            const incomingDate = incomingField.date && !isPlaceholderText(incomingField.date) ? incomingField.date : null;
+            const mergedDate = incomingDate || existingDate;
+
+            cleanMergedDates[sk] = {
+              ...existingField,
+              ...incomingField,
+              date: mergedDate,
+              start: incomingField.start || existingField.start,
+              end: incomingField.end || existingField.end,
+              evidence: incomingField.evidence || existingField.evidence,
+              status: incomingField.status || existingField.status || "not_announced"
+            };
+          }
+
+          // Strict chronological validation: ensure no contradictory combinations
+          const valMerged = validateNoticeDates({
+            applicationStart: cleanMergedDates.startDate,
+            applicationLastDate: cleanMergedDates.lastDate,
+            admitCardDate: cleanMergedDates.admitCardDate,
+            examDate: cleanMergedDates.examDate,
+            examDateFrom: cleanMergedDates.examDateFrom
+          });
+          if (!valMerged.isValid) {
+            // Contradiction detected on merge: e.g. incoming admitCardDate is after existing examDate
+            if (valMerged.errors.some(e => e.includes("Admit card release date"))) {
+              cleanMergedDates.admitCardDate = oldDates.admitCardDate && !isPlaceholderText(oldDates.admitCardDate) ? oldDates.admitCardDate : null;
+              if (cleanMergedDates.admit_card_date) cleanMergedDates.admit_card_date.date = cleanMergedDates.admitCardDate;
             }
           }
 
@@ -1122,6 +1225,18 @@ export async function GET(request: Request) {
       }
 
       const id = `auto-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+      // Sanitize new record: ensure NO placeholder strings exist in any date fields
+      for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "examDateFrom", "examDateTo", "admitCardDate", "citySlipDate", "resultDate"]) {
+        if (parsed.important_dates[k] && isPlaceholderText(parsed.important_dates[k])) {
+          parsed.important_dates[k] = null;
+        }
+      }
+      for (const sk of ["application_begin", "application_last_date", "fee_payment_last_date", "correction_last_date", "exam_date", "city_intimation_date", "admit_card_date", "answer_key_date", "result_date"]) {
+        if (parsed.important_dates[sk]?.date && isPlaceholderText(parsed.important_dates[sk].date)) {
+          parsed.important_dates[sk].date = null;
+        }
+      }
 
       const newRecord = {
         id,
