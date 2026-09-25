@@ -18,19 +18,29 @@ module.exports = {
     '/onboarding/*',
   ],
   additionalPaths: async (config) => {
-    const blogDir = path.join(__dirname, 'lib', 'blog-content');
-    if (!fs.existsSync(blogDir)) return [];
-    const files = fs.readdirSync(blogDir);
-    const slugs = files
-      .filter((f) => f.endsWith('.ts'))
-      .map((f) => f.replace('.ts', ''));
-
     const paths = [];
-    for (const slug of slugs) {
-      paths.push(await config.transform(config, `/blog/${slug}`));
+
+    // ── Static high-priority gov listing pages ──
+    paths.push(await config.transform(config, '/gov'));
+    paths.push(await config.transform(config, '/gov/jobs'));
+
+    // ── Blog posts from lib/blog-content ──
+    const blogDir = path.join(__dirname, 'lib', 'blog-content');
+    if (fs.existsSync(blogDir)) {
+      const files = fs.readdirSync(blogDir);
+      const slugs = files
+        .filter((f) => f.endsWith('.ts'))
+        .map((f) => f.replace('.ts', ''));
+      for (const slug of slugs) {
+        paths.push(await config.transform(config, `/blog/${slug}`));
+      }
     }
+
     return paths;
   },
+  // The dynamic gov notices sitemap (/gov-sitemap) is registered separately
+  // in Next.js App Router via app/gov-sitemap/sitemap.ts
+  // It is auto-referenced by Next.js as a sub-sitemap at /gov-sitemap.xml
   robotsTxtOptions: {
     policies: [
       {
