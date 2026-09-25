@@ -29,6 +29,22 @@ export const DISCOVERY_SOURCES: DiscoverySource[] = [
     isAggregator: true
   },
   {
+    id: "sarkari_result_admit",
+    name: "Sarkari Result Admit Card",
+    url: "https://news.google.com/rss/search?q=%22sarkariresult%22+OR+%22sarkari+result%22+admit+card+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+  {
+    id: "sarkari_result_result",
+    name: "Sarkari Result Scorecard",
+    url: "https://news.google.com/rss/search?q=%22sarkariresult%22+OR+%22sarkari+result%22+result+scorecard+2026&hl=en-IN&gl=IN&ceid=IN:en",
+    type: "aggregator_feed",
+    trustLevel: "trusted_aggregator",
+    isAggregator: true
+  },
+  {
     id: "physics_wallah",
     name: "Physics Wallah (PW)",
     url: "https://news.google.com/rss/search?q=%22pw.live%22+OR+%22physics+wallah%22+recruitment+vacancy+notification+2026&hl=en-IN&gl=IN&ceid=IN:en",
@@ -1005,13 +1021,20 @@ export async function GET(request: Request) {
       const parsed = quickParseNotice(rawItem, rawItem.source);
       if (!parsed.slug || parsed.title.length < 10) continue;
 
-      // ── DEEP EXTRACTION FOR ADMIT CARDS & NOTICES MISSING EXACT DATES ──
-      // If notice is an admit card (or result) and exact date is not in snippet,
-      // fetch article content to extract real dates and stage information.
+      // ── DEEP EXTRACTION FOR SARKARI RESULT, ADMIT CARDS & NOTICES MISSING EXACT DATES ──
+      // If notice is an admit card, recruitment notice, or originates from a structured source
+      // like Sarkari Result, fetch article content to extract exact dates, fees, age limit & qualification.
       const isAdmitNotice = parsed.type === "admit-card" || /admit card|hall ticket|call letter/i.test(parsed.title);
+      const isSarkariSource = Boolean(
+        (rawItem.link && rawItem.link.includes("sarkariresult")) || 
+        rawItem.source?.id?.includes("sarkari")
+      );
       const isMissingCriticalDates = !parsed.important_dates.examDate || (isAdmitNotice && !parsed.important_dates.admitCardDate);
+      const shouldDeepExtract = Boolean(
+        rawItem.link && (isMissingCriticalDates || parsed.type === "recruitment" || isSarkariSource)
+      );
 
-      if (isMissingCriticalDates && rawItem.link) {
+      if (shouldDeepExtract && rawItem.link) {
         try {
           const deepExtracted = await deepExtractFromNotice(
             parsed.title,
@@ -1047,16 +1070,41 @@ export async function GET(request: Request) {
                 parsed.important_dates.citySlipEvidence = deepDates.citySlipEvidence;
                 parsed.important_dates.city_intimation_date = deepDates.city_intimation_date;
               }
-              if (deepDates.startDate && !parsed.important_dates.startDate) {
+              if (deepDates.startDate && (!parsed.important_dates.startDate || isPlaceholderText(parsed.important_dates.startDate))) {
                 parsed.important_dates.startDate = deepDates.startDate;
                 parsed.important_dates.application_begin = deepDates.application_begin;
               }
-              if (deepDates.lastDate && !parsed.important_dates.lastDate) {
+              if (deepDates.lastDate && (!parsed.important_dates.lastDate || isPlaceholderText(parsed.important_dates.lastDate))) {
                 parsed.important_dates.lastDate = deepDates.lastDate;
                 parsed.important_dates.application_last_date = deepDates.application_last_date;
               }
+              if (deepDates.feeLastDate && (!parsed.important_dates.feeLastDate || isPlaceholderText(parsed.important_dates.feeLastDate))) {
+                parsed.important_dates.feeLastDate = deepDates.feeLastDate;
+                parsed.important_dates.fee_payment_last_date = deepDates.fee_payment_last_date;
+              }
               if (deepDates.stage) parsed.important_dates.stage = deepDates.stage;
               if (deepDates.stages) parsed.important_dates.stages = deepDates.stages;
+            }
+
+            // Rich metadata extraction from Sarkari Result and structured pages:
+            if (deepExtracted.applicationFee && deepExtracted.applicationFee.generalOBC && deepExtracted.applicationFee.generalOBC !== "See Notification") {
+              parsed.application_fee = deepExtracted.applicationFee;
+            }
+            if (deepExtracted.ageLimit && deepExtracted.ageLimit !== "18 - 40 Years (as per category)") {
+              parsed.age_limit = deepExtracted.ageLimit;
+            }
+            if (deepExtracted.qualification && deepExtracted.qualification.length > 5) {
+              parsed.qualification = deepExtracted.qualification;
+              parsed.qualification_level = deepExtracted.qualificationLevel || parsed.qualification_level;
+            }
+            if (deepExtracted.vacancies && parsed.vacancies === "See Notification") {
+              parsed.vacancies = deepExtracted.vacancies;
+            }
+            if (deepExtracted.officialPdfUrl && (!parsed.official_pdf_url || parsed.official_pdf_url.includes("employmentnews.gov.in"))) {
+              parsed.official_pdf_url = deepExtracted.officialPdfUrl;
+            }
+            if (deepExtracted.applyUrl && (!parsed.apply_url || parsed.apply_url.includes("employmentnews.gov.in"))) {
+              parsed.apply_url = deepExtracted.applyUrl;
             }
           }
         } catch (deepErr) {
@@ -1115,8 +1163,24 @@ export async function GET(request: Request) {
           parsed.apply_url !== existingMatch.apply_url &&
           !parsed.apply_url.includes("employmentnews.gov.in")
         );
+        // Rich metadata updates (Fee, Age Limit, Qualification from structured sources like Sarkari Result)
+        const hasFeeUpdate = Boolean(
+          parsed.application_fee?.generalOBC &&
+          parsed.application_fee.generalOBC !== "See Notification" &&
+          (!existingMatch.application_fee?.generalOBC || existingMatch.application_fee.generalOBC === "See Notification" || existingMatch.application_fee.generalOBC === "Check Gazette Notice")
+        );
+        const hasAgeUpdate = Boolean(
+          parsed.age_limit &&
+          parsed.age_limit !== "18 - 40 Years (as per category)" &&
+          (!existingMatch.age_limit || existingMatch.age_limit === "18 - 40 Years (as per category)")
+        );
+        const hasQualUpdate = Boolean(
+          parsed.qualification &&
+          parsed.qualification !== "Bachelor's Degree in any discipline / Relevant Qualification" &&
+          (!existingMatch.qualification || existingMatch.qualification === "Bachelor's Degree in any discipline / Relevant Qualification")
+        );
 
-        if (hasDateChange || hasExamChange || hasAdmitCardChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate) {
+        if (hasDateChange || hasExamChange || hasAdmitCardChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate || hasFeeUpdate || hasAgeUpdate || hasQualUpdate) {
           const reasons: string[] = [];
           if (hasDateChange) reasons.push(`Last date updated to ${newDates.lastDate}`);
           if (hasExamChange) reasons.push(`Exam date announced: ${newDates.examDate}`);
@@ -1125,6 +1189,9 @@ export async function GET(request: Request) {
           if (hasVacanciesUpdate) reasons.push(`Vacancies confirmed: ${parsed.vacancies}`);
           if (hasVerificationUpgrade) reasons.push(`Upgraded to Official Verified`);
           if (hasResultLinkUpdate) reasons.push(`Result access link updated to ${parsed.apply_url}`);
+          if (hasFeeUpdate) reasons.push(`Application fee updated from source: ${parsed.application_fee?.generalOBC}`);
+          if (hasAgeUpdate) reasons.push(`Age limit updated from source: ${parsed.age_limit}`);
+          if (hasQualUpdate) reasons.push(`Eligibility qualification updated from source`);
 
           const updatedSourcesTracked = Array.isArray(existingMatch.sources_tracked)
             ? [...existingMatch.sources_tracked]
@@ -1186,6 +1253,10 @@ export async function GET(request: Request) {
               badge_color: parsed.badge_color || existingMatch.badge_color,
               important_dates: cleanMergedDates,
               vacancies: hasVacanciesUpdate ? parsed.vacancies : existingMatch.vacancies,
+              qualification: hasQualUpdate ? parsed.qualification : existingMatch.qualification,
+              qualification_level: hasQualUpdate ? parsed.qualification_level : existingMatch.qualification_level,
+              age_limit: hasAgeUpdate ? parsed.age_limit : existingMatch.age_limit,
+              application_fee: hasFeeUpdate ? parsed.application_fee : existingMatch.application_fee,
               verification_status: hasVerificationUpgrade ? "verified" : existingMatch.verification_status,
               official_pdf_url: (hasVerificationUpgrade && parsed.official_pdf_url) ? parsed.official_pdf_url : existingMatch.official_pdf_url,
               apply_url: (hasVerificationUpgrade || hasResultLinkUpdate) ? parsed.apply_url : existingMatch.apply_url,

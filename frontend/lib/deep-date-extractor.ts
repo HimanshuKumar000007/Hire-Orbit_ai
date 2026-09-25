@@ -6,6 +6,7 @@
  */
 
 import { cleanDateValue, isRealDateString, detectExamStage, ExamStage } from "./universal-date-normalizer";
+import { parseSarkariResultHtml } from "./sarkari-result-parser";
 
 const MONTH_NAMES = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
 
@@ -36,6 +37,15 @@ export interface ExtractedUniversalDates {
   resultStatus: "not_declared" | "announced" | "released";
   confidence: number;
   stages?: Record<string, any>;
+
+  // Rich metadata fields (extracted from Sarkari Result and tabular layouts)
+  applicationFee?: { generalOBC: string; scStPh: string; female: string; paymentMode?: string };
+  ageLimit?: string;
+  qualification?: string;
+  qualificationLevel?: "10th" | "12th" | "diploma" | "graduate" | "postgraduate";
+  vacancies?: string;
+  officialPdfUrl?: string | null;
+  applyUrl?: string | null;
 }
 
 /**
@@ -419,9 +429,9 @@ export async function resolveSourceUrl(url: string): Promise<string> {
 }
 
 /**
- * Safely fetches publisher HTML text with 4.5s timeout and extracts content + tables + schemas
+ * Safely fetches publisher raw HTML with 4.5s timeout
  */
-export async function fetchArticleText(url: string): Promise<string> {
+export async function fetchRawHtml(url: string): Promise<string> {
   if (!url || url.includes("news.google.com")) return "";
   try {
     const res = await fetch(url, {
@@ -433,28 +443,45 @@ export async function fetchArticleText(url: string): Promise<string> {
       signal: AbortSignal.timeout(4500)
     });
     if (!res.ok) return "";
-    const html = await res.text();
-    const text = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, (match) => {
-        if (match.includes("application/ld+json")) {
-          return match.replace(/<[^>]+>/g, " ");
-        }
-        return " ";
-      })
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
-      .replace(/<t[dh][^>]*>/gi, " | ")
-      .replace(/<\/tr>/gi, "\n")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return text.slice(0, 50000);
+    return await res.text();
   } catch {
     return "";
   }
 }
 
 /**
- * High-level universal extraction: resolves source URL, fetches text, and extracts dates with evidence
+ * Converts HTML into clean article text by stripping tags and converting table cells
+ */
+export function htmlToArticleText(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, (match) => {
+      if (match.includes("application/ld+json")) {
+        return match.replace(/<[^>]+>/g, " ");
+      }
+      return " ";
+    })
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+    .replace(/<t[dh][^>]*>/gi, " | ")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 50000);
+}
+
+/**
+ * Safely fetches publisher HTML text with 4.5s timeout and extracts content + tables + schemas
+ */
+export async function fetchArticleText(url: string): Promise<string> {
+  const html = await fetchRawHtml(url);
+  return htmlToArticleText(html);
+}
+
+/**
+ * High-level universal extraction: resolves source URL, fetches text, and extracts dates with evidence.
+ * If the source is Sarkari Result or a standardized tabular notice page, it also extracts
+ * Application Fees, Age Limits, Educational Qualification, Vacancies, and Official Links.
  */
 export async function deepExtractFromNotice(
   title: string,
@@ -465,47 +492,93 @@ export async function deepExtractFromNotice(
   // 1. Initial extraction from title and snippet
   let extracted = extractDatesFromText(rawSnippet, title, fallbackYear);
 
-  // If examDate and admitCardDate already both found with high confidence, return immediately
-  if (extracted.examDate && extracted.admitCardDate) {
-    return extracted;
-  }
-
   // 2. Deep source fetch if URL is available
   if (sourceUrl) {
     const directUrl = await resolveSourceUrl(sourceUrl);
     if (directUrl && !directUrl.includes("news.google.com")) {
-      const articleText = await fetchArticleText(directUrl);
-      if (articleText) {
-        const deepDates = extractDatesFromText(articleText, title, fallbackYear);
-        // Merge with preference for deep dates
-        return {
-          examDate: deepDates.examDate || extracted.examDate,
-          examDateFrom: deepDates.examDateFrom || extracted.examDateFrom,
-          examDateTo: deepDates.examDateTo || extracted.examDateTo,
-          examDateStatus: deepDates.examDate ? "announced" : extracted.examDateStatus,
-          examDateEvidence: deepDates.examDateEvidence || extracted.examDateEvidence,
+      const rawHtml = await fetchRawHtml(directUrl);
+      if (rawHtml) {
+        // A. Check if it's a Sarkari Result / standardized tabular portal
+        const isSarkariOrTabular = directUrl.includes("sarkariresult") || 
+          (/Important\s*Dates/i.test(rawHtml) && (/Application\s*Fee/i.test(rawHtml) || /Age\s*Limit/i.test(rawHtml)));
 
-          admitCardDate: deepDates.admitCardDate || extracted.admitCardDate,
-          admitCardStatus: deepDates.admitCardDate ? "released" : extracted.admitCardStatus,
-          admitCardEvidence: deepDates.admitCardEvidence || extracted.admitCardEvidence,
+        if (isSarkariOrTabular) {
+          const sarkari = parseSarkariResultHtml(rawHtml);
+          if (sarkari.isSarkariLayout) {
+            const sd = sarkari.importantDates;
+            return {
+              examDate: sd.examDate || extracted.examDate,
+              examDateFrom: sd.examDateFrom || extracted.examDateFrom,
+              examDateTo: sd.examDateTo || extracted.examDateTo,
+              examDateStatus: sd.examDate ? "announced" : extracted.examDateStatus,
+              examDateEvidence: sd.examDate ? "Official examination schedule" : extracted.examDateEvidence,
 
-          citySlipDate: deepDates.citySlipDate || extracted.citySlipDate,
-          citySlipStatus: deepDates.citySlipDate ? "available" : extracted.citySlipStatus,
-          citySlipEvidence: deepDates.citySlipEvidence || extracted.citySlipEvidence,
+              admitCardDate: sd.admitCardDate || extracted.admitCardDate,
+              admitCardStatus: sd.admitCardDate ? "released" : extracted.admitCardStatus,
+              admitCardEvidence: sd.admitCardDate ? "Official admit card schedule" : extracted.admitCardEvidence,
 
-          applicationStart: deepDates.applicationStart || extracted.applicationStart,
-          applicationStartEvidence: deepDates.applicationStartEvidence || extracted.applicationStartEvidence,
-          applicationLastDate: deepDates.applicationLastDate || extracted.applicationLastDate,
-          applicationLastDateEvidence: deepDates.applicationLastDateEvidence || extracted.applicationLastDateEvidence,
-          feeLastDate: deepDates.feeLastDate || extracted.feeLastDate,
-          feeLastDateEvidence: deepDates.feeLastDateEvidence || extracted.feeLastDateEvidence,
-          resultDate: deepDates.resultDate || extracted.resultDate,
-          resultDateEvidence: deepDates.resultDateEvidence || extracted.resultDateEvidence,
-          resultStatus: deepDates.resultDate ? "released" : extracted.resultStatus,
-          confidence: Math.max(deepDates.confidence, extracted.confidence),
-          stage: deepDates.stage || extracted.stage,
-          stages: deepDates.stages || extracted.stages
-        };
+              citySlipDate: extracted.citySlipDate,
+              citySlipStatus: extracted.citySlipStatus,
+              citySlipEvidence: extracted.citySlipEvidence,
+
+              applicationStart: sd.startDate || extracted.applicationStart,
+              applicationStartEvidence: sd.startDate ? "Official online application begin date" : extracted.applicationStartEvidence,
+              applicationLastDate: sd.lastDate || extracted.applicationLastDate,
+              applicationLastDateEvidence: sd.lastDate ? "Official online application last date" : extracted.applicationLastDateEvidence,
+              feeLastDate: sd.feeLastDate || extracted.feeLastDate,
+              feeLastDateEvidence: sd.feeLastDate ? "Official examination fee payment deadline" : extracted.feeLastDateEvidence,
+              resultDate: sd.resultDate || extracted.resultDate,
+              resultDateEvidence: sd.resultDate ? "Official result declaration" : extracted.resultDateEvidence,
+              resultStatus: sd.resultDate ? "released" : extracted.resultStatus,
+              confidence: 0.95,
+              stage: extracted.stage,
+              stages: extracted.stages,
+
+              // Rich metadata from Sarkari Result
+              applicationFee: sarkari.applicationFee,
+              ageLimit: sarkari.ageLimit.rawText,
+              qualification: sarkari.qualification || undefined,
+              qualificationLevel: sarkari.qualificationLevel,
+              vacancies: sarkari.vacancies || undefined,
+              officialPdfUrl: sarkari.officialLinks.notificationPdfUrl,
+              applyUrl: sarkari.officialLinks.applyOnlineUrl,
+            };
+          }
+        }
+
+        // B. Standard article text extraction (news portals, blogs, aggregators)
+        const articleText = htmlToArticleText(rawHtml);
+        if (articleText) {
+          const deepDates = extractDatesFromText(articleText, title, fallbackYear);
+          return {
+            examDate: deepDates.examDate || extracted.examDate,
+            examDateFrom: deepDates.examDateFrom || extracted.examDateFrom,
+            examDateTo: deepDates.examDateTo || extracted.examDateTo,
+            examDateStatus: deepDates.examDate ? "announced" : extracted.examDateStatus,
+            examDateEvidence: deepDates.examDateEvidence || extracted.examDateEvidence,
+
+            admitCardDate: deepDates.admitCardDate || extracted.admitCardDate,
+            admitCardStatus: deepDates.admitCardDate ? "released" : extracted.admitCardStatus,
+            admitCardEvidence: deepDates.admitCardEvidence || extracted.admitCardEvidence,
+
+            citySlipDate: deepDates.citySlipDate || extracted.citySlipDate,
+            citySlipStatus: deepDates.citySlipDate ? "available" : extracted.citySlipStatus,
+            citySlipEvidence: deepDates.citySlipEvidence || extracted.citySlipEvidence,
+
+            applicationStart: deepDates.applicationStart || extracted.applicationStart,
+            applicationStartEvidence: deepDates.applicationStartEvidence || extracted.applicationStartEvidence,
+            applicationLastDate: deepDates.applicationLastDate || extracted.applicationLastDate,
+            applicationLastDateEvidence: deepDates.applicationLastDateEvidence || extracted.applicationLastDateEvidence,
+            feeLastDate: deepDates.feeLastDate || extracted.feeLastDate,
+            feeLastDateEvidence: deepDates.feeLastDateEvidence || extracted.feeLastDateEvidence,
+            resultDate: deepDates.resultDate || extracted.resultDate,
+            resultDateEvidence: deepDates.resultDateEvidence || extracted.resultDateEvidence,
+            resultStatus: deepDates.resultDate ? "released" : extracted.resultStatus,
+            confidence: Math.max(deepDates.confidence, extracted.confidence),
+            stage: deepDates.stage || extracted.stage,
+            stages: deepDates.stages || extracted.stages
+          };
+        }
       }
     }
   }
