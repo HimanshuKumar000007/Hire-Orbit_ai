@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { generateRecruitmentFingerprint, generateResultFingerprint } from "@/lib/universal-notice-model";
 import { extractDatesFromText, deepExtractFromNotice, ExtractedUniversalDates } from "@/lib/deep-date-extractor";
 import { validateNoticeDates, cleanDateValue, isRealDateString } from "@/lib/universal-date-normalizer";
+import { diffNoticeFields, appendChangeHistory, createInitialNoticeLog } from "@/lib/notice-audit-engine";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
@@ -1122,85 +1123,31 @@ export async function GET(request: Request) {
       // Check existing by Fingerprint or Slug
       const existingMatch = existingByFingerprint.get(parsed.fingerprint) || existingBySlug.get(parsed.slug);
 
-      // ─── CASE A: EXISTING RECRUITMENT MATCH FOUND -> CHANGE DETECTION ───
+      // ─── CASE A: EXISTING RECRUITMENT MATCH FOUND -> STATE MACHINE CHECK ───
       if (existingMatch) {
-        const oldDates: Record<string, any> = existingMatch.important_dates || {};
-        const newDates: Record<string, any> = parsed.important_dates || {};
-
-        const hasDateChange = Boolean(
-          newDates.lastDate && 
-          newDates.lastDate !== oldDates.lastDate && 
-          !isPlaceholderText(newDates.lastDate)
-        );
-        const hasExamChange = Boolean(
-          newDates.examDate && 
-          newDates.examDate !== oldDates.examDate && 
-          !isPlaceholderText(newDates.examDate)
-        );
-        const hasAdmitCardChange = Boolean(
-          newDates.admitCardDate &&
-          newDates.admitCardDate !== oldDates.admitCardDate &&
-          !isPlaceholderText(newDates.admitCardDate)
-        );
-        const hasBadgeChange = Boolean(
-          parsed.badge_status && 
-          parsed.badge_status !== existingMatch.badge_status
-        );
-        const hasVacanciesUpdate = Boolean(
-          parsed.vacancies && 
-          parsed.vacancies !== "See Notification" && 
-          existingMatch.vacancies === "See Notification"
-        );
-        // Official verification upgrade: pending -> verified
-        const hasVerificationUpgrade = Boolean(
-          parsed.verification_status === "verified" && 
-          existingMatch.verification_status !== "verified"
-        );
-        // Result link update (e.g. scorecard available, cutoff PDF, or new candidate result link)
-        const hasResultLinkUpdate = Boolean(
-          parsed.type === "result" &&
-          parsed.apply_url &&
-          parsed.apply_url !== existingMatch.apply_url &&
-          !parsed.apply_url.includes("employmentnews.gov.in")
-        );
-        // Rich metadata updates (Fee, Age Limit, Qualification from structured sources like Sarkari Result)
-        const hasFeeUpdate = Boolean(
-          parsed.application_fee?.generalOBC &&
-          parsed.application_fee.generalOBC !== "See Notification" &&
-          (!existingMatch.application_fee?.generalOBC || existingMatch.application_fee.generalOBC === "See Notification" || existingMatch.application_fee.generalOBC === "Check Gazette Notice")
-        );
-        const hasAgeUpdate = Boolean(
-          parsed.age_limit &&
-          parsed.age_limit !== "18 - 40 Years (as per category)" &&
-          (!existingMatch.age_limit || existingMatch.age_limit === "18 - 40 Years (as per category)")
-        );
-        const hasQualUpdate = Boolean(
-          parsed.qualification &&
-          parsed.qualification !== "Bachelor's Degree in any discipline / Relevant Qualification" &&
-          (!existingMatch.qualification || existingMatch.qualification === "Bachelor's Degree in any discipline / Relevant Qualification")
+        const nowIso = new Date().toISOString();
+        const diff = diffNoticeFields(
+          existingMatch,
+          parsed,
+          rawItem.source.name,
+          rawItem.link,
+          nowIso
         );
 
-        if (hasDateChange || hasExamChange || hasAdmitCardChange || hasBadgeChange || hasVacanciesUpdate || hasVerificationUpgrade || hasResultLinkUpdate || hasFeeUpdate || hasAgeUpdate || hasQualUpdate) {
-          const reasons: string[] = [];
-          if (hasDateChange) reasons.push(`Last date updated to ${newDates.lastDate}`);
-          if (hasExamChange) reasons.push(`Exam date announced: ${newDates.examDate}`);
-          if (hasAdmitCardChange) reasons.push(`Admit card date: ${newDates.admitCardDate}`);
-          if (hasBadgeChange) reasons.push(`Status changed to ${parsed.badge_status}`);
-          if (hasVacanciesUpdate) reasons.push(`Vacancies confirmed: ${parsed.vacancies}`);
-          if (hasVerificationUpgrade) reasons.push(`Upgraded to Official Verified`);
-          if (hasResultLinkUpdate) reasons.push(`Result access link updated to ${parsed.apply_url}`);
-          if (hasFeeUpdate) reasons.push(`Application fee updated from source: ${parsed.application_fee?.generalOBC}`);
-          if (hasAgeUpdate) reasons.push(`Age limit updated from source: ${parsed.age_limit}`);
-          if (hasQualUpdate) reasons.push(`Eligibility qualification updated from source`);
+        if (diff.action === "ACTION_UPDATE") {
+          const oldDates: Record<string, any> = existingMatch.important_dates || {};
+          const newDates: Record<string, any> = parsed.important_dates || {};
 
           const updatedSourcesTracked = Array.isArray(existingMatch.sources_tracked)
             ? [...existingMatch.sources_tracked]
             : [];
 
-          // Avoid duplicating identical source in tracking list
           const alreadyTracked = updatedSourcesTracked.some((s: any) => s.sourceId === rawItem.source.id);
           if (!alreadyTracked) {
             updatedSourcesTracked.push(parsed.sourceTrackingEntry);
+          } else {
+            const idx = updatedSourcesTracked.findIndex((s: any) => s.sourceId === rawItem.source.id);
+            if (idx >= 0) updatedSourcesTracked[idx].lastCheckedAt = nowIso;
           }
 
           // Clean merge: Specific Date > Generic Status, placeholders stripped to null
@@ -1240,12 +1187,26 @@ export async function GET(request: Request) {
             examDateFrom: cleanMergedDates.examDateFrom
           });
           if (!valMerged.isValid) {
-            // Contradiction detected on merge: e.g. incoming admitCardDate is after existing examDate
             if (valMerged.errors.some(e => e.includes("Admit card release date"))) {
               cleanMergedDates.admitCardDate = oldDates.admitCardDate && !isPlaceholderText(oldDates.admitCardDate) ? oldDates.admitCardDate : null;
               if (cleanMergedDates.admit_card_date) cleanMergedDates.admit_card_date.date = cleanMergedDates.admitCardDate;
             }
           }
+
+          // Append to audit trail
+          cleanMergedDates.change_history = appendChangeHistory(
+            oldDates.change_history,
+            diff.changes
+          );
+          cleanMergedDates.last_changed_at = nowIso;
+          cleanMergedDates.last_checked_at = nowIso;
+
+          const hasVacanciesUpdate = diff.changes.some(c => c.field === "vacancies");
+          const hasQualUpdate = diff.changes.some(c => c.field === "qualification");
+          const hasAgeUpdate = diff.changes.some(c => c.field === "age_limit");
+          const hasFeeUpdate = diff.changes.some(c => c.field === "application_fee");
+          const hasVerificationUpgrade = diff.changes.some(c => c.field === "verification_status");
+          const hasLinkUpdate = diff.changes.some(c => c.field === "apply_url");
 
           if (!isTestMode) {
             await supabase.from("gov_notifications").update({
@@ -1258,56 +1219,68 @@ export async function GET(request: Request) {
               age_limit: hasAgeUpdate ? parsed.age_limit : existingMatch.age_limit,
               application_fee: hasFeeUpdate ? parsed.application_fee : existingMatch.application_fee,
               verification_status: hasVerificationUpgrade ? "verified" : existingMatch.verification_status,
-              official_pdf_url: (hasVerificationUpgrade && parsed.official_pdf_url) ? parsed.official_pdf_url : existingMatch.official_pdf_url,
-              apply_url: (hasVerificationUpgrade || hasResultLinkUpdate) ? parsed.apply_url : existingMatch.apply_url,
+              official_pdf_url: (parsed.official_pdf_url && !parsed.official_pdf_url.includes("employmentnews.gov.in")) ? parsed.official_pdf_url : existingMatch.official_pdf_url,
+              apply_url: (hasVerificationUpgrade || hasLinkUpdate) ? parsed.apply_url : existingMatch.apply_url,
               sources_tracked: updatedSourcesTracked,
-              updated_at: new Date().toISOString()
+              updated_at: nowIso
             }).eq("id", existingMatch.id);
           }
 
           updatedItems.push({
             title: parsed.title,
-            reason: reasons.join("; ")
+            reason: diff.summaryReasons.join("; ")
           });
         } else {
-          // Unchanged / duplicate from another aggregator
+          // ACTION_NOOP: Identical notice with no factual changes -> Touch lastCheckedAt only
           duplicates++;
-          // Update lastCheckedAt in source tracking without overwriting original discovery
-          if (!isTestMode && Array.isArray(existingMatch.sources_tracked)) {
-            const tracking = [...existingMatch.sources_tracked];
+          if (!isTestMode) {
+            const tracking = Array.isArray(existingMatch.sources_tracked) ? [...existingMatch.sources_tracked] : [];
             const idx = tracking.findIndex((s: any) => s.sourceId === rawItem.source.id);
             if (idx >= 0) {
-              tracking[idx].lastCheckedAt = new Date().toISOString();
+              tracking[idx].lastCheckedAt = nowIso;
             } else {
               tracking.push(parsed.sourceTrackingEntry);
             }
+            const oldDates = existingMatch.important_dates || {};
             await supabase.from("gov_notifications").update({
-              sources_tracked: tracking
+              sources_tracked: tracking,
+              important_dates: {
+                ...oldDates,
+                last_checked_at: nowIso
+              }
             }).eq("id", existingMatch.id);
           }
         }
         continue;
       }
 
-      // ─── CASE B: GENUINELY NEW RECRUITMENT -> INSERT NEW ROW ──────────
+      // ─── CASE B: GENUINELY NEW RECRUITMENT -> ACTION_CREATE ───────────
       let slug = parsed.slug;
       if (existingBySlug.has(slug)) {
         slug = `${slug}-${Date.now().toString(36)}`;
       }
 
       const id = `auto-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const nowIso = new Date().toISOString();
 
       // Sanitize new record: ensure NO placeholder strings exist in any date fields
+      const newDatesObj: Record<string, any> = parsed.important_dates;
       for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "examDateFrom", "examDateTo", "admitCardDate", "citySlipDate", "resultDate"]) {
-        if (parsed.important_dates[k] && isPlaceholderText(parsed.important_dates[k])) {
-          parsed.important_dates[k] = null;
+        if (newDatesObj[k] && isPlaceholderText(newDatesObj[k])) {
+          newDatesObj[k] = null;
         }
       }
       for (const sk of ["application_begin", "application_last_date", "fee_payment_last_date", "correction_last_date", "exam_date", "city_intimation_date", "admit_card_date", "answer_key_date", "result_date"]) {
-        if (parsed.important_dates[sk]?.date && isPlaceholderText(parsed.important_dates[sk].date)) {
-          parsed.important_dates[sk].date = null;
+        if (newDatesObj[sk]?.date && isPlaceholderText(newDatesObj[sk].date)) {
+          newDatesObj[sk].date = null;
         }
       }
+
+      // Initialize audit trail and lifecycle timestamps
+      newDatesObj.change_history = createInitialNoticeLog(parsed.title, rawItem.source.name, nowIso);
+      newDatesObj.first_discovered_at = nowIso;
+      newDatesObj.last_changed_at = nowIso;
+      newDatesObj.last_checked_at = nowIso;
 
       const newRecord = {
         id,

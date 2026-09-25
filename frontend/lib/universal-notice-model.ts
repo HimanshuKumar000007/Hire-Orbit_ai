@@ -70,6 +70,39 @@ export function isOfficialGovDomain(urlStr: string): boolean {
 export { cleanDateValue, isRealDateString, type DateStatus, validateNoticeDates, type DateValidationResult } from "./universal-date-normalizer";
 import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus, validateNoticeDates, DateValidationResult } from "./universal-date-normalizer";
 
+export type FieldConfidenceStatus = 'EXACT' | 'INFERRED' | 'MISSING' | 'CONFLICTED' | 'FAILED';
+
+export interface FieldWithState<T> {
+  value: T | null;
+  status: FieldConfidenceStatus;
+  confidence: number;
+  evidence?: string | null;
+}
+
+/**
+ * Classifies a date string or raw field into a strict FieldWithState
+ */
+export function classifyFieldState<T extends string>(
+  val: T | null | undefined,
+  evidence?: string | null,
+  isInferred?: boolean
+): FieldWithState<T> {
+  if (!val || !isRealDateString(val)) {
+    return {
+      value: null,
+      status: 'MISSING',
+      confidence: 0,
+      evidence: null
+    };
+  }
+  return {
+    value: val,
+    status: isInferred ? 'INFERRED' : 'EXACT',
+    confidence: isInferred ? 0.7 : 0.95,
+    evidence: evidence || null
+  };
+}
+
 export interface UniversalNoticeDates {
   applicationStart?: string | null;
   applicationStartStatus?: DateStatus;
