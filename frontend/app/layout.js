@@ -19,6 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${outfit.variable} dark antialiased`}>
       <head>
+        {/* Google AdSense ca-pub-7428853562205065 */}
         <meta name="google-adsense-account" content="ca-pub-7428853562205065" />
         <script
           async
