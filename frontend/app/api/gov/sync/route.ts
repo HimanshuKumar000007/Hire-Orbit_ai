@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateRecruitmentFingerprint, generateResultFingerprint } from "@/lib/universal-notice-model";
+import { extractDatesFromText } from "@/lib/deep-date-extractor";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://buqkdtnffjoiwwtfxiek.supabase.co";
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1cWtkdG5mZmpvaXd3dGZ4aWVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjI5NjQsImV4cCI6MjA4OTU5ODk2NH0.FW_VUPDN7hPnSBapQGS9Vh7YusX05Z_cpzu8f4-d1q4";
@@ -438,87 +439,74 @@ function extractDatesFromNotice(
   type: string,
   year: string
 ) {
-  const combined = `${title} ${desc}`;
-  const MONTHS = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?";
+  // Use universal extractor with date range, evidence, and confidence support
+  const extracted = extractDatesFromText(desc, title, year);
 
-  const formatExtractedDate = (p1: string, p2: string, p3?: string) => {
-    const y = p3 && p3.match(/20\d\d/) ? p3.trim() : (year || "2026");
-    if (/\d/.test(p1)) {
-      // p1 is day digits (e.g., "27" or "27th"), p2 is month name
-      const d = p1.replace(/\D/g, "");
-      return `${d} ${p2} ${y}`.trim();
-    } else {
-      // p1 is month name, p2 is day digits
-      const d = p2.replace(/\D/g, "");
-      return `${d} ${p1} ${y}`.trim();
-    }
-  };
+  const isAdmitNotice = type === "admit-card" || /admit card|hall ticket|call letter|city slip|exam date/i.test(title);
+  const isResultNotice = type === "result" || /result|merit list|scorecard|cut off/i.test(title);
 
-  // 1. Exam Date Extraction (Supports "exam on September 27", "prelims on 27 Sep", DD/MM/YYYY, etc.)
-  let examDate: string | null = null;
-  const examDateMatch = combined.match(new RegExp(`(?:cbt|exam(?:ination)?|written test|screening|prelims|mains|schedule[d]?)\\s*(?:on|from|for|is|held on|date[:\\s]+)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:cbt|exam(?:ination)?|written test|screening|prelims|mains|schedule[d]?)\\s*(?:on|from|for|is|held on|date[:\\s]+)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:on|from)\\s+([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:on|from)\\s+(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(/(?:exam|held|scheduled).*?([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/i);
-
-  if (examDateMatch) {
-    if (examDateMatch[0].includes("/") || examDateMatch[0].includes("-")) {
-      examDate = examDateMatch[1] || examDateMatch[0];
-    } else {
-      examDate = formatExtractedDate(examDateMatch[1], examDateMatch[2], examDateMatch[3]);
-    }
-  }
-
-  // 2. Admit Card / Hall Ticket Release Date Extraction
-  let admitCardDate: string | null = null;
-  const admitCardMatch = combined.match(new RegExp(`(?:admit card|hall ticket|call letter|city slip)\\s*(?:out|released|available|download|live)?\\s*(?:on|from)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:admit card|hall ticket|call letter|city slip)\\s*(?:out|released|available|download|live)?\\s*(?:on|from)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
-
-  if (admitCardMatch) {
-    admitCardDate = formatExtractedDate(admitCardMatch[1], admitCardMatch[2], admitCardMatch[3]);
-  }
-
-  // 3. Last Date to Apply
-  let lastDate: string | null = null;
-  const lastDateMatch = combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(/(?:apply by|last date)\\s*([0-3]?\\d[./-][0-1]?\\d[./-](?:20\\d\\d))/i);
-
-  if (lastDateMatch) {
-    if (lastDateMatch[0].includes("/") || lastDateMatch[0].includes("-")) {
-      lastDate = lastDateMatch[1];
-    } else {
-      lastDate = formatExtractedDate(lastDateMatch[1], lastDateMatch[2], lastDateMatch[3]);
-    }
-  }
-
-  // 4. Start Date
-  let startDate: string | null = null;
-  const startDateMatch = combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on)\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
-
-  if (startDateMatch) {
-    startDate = formatExtractedDate(startDateMatch[1], startDateMatch[2], startDateMatch[3]);
-  }
-
-  // 5. Result Date
-  let resultDate: string | null = null;
-  const resultMatch = combined.match(new RegExp(`(?:result|scorecard|merit list)\\s*(?:out|declared|released|announced)?\\s*(?:on|from)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTHS})(?:\\s*,?\\s*(20\\d\\d))?`, "i"))
-    || combined.match(new RegExp(`(?:result|scorecard|merit list)\\s*(?:out|declared|released|announced)?\\s*(?:on|from)?\\s*(${MONTHS})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
-
-  if (resultMatch) {
-    resultDate = formatExtractedDate(resultMatch[1], resultMatch[2], resultMatch[3]);
-  }
-
-  // STRICT SEPARATION: Only store actual structured dates or null (never UI placeholder sentences)
+  // Return backward-compatible top-level keys AND complete structured schema
   return {
-    startDate: startDate || null,
-    lastDate: lastDate || null,
-    feeLastDate: lastDate || null,
-    examDate: examDate || null,
-    admitCardDate: admitCardDate || null,
-    resultDate: resultDate || null
+    startDate: extracted.applicationStart || null,
+    lastDate: extracted.applicationLastDate || null,
+    feeLastDate: extracted.feeLastDate || extracted.applicationLastDate || null,
+    examDate: extracted.examDate || null,
+    examDateFrom: extracted.examDateFrom || null,
+    examDateTo: extracted.examDateTo || null,
+    examDateEvidence: extracted.examDateEvidence || null,
+    admitCardDate: extracted.admitCardDate || null,
+    admitCardEvidence: extracted.admitCardEvidence || null,
+    citySlipDate: extracted.citySlipDate || null,
+    citySlipEvidence: extracted.citySlipEvidence || null,
+    resultDate: extracted.resultDate || null,
+    resultDateEvidence: extracted.resultDateEvidence || null,
+
+    // Universal Structured Model
+    application_begin: {
+      date: extracted.applicationStart || null,
+      status: extracted.applicationStart ? "available" : (isAdmitNotice || isResultNotice ? "completed" : "not_announced"),
+      evidence: extracted.applicationStartEvidence || undefined
+    },
+    application_last_date: {
+      date: extracted.applicationLastDate || null,
+      status: (isAdmitNotice || isResultNotice) ? "closed" : (extracted.applicationLastDate ? "available" : "not_announced"),
+      evidence: extracted.applicationLastDateEvidence || undefined
+    },
+    fee_payment_last_date: {
+      date: extracted.feeLastDate || extracted.applicationLastDate || null,
+      status: (isAdmitNotice || isResultNotice) ? "closed" : "available",
+      evidence: extracted.feeLastDateEvidence || undefined
+    },
+    correction_last_date: {
+      date: null,
+      status: (isAdmitNotice || isResultNotice) ? "closed" : "not_announced"
+    },
+    exam_date: {
+      date: extracted.examDate || null,
+      start: extracted.examDateFrom || undefined,
+      end: extracted.examDateTo || undefined,
+      status: extracted.examDate ? "announced" : "not_announced",
+      evidence: extracted.examDateEvidence || undefined
+    },
+    city_intimation_date: {
+      date: extracted.citySlipDate || null,
+      status: extracted.citySlipDate ? "available" : "not_announced",
+      evidence: extracted.citySlipEvidence || undefined
+    },
+    admit_card_date: {
+      date: extracted.admitCardDate || null,
+      status: extracted.admitCardDate ? "released" : (isAdmitNotice ? "released" : "not_announced"),
+      evidence: extracted.admitCardEvidence || undefined
+    },
+    answer_key_date: {
+      date: null,
+      status: "not_announced"
+    },
+    result_date: {
+      date: extracted.resultDate || null,
+      status: extracted.resultDate ? "released" : "not_declared",
+      evidence: extracted.resultDateEvidence || undefined
+    }
   };
 }
 
@@ -1075,11 +1063,17 @@ export async function GET(request: Request) {
 
           // Clean merge: real dates overwrite, placeholders stripped to null
           const cleanMergedDates: Record<string, any> = { ...oldDates };
-          for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "admitCardDate", "resultDate"]) {
+          for (const k of ["startDate", "lastDate", "feeLastDate", "examDate", "examDateFrom", "examDateTo", "examDateEvidence", "admitCardDate", "admitCardEvidence", "citySlipDate", "citySlipEvidence", "resultDate", "resultDateEvidence"]) {
             if (newDates[k]) {
               cleanMergedDates[k] = newDates[k];
             } else if (isPlaceholderText(cleanMergedDates[k])) {
               cleanMergedDates[k] = null;
+            }
+          }
+          // Merge structured schema keys
+          for (const sk of ["application_begin", "application_last_date", "fee_payment_last_date", "correction_last_date", "exam_date", "city_intimation_date", "admit_card_date", "answer_key_date", "result_date"]) {
+            if (newDates[sk]) {
+              cleanMergedDates[sk] = newDates[sk];
             }
           }
 

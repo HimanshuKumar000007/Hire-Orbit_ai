@@ -108,7 +108,7 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
               ? notice.dates.examDate
               : (notice.dates.examDateStatus === 'ANNOUNCED' || notice.dates.examDateStatus === 'announced' || notice.dates.examDateStatus === 'EXACT_DATE' || notice.status === 'EXAM_DATE_ANNOUNCED' || notice.status === 'ADMIT_CARD_AVAILABLE')
               ? "Official Schedule Announced"
-              : "To be Notified Soon"}
+              : "To Be Announced"}
           </span>
         </div>
 

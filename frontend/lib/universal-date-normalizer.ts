@@ -176,10 +176,10 @@ export function normalizeGovernmentNoticeDates(
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. EXAM DATE EXTRACTION & NORMALIZATION
   // ─────────────────────────────────────────────────────────────────────────────
-  let rawExamVal = extractRawValue(rawDates.examDate);
-  let examFrom: string | null = extractRawValue(rawDates.examDateFrom);
-  let examTo: string | null = extractRawValue(rawDates.examDateTo);
-  let examEvidence: string | null = rawDates.examDateEvidence || null;
+  let rawExamVal = extractRawValue(rawDates.examDate) || extractRawValue(rawDates.exam_date);
+  let examFrom: string | null = extractRawValue(rawDates.examDateFrom) || (typeof rawDates.exam_date === 'object' ? extractRawValue(rawDates.exam_date?.start) : null);
+  let examTo: string | null = extractRawValue(rawDates.examDateTo) || (typeof rawDates.exam_date === 'object' ? extractRawValue(rawDates.exam_date?.end) : null);
+  let examEvidence: string | null = rawDates.examDateEvidence || (typeof rawDates.exam_date === 'object' ? rawDates.exam_date?.evidence : null) || null;
   let examSource = rawExamVal ? "database" : "notice_context";
 
   // If DB date is missing, search title and source context
@@ -279,8 +279,8 @@ export function normalizeGovernmentNoticeDates(
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. ADMIT CARD RELEASE DATE
   // ─────────────────────────────────────────────────────────────────────────────
-  let rawAdmitVal = extractRawValue(rawDates.admitCardDate);
-  let admitEvidence = rawDates.admitCardEvidence || null;
+  let rawAdmitVal = extractRawValue(rawDates.admitCardDate) || extractRawValue(rawDates.admit_card_date);
+  let admitEvidence = rawDates.admitCardEvidence || (typeof rawDates.admit_card_date === 'object' ? rawDates.admit_card_date?.evidence : null) || null;
   let admitSource = rawAdmitVal ? "database" : "notice_context";
 
   if (!rawAdmitVal) {
@@ -361,10 +361,10 @@ export function normalizeGovernmentNoticeDates(
   // ─────────────────────────────────────────────────────────────────────────────
   // 3. APPLICATION WINDOW & FEES
   // ─────────────────────────────────────────────────────────────────────────────
-  let rawStartVal = extractRawValue(rawDates.startDate || rawDates.applicationStart);
-  let rawLastVal = extractRawValue(rawDates.lastDate || rawDates.applicationLastDate);
-  let rawFeeVal = extractRawValue(rawDates.feeLastDate) || rawLastVal;
-  let rawCorrectionVal = extractRawValue(rawDates.correctionLastDate);
+  let rawStartVal = extractRawValue(rawDates.startDate || rawDates.applicationStart) || extractRawValue(rawDates.application_begin);
+  let rawLastVal = extractRawValue(rawDates.lastDate || rawDates.applicationLastDate) || extractRawValue(rawDates.application_last_date);
+  let rawFeeVal = extractRawValue(rawDates.feeLastDate) || extractRawValue(rawDates.fee_payment_last_date) || rawLastVal;
+  let rawCorrectionVal = extractRawValue(rawDates.correctionLastDate) || extractRawValue(rawDates.correction_last_date);
 
   let appLastStatus: DateStatus = "available";
   let appLastStatusLabel = "Online Applications Open";
@@ -415,7 +415,7 @@ export function normalizeGovernmentNoticeDates(
   // ─────────────────────────────────────────────────────────────────────────────
   // 4. EXAM CITY / INTIMATION SLIP
   // ─────────────────────────────────────────────────────────────────────────────
-  let rawCityVal = extractRawValue(rawDates.citySlipDate || rawDates.examCityDate);
+  let rawCityVal = extractRawValue(rawDates.citySlipDate || rawDates.examCityDate) || extractRawValue(rawDates.city_intimation_date);
   const citySlipStatus: DateStatus = rawCityVal || /city slip|city intimation|exam city/i.test(title + badge)
     ? "available"
     : (isAdmitNotice || isResultNotice ? "completed" : "not_announced");
@@ -431,7 +431,7 @@ export function normalizeGovernmentNoticeDates(
   // ─────────────────────────────────────────────────────────────────────────────
   // 5. RESULT, SCORECARD, MERIT LIST, CUTOFF
   // ─────────────────────────────────────────────────────────────────────────────
-  let rawResultVal = extractRawValue(rawDates.resultDate);
+  let rawResultVal = extractRawValue(rawDates.resultDate) || extractRawValue(rawDates.result_date);
   const resultStatus: DateStatus = isResultNotice ? (rawResultVal || /out|declared|released/i.test(title + badge) ? "released" : "announced") : "not_declared";
 
   const resultModel: DateFieldModel = {
@@ -446,7 +446,7 @@ export function normalizeGovernmentNoticeDates(
   const cutoffModel: DateFieldModel = { ...resultModel, statusLabel: rawResultVal ? `Cutoff Released (${rawResultVal})` : "Cutoff Pending" };
 
   // Other milestones
-  const answerKeyVal = extractRawValue(rawDates.answerKeyDate);
+  const answerKeyVal = extractRawValue(rawDates.answerKeyDate) || extractRawValue(rawDates.answer_key_date);
   const answerKeyModel: DateFieldModel = {
     value: answerKeyVal,
     status: answerKeyVal ? "released" : (isResultNotice ? "completed" : "not_announced"),
@@ -526,5 +526,76 @@ export function normalizeGovernmentNoticeDates(
       interviewDate: interviewModel,
       finalResultDate: finalResultModel
     }
+  };
+}
+
+export interface DateValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  errors: string[];
+}
+
+/**
+ * Universal Temporal Order & Logic Validator
+ * Ensures application_begin <= application_last_date <= exam_date,
+ * admit_card_date <= exam_date, and flags suspicious or impossible dates.
+ */
+export function validateNoticeDates(dates: {
+  applicationStart?: string | null;
+  applicationLastDate?: string | null;
+  admitCardDate?: string | null;
+  examDate?: string | null;
+  examDateFrom?: string | null;
+}): DateValidationResult {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  const parseSafe = (dStr?: string | null): number | null => {
+    if (!dStr) return null;
+    const clean = cleanDateValue(dStr);
+    if (!clean) return null;
+    // Extract first day/month/year if date range
+    const single = clean.split(/[–—\-]|(\bto\b)/i)[0].trim();
+    const ts = Date.parse(single);
+    return isNaN(ts) ? null : ts;
+  };
+
+  const startTs = parseSafe(dates.applicationStart);
+  const lastTs = parseSafe(dates.applicationLastDate);
+  const admitTs = parseSafe(dates.admitCardDate);
+  const examTs = parseSafe(dates.examDateFrom || dates.examDate);
+
+  // 1. Application start <= Application last date
+  if (startTs && lastTs && startTs > lastTs) {
+    errors.push(`Application start date (${dates.applicationStart}) is after application last date (${dates.applicationLastDate})`);
+  }
+
+  // 2. Application last date <= Exam date
+  if (lastTs && examTs && lastTs > examTs) {
+    warnings.push(`Application deadline (${dates.applicationLastDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+  }
+
+  // 3. Admit card <= Exam date
+  if (admitTs && examTs && admitTs > examTs) {
+    warnings.push(`Admit card release date (${dates.admitCardDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+  }
+
+  // 4. Sanity check years (must be between 2020 and 2035)
+  for (const [name, val] of Object.entries(dates)) {
+    if (val && typeof val === 'string') {
+      const ym = val.match(/\b(20\d\d)\b/);
+      if (ym) {
+        const y = parseInt(ym[1], 10);
+        if (y < 2020 || y > 2035) {
+          errors.push(`Suspicious year ${y} detected in ${name}: "${val}"`);
+        }
+      }
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    warnings,
+    errors
   };
 }

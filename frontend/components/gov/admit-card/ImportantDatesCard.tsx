@@ -68,6 +68,21 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       highlightColor: "text-emerald-400",
       icon: CheckCircle2
     });
+  } else if (dates.admitCardStatus === 'EXPECTED_SOON' || dates.admitCardStatus === 'upcoming') {
+    items.push({
+      label: "Admit Card Download",
+      value: "Expected Soon",
+      isHighlight: true,
+      highlightColor: "text-amber-400",
+      icon: CheckCircle2
+    });
+  } else {
+    items.push({
+      label: "Admit Card Download Date",
+      value: "To Be Announced",
+      highlightColor: "text-zinc-400",
+      icon: CheckCircle2
+    });
   }
 
   if (dates.examDate && isRealDateString(dates.examDate)) {
@@ -84,6 +99,13 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
       value: "Official Schedule Announced",
       isHighlight: true,
       highlightColor: "text-blue-400",
+      icon: Flame
+    });
+  } else {
+    items.push({
+      label: "Examination Schedule Date",
+      value: "To Be Announced",
+      highlightColor: "text-zinc-400",
       icon: Flame
     });
   }

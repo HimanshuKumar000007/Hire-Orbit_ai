@@ -67,8 +67,8 @@ export function isOfficialGovDomain(urlStr: string): boolean {
 }
 
 
-export { cleanDateValue, isRealDateString, type DateStatus } from "./universal-date-normalizer";
-import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus } from "./universal-date-normalizer";
+export { cleanDateValue, isRealDateString, type DateStatus, validateNoticeDates, type DateValidationResult } from "./universal-date-normalizer";
+import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus, validateNoticeDates, DateValidationResult } from "./universal-date-normalizer";
 
 export interface UniversalNoticeDates {
   applicationStart?: string | null;

@@ -25,10 +25,15 @@ export interface ExtractedUniversalDates {
   citySlipEvidence: string | null;
 
   applicationStart: string | null;
+  applicationStartEvidence?: string | null;
   applicationLastDate: string | null;
+  applicationLastDateEvidence?: string | null;
   feeLastDate: string | null;
+  feeLastDateEvidence?: string | null;
   resultDate: string | null;
+  resultDateEvidence?: string | null;
   resultStatus: "not_declared" | "announced" | "released";
+  confidence: number;
 }
 
 /**
@@ -222,11 +227,96 @@ export function extractDatesFromText(
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // D2. APPLICATION START & LAST DATE PATTERNS
+  // ─────────────────────────────────────────────────────────────────────────────
+  let applicationStartEvidence: string | null = null;
+  const appStartRegex1 = new RegExp(
+    `(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on|online application from)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const appStartRegex2 = new RegExp(
+    `(?:apply online from|registration begins?|application starts?|start date[:\\s]+|begins? on|online application from)\\s*(${MONTH_NAMES})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const as1 = cleanText.match(appStartRegex1);
+  const as2 = cleanText.match(appStartRegex2);
+  if (as1 && as1[1] && as1[2]) {
+    applicationStart = formatCalendarDate(as1[1], as1[2], as1[3], establishedYear);
+    applicationStartEvidence = as1[0].trim();
+  } else if (as2 && as2[1] && as2[2]) {
+    applicationStart = formatCalendarDate(as2[2], as2[1], as2[3], establishedYear);
+    applicationStartEvidence = as2[0].trim();
+  }
+
+  let applicationLastDateEvidence: string | null = null;
+  const appLastRegex1 = new RegExp(
+    `(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const appLastRegex2 = new RegExp(
+    `(?:apply by|last date(?:\\s+to apply)?|apply online till|closing date|registration ends?|deadline[:\\s]+)\\s*(${MONTH_NAMES})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const tableLastDateRegex = new RegExp(
+    `(?:last date|closing date)[^\r\n|]{0,60}\\|\\s*([0-3]?\\d)\\s*(${MONTH_NAMES})\\s*(20\\d\\d)?`,
+    "i"
+  );
+  const al1 = cleanText.match(appLastRegex1);
+  const al2 = cleanText.match(appLastRegex2);
+  const alTable = cleanText.match(tableLastDateRegex);
+  if (al1 && al1[1] && al1[2]) {
+    applicationLastDate = formatCalendarDate(al1[1], al1[2], al1[3], establishedYear);
+    applicationLastDateEvidence = al1[0].trim();
+  } else if (al2 && al2[1] && al2[2]) {
+    applicationLastDate = formatCalendarDate(al2[2], al2[1], al2[3], establishedYear);
+    applicationLastDateEvidence = al2[0].trim();
+  } else if (alTable && alTable[1] && alTable[2]) {
+    applicationLastDate = formatCalendarDate(alTable[1], alTable[2], alTable[3], establishedYear);
+    applicationLastDateEvidence = alTable[0].trim();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // D3. FEE PAYMENT LAST DATE
+  // ─────────────────────────────────────────────────────────────────────────────
+  let feeLastDateEvidence: string | null = null;
+  const feeRegex = new RegExp(
+    `(?:fee payment last date|pay fee till|fee last date|last date for fee)\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const fMatch = cleanText.match(feeRegex);
+  if (fMatch && fMatch[1] && fMatch[2]) {
+    feeLastDate = formatCalendarDate(fMatch[1], fMatch[2], fMatch[3], establishedYear);
+    feeLastDateEvidence = fMatch[0].trim();
+  } else if (applicationLastDate) {
+    feeLastDate = applicationLastDate;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // D4. RESULT DATE
+  // ─────────────────────────────────────────────────────────────────────────────
+  let resultDateEvidence: string | null = null;
+  const resultRegex1 = new RegExp(
+    `(?:result|scorecard|merit list)\\s*(?:out|declared|released|announced)?\\s*(?:on|from|dated)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const rMatch = cleanText.match(resultRegex1);
+  if (rMatch && rMatch[1] && rMatch[2]) {
+    resultDate = formatCalendarDate(rMatch[1], rMatch[2], rMatch[3], establishedYear);
+    resultDateEvidence = rMatch[0].trim();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // E. STRICT VALIDATION & DECOUPLING
   // ─────────────────────────────────────────────────────────────────────────────
   const cleanExam = cleanDateValue(examDate) || null;
   const cleanAdmit = cleanDateValue(admitCardDate) || null;
   const cleanCity = cleanDateValue(citySlipDate) || null;
+  const cleanAppStart = cleanDateValue(applicationStart) || null;
+  const cleanAppLast = cleanDateValue(applicationLastDate) || null;
+  const cleanFeeLast = cleanDateValue(feeLastDate) || cleanAppLast || null;
+  const cleanResult = cleanDateValue(resultDate) || null;
+
+  const confidence = (cleanExam || cleanAdmit) ? 0.98 : (cleanAppStart || cleanAppLast ? 0.95 : 0.85);
 
   return {
     examDate: cleanExam,
@@ -243,11 +333,16 @@ export function extractDatesFromText(
     citySlipStatus: cleanCity ? "available" : "not_announced",
     citySlipEvidence: cleanCity ? citySlipEvidence : null,
 
-    applicationStart,
-    applicationLastDate,
-    feeLastDate,
-    resultDate,
-    resultStatus: "not_declared"
+    applicationStart: cleanAppStart,
+    applicationStartEvidence: cleanAppStart ? applicationStartEvidence : null,
+    applicationLastDate: cleanAppLast,
+    applicationLastDateEvidence: cleanAppLast ? applicationLastDateEvidence : null,
+    feeLastDate: cleanFeeLast,
+    feeLastDateEvidence: cleanFeeLast ? feeLastDateEvidence : null,
+    resultDate: cleanResult,
+    resultDateEvidence: cleanResult ? resultDateEvidence : null,
+    resultStatus: cleanResult ? "released" : "not_declared",
+    confidence
   };
 }
 
@@ -351,10 +446,15 @@ export async function deepExtractFromNotice(
           citySlipEvidence: deepDates.citySlipEvidence || extracted.citySlipEvidence,
 
           applicationStart: deepDates.applicationStart || extracted.applicationStart,
+          applicationStartEvidence: deepDates.applicationStartEvidence || extracted.applicationStartEvidence,
           applicationLastDate: deepDates.applicationLastDate || extracted.applicationLastDate,
+          applicationLastDateEvidence: deepDates.applicationLastDateEvidence || extracted.applicationLastDateEvidence,
           feeLastDate: deepDates.feeLastDate || extracted.feeLastDate,
+          feeLastDateEvidence: deepDates.feeLastDateEvidence || extracted.feeLastDateEvidence,
           resultDate: deepDates.resultDate || extracted.resultDate,
-          resultStatus: extracted.resultStatus
+          resultDateEvidence: deepDates.resultDateEvidence || extracted.resultDateEvidence,
+          resultStatus: deepDates.resultDate ? "released" : extracted.resultStatus,
+          confidence: Math.max(deepDates.confidence, extracted.confidence)
         };
       }
     }
