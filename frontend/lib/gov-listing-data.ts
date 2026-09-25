@@ -120,6 +120,9 @@ export async function fetchGovNotifications(
     let query = supabase
       .from("gov_notifications")
       .select("*")
+      // Only show notices ingested on or after August 1, 2026.
+      // Old/expired exam records remain in the DB but are excluded from the listing.
+      .gte("created_at", "2026-08-01T00:00:00.000Z")
       .order("created_at", { ascending: false })
       .limit(limit);
 

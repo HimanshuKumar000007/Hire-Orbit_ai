@@ -1018,7 +1018,39 @@ export async function GET(request: Request) {
     const newlyAdded: string[] = [];
     const updatedItems: Array<{ title: string; reason: string }> = [];
 
+    // ── INGESTION CUTOFF DATE ──────────────────────────────────────────────────
+    // Only ingest notices published on or after August 1, 2026.
+    // Notices from before this date are old/expired exams that should NOT be stored.
+    // This is a PIPELINE gate — it does NOT touch existing DB records.
+    const INGESTION_CUTOFF = new Date("2026-08-01T00:00:00.000Z");
+
     for (const rawItem of toProcess) {
+      // ── DATE GATE: Skip old notices published before August 2026 ──────────
+      if (rawItem.pubDate) {
+        const itemDate = new Date(rawItem.pubDate);
+        // If date is parseable and before our cutoff, skip entirely
+        if (!isNaN(itemDate.getTime()) && itemDate < INGESTION_CUTOFF) {
+          duplicates++; // count as skipped (not new)
+          continue;
+        }
+      }
+
+      // ── TITLE YEAR GATE: Skip titles that are clearly 2025-era historical notices ──
+      // If the title mentions 2025 but NOT 2026, it's an old/expired exam.
+      // Exception: if title mentions "result" or "answer key" for a 2025 exam published recently,
+      // those are still relevant — but recruitment/admit-card for 2025 are expired.
+      const titleLower = rawItem.title.toLowerCase();
+      const has2025 = /\b2025\b/.test(rawItem.title);
+      const has2026 = /\b2026\b/.test(rawItem.title);
+      if (has2025 && !has2026) {
+        const isResultOrAnswerKey = /result|answer key|scorecard|merit list|cutoff/i.test(titleLower);
+        if (!isResultOrAnswerKey) {
+          // This is a recruitment/admit-card for 2025 — skip it, the exam has already happened
+          duplicates++;
+          continue;
+        }
+      }
+
       const parsed = quickParseNotice(rawItem, rawItem.source);
       if (!parsed.slug || parsed.title.length < 10) continue;
 
