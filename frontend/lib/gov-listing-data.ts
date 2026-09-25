@@ -5,12 +5,12 @@
  * Used by async Server Component pages (gov/jobs, gov/page, etc.).
  *
  * IMPORTANT:
- * - Always uses { cache: 'no-store' } semantics so the initial page render
- *   contains the CURRENT database state, not a stale build-time snapshot.
+ * - Calls unstable_noStore() on every invocation to bypass Next.js Data Cache.
  * - Returns [] on any error — never falls back to a static hardcoded array.
  * - Do NOT import from this file inside "use client" components.
  */
 
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import type { GovJobNotification } from "@/lib/gov-jobs-data";
 
@@ -107,6 +107,11 @@ export interface FetchGovNotificationsOptions {
 export async function fetchGovNotifications(
   opts: FetchGovNotificationsOptions = {}
 ): Promise<GovJobNotification[]> {
+  // Explicitly opt out of Next.js Data Cache on every invocation.
+  // This ensures the listing pages always show the CURRENT Supabase state,
+  // not a cached snapshot from a previous build or request.
+  noStore();
+
   const { types, limit = 200 } = opts;
 
   try {

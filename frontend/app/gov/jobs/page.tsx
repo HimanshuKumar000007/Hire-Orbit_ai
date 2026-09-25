@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { LatestJobsListing } from "@/components/gov/jobs/LatestJobsListing";
@@ -41,6 +42,9 @@ export const dynamic = "force-dynamic";
  * No client-side stale data, no delayed replacement.
  */
 export default async function LatestGovJobsPage() {
+  // Opt out of Next.js page cache — always fetch live Supabase data on every request.
+  noStore();
+
   // Fetch current recruitment notices server-side.
   // fetchGovNotifications returns [] on error — never a static array.
   let initialJobs = await fetchGovNotifications({

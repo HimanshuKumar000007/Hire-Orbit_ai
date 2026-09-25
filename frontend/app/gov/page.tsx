@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { unstable_noStore as noStore } from 'next/cache';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { GovHubListing } from "@/components/gov/GovHubListing";
@@ -34,6 +35,9 @@ export const dynamic = "force-dynamic";
  * Interactive sections (filters, tabs, grid) are delegated to GovHubListing (client component).
  */
 export default async function GovJobsPage() {
+  // Opt out of Next.js page cache — always fetch live Supabase data on every request.
+  noStore();
+
   // Fetch all current notices (all types) server-side.
   // fetchGovNotifications returns [] on error — never a static array.
   const initialNotifications = await fetchGovNotifications();
