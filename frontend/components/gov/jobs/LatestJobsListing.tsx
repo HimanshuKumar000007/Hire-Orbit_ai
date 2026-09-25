@@ -1,32 +1,34 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { getSupabaseClient } from "@/lib/supabase";
-import { GOV_JOB_NOTIFICATIONS, GovJobNotification } from "@/lib/gov-jobs-data";
+import { GovJobNotification } from "@/lib/gov-jobs-data";
 import { UniversalJobCard } from "./UniversalJobCard";
 import { JobSearchAndFilters, FilterState } from "./JobSearchAndFilters";
-import { 
-  Briefcase, 
-  ShieldCheck, 
-  Info, 
-  Sparkles, 
-  FileText, 
-  ArrowRight, 
-  Zap, 
-  CheckCircle2 
+import {
+  Briefcase,
+  Info,
+  Sparkles,
+  FileText,
+  ArrowRight,
+  Zap,
+  CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 interface LatestJobsListingProps {
-  initialJobs?: GovJobNotification[];
+  /**
+   * Current jobs fetched server-side from Supabase.
+   * This is always the live database state — no static fallback is used.
+   * Pass undefined only if the server fetch failed (will show error state).
+   */
+  initialJobs: GovJobNotification[];
+  fetchError?: boolean;
 }
 
-export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
-  const [jobs, setJobs] = useState<GovJobNotification[]>(
-    initialJobs && initialJobs.length > 0 
-      ? initialJobs 
-      : GOV_JOB_NOTIFICATIONS.filter(j => j.type === 'job' || j.type === 'recruitment')
-  );
+export function LatestJobsListing({ initialJobs, fetchError }: LatestJobsListingProps) {
+  // State is seeded from server-fetched data — no client-side refetch needed.
+  const [jobs] = useState<GovJobNotification[]>(initialJobs);
 
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
@@ -35,66 +37,6 @@ export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
     selectedState: 'all',
     sortBy: 'latest',
   });
-
-  // Load live recruitments from Supabase on mount
-  useEffect(() => {
-    async function loadLiveRecruitments() {
-      try {
-        const supabase = getSupabaseClient();
-        const { data, error } = await supabase
-          .from('gov_notifications')
-          .select('*')
-          .or('type.eq.job,type.eq.recruitment')
-          .order('created_at', { ascending: false })
-          .limit(200);
-
-        if (!error && data && data.length > 0) {
-          const mapped: GovJobNotification[] = data.map((d: any) => ({
-            id: d.id,
-            slug: d.slug,
-            title: d.title,
-            shortTitle: d.short_title || d.title,
-            organization: d.organization,
-            category: d.category,
-            type: d.type || 'job',
-            badgeStatus: d.badge_status,
-            badgeColor: d.badge_color,
-            vacancies: d.vacancies,
-            qualification: d.qualification,
-            qualificationLevel: d.qualification_level,
-            ageLimit: d.age_limit,
-            payScale: d.pay_scale,
-            applicationFee: d.application_fee || {},
-            importantDates: d.important_dates || {},
-            location: d.location,
-            summary: d.summary,
-            keyHighlights: d.key_highlights || [],
-            selectionProcess: d.selection_process || [],
-            officialPdfUrl: d.official_pdf_url,
-            applyUrl: d.apply_url,
-            updatedAt: 'Live Gazette Verified',
-            isTrending: d.is_trending,
-            isLeadStory: d.is_lead_story,
-            categoryDistribution: d.category_distribution || undefined,
-            postWiseDetails: d.post_wise_details || undefined,
-            examPattern: d.exam_pattern || undefined,
-            applicationInstructions: d.application_instructions || undefined,
-            documentsRequired: d.documents_required || undefined,
-          }));
-
-          const supabaseIds = new Set(mapped.map(m => m.id));
-          const staticOnly = GOV_JOB_NOTIFICATIONS
-            .filter(s => (s.type === 'job' || s.type === 'recruitment') && !supabaseIds.has(s.id));
-
-          setJobs([...mapped, ...staticOnly]);
-        }
-      } catch (err) {
-        console.warn("Using fallback static recruitment notifications:", err);
-      }
-    }
-
-    loadLiveRecruitments();
-  }, []);
 
   // Filter & Factual Sort Engine
   const filteredJobs = useMemo(() => {
@@ -168,7 +110,7 @@ export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
       if (filters.sortBy === 'updated') {
         return (b.updatedAt || '').localeCompare(a.updatedAt || '');
       }
-      // Default: Latest
+      // Default: Latest (by id, newest DB records first)
       return (b.id || '').localeCompare(a.id || '');
     });
   }, [jobs, filters]);
@@ -182,8 +124,17 @@ export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
         totalResults={filteredJobs.length}
       />
 
-      {/* Grid of Universal Job Cards */}
-      {filteredJobs.length === 0 ? (
+      {/* Error State — Supabase fetch failed server-side */}
+      {fetchError && (
+        <div className="text-center py-16 bg-white/[0.01] rounded-3xl border border-amber-500/20 p-8 mb-6">
+          <Info className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <h3 className="text-white font-bold text-lg mb-1">Could not load live recruitment data</h3>
+          <p className="text-zinc-500 text-sm">Database is temporarily unavailable. Please refresh the page to try again.</p>
+        </div>
+      )}
+
+      {/* Empty State — no matching results */}
+      {!fetchError && filteredJobs.length === 0 && (
         <div className="text-center py-20 bg-white/[0.01] rounded-3xl border border-white/5 p-8">
           <Info className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
           <h3 className="text-white font-bold text-lg mb-1">No government recruitments match your filters</h3>
@@ -201,7 +152,10 @@ export function LatestJobsListing({ initialJobs }: LatestJobsListingProps) {
             Reset All Filters
           </button>
         </div>
-      ) : (
+      )}
+
+      {/* Job Cards Grid */}
+      {!fetchError && filteredJobs.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredJobs.map((job) => (
             <UniversalJobCard key={job.id} job={job} />

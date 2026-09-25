@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { LatestJobsListing } from "@/components/gov/jobs/LatestJobsListing";
-import { ShieldCheck, Sparkles, Building2, Award } from 'lucide-react';
+import { fetchGovNotifications } from "@/lib/gov-listing-data";
+import { ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: "Latest Government Jobs 2026 (Apply Online) | HireOrbitAI Gov Desk",
@@ -30,7 +31,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LatestGovJobsPage() {
+// Force dynamic rendering so every request hits live Supabase data.
+// This page must NOT be statically generated at build time.
+export const dynamic = "force-dynamic";
+
+/**
+ * Async Server Component — fetches CURRENT jobs from Supabase before rendering HTML.
+ * The initial HTML sent to the browser already contains the latest database records.
+ * No client-side stale data, no delayed replacement.
+ */
+export default async function LatestGovJobsPage() {
+  // Fetch current recruitment notices server-side.
+  // fetchGovNotifications returns [] on error — never a static array.
+  let initialJobs = await fetchGovNotifications({
+    types: ['job', 'recruitment'],
+  });
+
+  const fetchError = initialJobs.length === 0;
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-emerald-500/30 pt-16 lg:pt-20">
       <Navigation />
@@ -75,7 +93,10 @@ export default function LatestGovJobsPage() {
       {/* Main Listing Section */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <LatestJobsListing />
+          <LatestJobsListing
+            initialJobs={initialJobs}
+            fetchError={fetchError && initialJobs.length === 0}
+          />
         </div>
       </section>
 
