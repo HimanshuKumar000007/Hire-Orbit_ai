@@ -1,6 +1,6 @@
 "use client";
 
-import { UniversalRecruitmentNotice } from "@/lib/universal-notice-model";
+import { UniversalRecruitmentNotice, isRealDateString } from "@/lib/universal-notice-model";
 import { 
   CheckCircle2, 
   Clock, 
@@ -53,7 +53,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
                 {notice.statusLabel}
               </span>
 
-              {notice.dates.applicationLastDate && isLive && (
+              {notice.dates.applicationLastDate && isLive && isRealDateString(notice.dates.applicationLastDate) && (
                 <span className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
                   <Clock className="w-3.5 h-3.5" />
                   Last Date: {notice.dates.applicationLastDate}
@@ -74,7 +74,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
                   <span>{notice.vacancy.total} Verified Vacancies</span>
                 </div>
               )}
-              {notice.dates.applicationStart && (
+              {notice.dates.applicationStart && isRealDateString(notice.dates.applicationStart) && (
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Calendar className="w-4 h-4 text-zinc-500" />
                   <span>Started: {notice.dates.applicationStart}</span>

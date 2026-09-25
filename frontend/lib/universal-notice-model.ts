@@ -1193,10 +1193,10 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   if (ageLimitData?.rawText) {
     quickFacts.push({ label: "Age Bracket", value: ageLimitData.rawText });
   }
-  if (dates.applicationStart) {
+  if (dates.applicationStart && isRealDateString(dates.applicationStart)) {
     quickFacts.push({ label: "Application Start", value: dates.applicationStart });
   }
-  if (dates.applicationLastDate) {
+  if (dates.applicationLastDate && isRealDateString(dates.applicationLastDate)) {
     quickFacts.push({ label: "Last Date", value: dates.applicationLastDate, highlight: true });
   }
   if (job.location) {

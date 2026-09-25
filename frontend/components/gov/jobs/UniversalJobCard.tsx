@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { GovJobNotification } from "@/lib/gov-jobs-data";
+import { isRealDateString } from "@/lib/universal-notice-model";
 import { 
   Building2, 
   Award, 
@@ -34,12 +35,12 @@ export function UniversalJobCard({ job }: UniversalJobCardProps) {
     statusBadgeStyle = "bg-amber-500/10 text-amber-400 border-amber-500/30";
   }
 
-  // Clean dates (no N/A)
-  const lastDate = job.importantDates.lastDate && !job.importantDates.lastDate.includes('N/A')
+  // Only show real calendar dates — isRealDateString blocks all placeholder strings
+  const lastDate = isRealDateString(job.importantDates.lastDate)
     ? job.importantDates.lastDate
     : undefined;
 
-  const startDate = job.importantDates.startDate && !job.importantDates.startDate.includes('N/A') && job.importantDates.startDate !== 'Announced'
+  const startDate = isRealDateString(job.importantDates.startDate)
     ? job.importantDates.startDate
     : undefined;
 

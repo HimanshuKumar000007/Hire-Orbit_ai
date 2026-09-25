@@ -1,4 +1,4 @@
-import { UniversalNoticeDates } from "@/lib/universal-notice-model";
+import { UniversalNoticeDates, isRealDateString } from "@/lib/universal-notice-model";
 import { Calendar, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface RecruitmentImportantDatesProps {
@@ -6,10 +6,11 @@ interface RecruitmentImportantDatesProps {
 }
 
 export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesProps) {
-  // Collect only valid dates that actually exist (no N/A)
+  // Collect only valid calendar dates — isRealDateString blocks all placeholder strings
+  // (e.g. "Active / Check Official Portal", "Same as Application Last Date", etc.)
   const items: Array<{ label: string; date: string; tag?: string; tagColor?: string; isImportant?: boolean }> = [];
 
-  if (dates.applicationStart) {
+  if (dates.applicationStart && isRealDateString(dates.applicationStart)) {
     items.push({
       label: "Online Application Start Date",
       date: dates.applicationStart,
@@ -18,7 +19,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.applicationLastDate) {
+  if (dates.applicationLastDate && isRealDateString(dates.applicationLastDate)) {
     const isClosed = dates.applicationLastStatus === 'closed';
     items.push({
       label: "Last Date to Apply Online",
@@ -29,7 +30,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.feeLastDate) {
+  if (dates.feeLastDate && isRealDateString(dates.feeLastDate)) {
     items.push({
       label: "Last Date to Pay Application Fee",
       date: dates.feeLastDate,
@@ -38,7 +39,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.correctionLastDate) {
+  if (dates.correctionLastDate && isRealDateString(dates.correctionLastDate)) {
     items.push({
       label: "Application Form Correction Window",
       date: dates.correctionLastDate,
@@ -47,7 +48,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.citySlipDate) {
+  if (dates.citySlipDate && isRealDateString(dates.citySlipDate)) {
     items.push({
       label: "Exam City Intimation Slip Date",
       date: dates.citySlipDate,
@@ -56,7 +57,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.examDate) {
+  if (dates.examDate && isRealDateString(dates.examDate)) {
     items.push({
       label: "Written Examination / CBT Date",
       date: dates.examDate,
@@ -65,7 +66,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.admitCardDate) {
+  if (dates.admitCardDate && isRealDateString(dates.admitCardDate)) {
     items.push({
       label: "Admit Card / Hall Ticket Release",
       date: dates.admitCardDate,
@@ -74,7 +75,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.answerKeyDate) {
+  if (dates.answerKeyDate && isRealDateString(dates.answerKeyDate)) {
     items.push({
       label: "Provisional Answer Key Release",
       date: dates.answerKeyDate,
@@ -83,7 +84,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  if (dates.resultDate) {
+  if (dates.resultDate && isRealDateString(dates.resultDate)) {
     items.push({
       label: "Result & Merit List Announcement",
       date: dates.resultDate,
@@ -92,7 +93,7 @@ export function RecruitmentImportantDates({ dates }: RecruitmentImportantDatesPr
     });
   }
 
-  // If no dates exist, hide the section entirely
+  // If no real calendar dates found, hide the section entirely
   if (items.length === 0) return null;
 
   return (

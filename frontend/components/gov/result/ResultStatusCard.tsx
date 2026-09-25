@@ -1,6 +1,6 @@
 "use client";
 
-import { UniversalResultNotice } from "@/lib/universal-notice-model";
+import { UniversalResultNotice, isRealDateString } from "@/lib/universal-notice-model";
 import { 
   CheckCircle2, 
   Clock, 
@@ -53,7 +53,7 @@ export function ResultStatusCard({ notice }: ResultStatusCardProps) {
                 {notice.statusLabel}
               </span>
 
-              {notice.dates.resultDate && (
+              {notice.dates.resultDate && isRealDateString(notice.dates.resultDate) && (
                 <span className="text-xs text-zinc-300 font-semibold flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
                   <Calendar className="w-3.5 h-3.5 text-emerald-400" />
                   Declared: {notice.dates.resultDate}
