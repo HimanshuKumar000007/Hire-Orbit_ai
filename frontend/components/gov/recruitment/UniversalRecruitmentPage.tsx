@@ -4,6 +4,7 @@ import { UniversalRecruitmentNotice } from "@/lib/universal-notice-model";
 import { GovJobNotification } from "@/lib/gov-jobs-data";
 import { RecruitmentHero } from "./RecruitmentHero";
 import { RecruitmentStatusCard } from "./RecruitmentStatusCard";
+import { GazetteOverviewPanel } from "./GazetteOverviewPanel";
 import { QuickFacts } from "./QuickFacts";
 import { RecruitmentImportantDates } from "./RecruitmentImportantDates";
 import { VacancyBreakdown } from "./VacancyBreakdown";
@@ -19,6 +20,7 @@ import { RecruitmentOfficialLinks } from "./RecruitmentOfficialLinks";
 import { RecruitmentAdvisory } from "./RecruitmentAdvisory";
 import { RecruitmentFAQ } from "./RecruitmentFAQ";
 import { RelatedOpportunities } from "./RelatedOpportunities";
+
 
 interface UniversalRecruitmentPageProps {
   notice: UniversalRecruitmentNotice;
@@ -116,8 +118,12 @@ export function UniversalRecruitmentPage({ notice, allNotices = [] }: UniversalR
         {/* C. Current Recruitment Status Card */}
         <RecruitmentStatusCard notice={notice} />
 
-        {/* D. Scannable Quick Facts Overview (Only verified fields) */}
+        {/* D. OFFICIAL GAZETTE OVERVIEW — 3-column quick-scan panel */}
+        <GazetteOverviewPanel notice={notice} />
+
+        {/* E. Scannable Quick Facts Overview (Only verified fields) */}
         <QuickFacts facts={notice.quickFacts} />
+
 
         {/* E. Important Dates Timeline (No N/A clutter) */}
         <RecruitmentImportantDates dates={notice.dates} />

@@ -681,8 +681,18 @@ export interface FeeCategoryItem {
   amount: string;
 }
 
+export interface RawFeeRow {
+  category: string;
+  amount: string;
+  isKnown: boolean;        // false = "See notification" / unknown
+  isExempt: boolean;
+}
+
 export interface ApplicationFeeStructure {
-  categories: FeeCategoryItem[];
+  categories: FeeCategoryItem[];  // only known/confirmed amounts
+  rawRows: RawFeeRow[];           // all categories including "See notification"
+  correctionCharge?: string;
+  paymentGatewayNote?: string;
   paymentMode?: string;
   exemptionNote?: string;
 }
@@ -1051,23 +1061,39 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   const rawFee = job.applicationFee;
   if (rawFee && (rawFee.generalOBC || rawFee.scStPh)) {
     const categories: FeeCategoryItem[] = [];
-    if (rawFee.generalOBC && !rawFee.generalOBC.includes('See notification')) {
-      categories.push({ category: "General / OBC / EWS", amount: rawFee.generalOBC });
-    }
-    if (rawFee.scStPh && !rawFee.scStPh.includes('See notification')) {
-      categories.push({ category: "SC / ST / PwD", amount: rawFee.scStPh });
-    }
-    if (rawFee.female && !rawFee.female.includes('See notification')) {
-      categories.push({ category: "Female Candidates", amount: rawFee.female });
-    }
-    if (categories.length > 0) {
+    const rawRows: RawFeeRow[] = [];
+
+    const addFeeRow = (categoryLabel: string, amount: string) => {
+      if (!amount) return;
+      const isSeeNotif = amount.toLowerCase().includes('see notification');
+      const isExempt =
+        amount.toLowerCase().includes('exempt') ||
+        amount.toLowerCase().includes('nil') ||
+        amount === '0' ||
+        amount === '₹0';
+
+      rawRows.push({ category: categoryLabel, amount, isKnown: !isSeeNotif, isExempt });
+      if (!isSeeNotif) {
+        categories.push({ category: categoryLabel, amount });
+      }
+    };
+
+    addFeeRow("General / OBC / EWS", rawFee.generalOBC);
+    addFeeRow("SC / ST / PH (PwBD)", rawFee.scStPh);
+    if (rawFee.female) addFeeRow("All Female Candidates", rawFee.female);
+
+    if (rawRows.length > 0) {
       feeData = {
         categories,
+        rawRows,
+        correctionCharge: "As per Commission Policy",
+        paymentGatewayNote: "Net Banking, Debit / Credit Card, UPI, or State E-Challan",
         paymentMode: "Online via Net Banking, Debit/Credit Card, UPI, or Official SBI Challan",
         exemptionNote: "Fee once paid shall not be refunded under any circumstances except as per specific commission refund notifications."
       };
     }
   }
+
 
   // 11. Salary / Pay Scale (Only verified)
   let salaryData: UniversalRecruitmentNotice['salary'] = null;
