@@ -416,6 +416,16 @@ export function normalizeGovernmentNoticeDates(
   // 4. EXAM CITY / INTIMATION SLIP
   // ─────────────────────────────────────────────────────────────────────────────
   let rawCityVal = extractRawValue(rawDates.citySlipDate || rawDates.examCityDate) || extractRawValue(rawDates.city_intimation_date);
+  if (!rawCityVal) {
+    const cs1 = combinedText.match(new RegExp(`(?:city slip|city intimation|exam city|exam district)\\s*(?:out|released|available|active)?\\s*(?:on|from|dated|[:\\s]+)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
+    const cs2 = combinedText.match(new RegExp(`(?:city slip|city intimation|exam city|exam district)\\s*(?:out|released|available|active)?\\s*(?:on|from|dated|[:\\s]+)?\\s*(${MONTH_NAMES})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`, "i"));
+    if (cs1 && cs1[1] && cs1[2]) {
+      rawCityVal = formatStandardDate(cs1[1], cs1[2], cs1[3], establishedYear);
+    } else if (cs2 && cs2[1] && cs2[2]) {
+      rawCityVal = formatStandardDate(cs2[2], cs2[1], cs2[3], establishedYear);
+    }
+  }
+
   const citySlipStatus: DateStatus = rawCityVal || /city slip|city intimation|exam city/i.test(title + badge)
     ? "available"
     : (isAdmitNotice || isResultNotice ? "completed" : "not_announced");
@@ -578,8 +588,14 @@ export function validateNoticeDates(dates: {
   }
 
   // 3. STRICT CHRONOLOGY: Admit card release date cannot be after exam date
+  // (In multi-stage exams e.g. PET/Mains or when stage is present, warn rather than reject)
+  const isMultiStage = (dates as any).stage && !['general', 'cbt1', 'tier1'].includes((dates as any).stage);
   if (admitTs && examTs && admitTs > examTs) {
-    errors.push(`Chronological contradiction: Admit card release date (${dates.admitCardDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+    if (isMultiStage) {
+      warnings.push(`Multi-stage notice: Admit card date (${dates.admitCardDate}) is after earlier stage exam date (${dates.examDate || dates.examDateFrom})`);
+    } else {
+      errors.push(`Chronological contradiction: Admit card release date (${dates.admitCardDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+    }
   }
 
   // 4. STRICT CHRONOLOGY: Result date cannot be before exam date
@@ -589,7 +605,11 @@ export function validateNoticeDates(dates: {
 
   // 5. City slip date should not be after exam date
   if (cityTs && examTs && cityTs > examTs) {
-    errors.push(`Chronological contradiction: City intimation date (${(dates as any).citySlipDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+    if (isMultiStage) {
+      warnings.push(`Multi-stage notice: City intimation date (${(dates as any).citySlipDate}) is after earlier stage exam date (${dates.examDate || dates.examDateFrom})`);
+    } else {
+      errors.push(`Chronological contradiction: City intimation date (${(dates as any).citySlipDate}) is after exam date (${dates.examDate || dates.examDateFrom})`);
+    }
   }
 
   // 6. Sanity check years (must be between 2020 and 2035)

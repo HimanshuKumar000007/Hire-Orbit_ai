@@ -17,6 +17,7 @@ export interface GovJobNotification {
     generalOBC: string;
     scStPh: string;
     female: string;
+    paymentMode?: string;
   };
   importantDates: {
     notificationDate?: string;

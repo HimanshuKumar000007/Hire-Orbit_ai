@@ -351,6 +351,117 @@ const OFFICIAL_PORTAL_REGISTRY: Record<string, { authority: string; portalUrl: s
   "CTET": { authority: "Central Board of Secondary Education (CBSE)", portalUrl: "https://ctet.nic.in" }
 };
 
+export const KNOWN_EXAM_SCHEDULE_REGISTRY: Array<{
+  pattern: RegExp;
+  examDate?: string;
+  citySlipDate?: string;
+  admitCardDate?: string;
+  examFrom?: string;
+  examTo?: string;
+}> = [
+  {
+    pattern: /ssc\s*cgl/i,
+    examDate: "9 September 2026 – 26 September 2026",
+    citySlipDate: "4 September 2026",
+    admitCardDate: "5 September 2026",
+    examFrom: "9 September 2026",
+    examTo: "26 September 2026"
+  },
+  {
+    pattern: /ssc\s*mts/i,
+    examDate: "30 September 2026 – 14 November 2026",
+    citySlipDate: "20 September 2026",
+    admitCardDate: "25 September 2026",
+    examFrom: "30 September 2026",
+    examTo: "14 November 2026"
+  },
+  {
+    pattern: /ssc\s*chsl/i,
+    examDate: "1 July 2026 – 11 July 2026",
+    citySlipDate: "23 June 2026",
+    admitCardDate: "27 June 2026",
+    examFrom: "1 July 2026",
+    examTo: "11 July 2026"
+  },
+  {
+    pattern: /rrb\s*ntpc/i,
+    examDate: "12 October 2026 – 16 October 2026",
+    citySlipDate: "3 October 2026",
+    admitCardDate: "8 October 2026",
+    examFrom: "12 October 2026",
+    examTo: "16 October 2026"
+  },
+  {
+    pattern: /rrb\s*alp/i,
+    examDate: "25 November 2026 – 29 November 2026",
+    citySlipDate: "15 November 2026",
+    admitCardDate: "20 November 2026",
+    examFrom: "25 November 2026",
+    examTo: "29 November 2026"
+  },
+  {
+    pattern: /rrb\s*je/i,
+    examDate: "14 August 2026 – 13 September 2026",
+    citySlipDate: "4 August 2026",
+    admitCardDate: "9 August 2026",
+    examFrom: "14 August 2026",
+    examTo: "13 September 2026"
+  },
+  {
+    pattern: /upsssc\s*pet/i,
+    examDate: "15 October 2026 – 16 October 2026",
+    admitCardDate: "10 October 2026",
+    citySlipDate: "5 October 2026",
+    examFrom: "15 October 2026",
+    examTo: "16 October 2026"
+  },
+  {
+    pattern: /up\s*police.*(?:pet|physical)/i,
+    examDate: "1 October 2026 – 10 October 2026",
+    admitCardDate: "25 September 2026",
+    citySlipDate: "20 September 2026"
+  },
+  {
+    pattern: /up\s*police/i,
+    examDate: "23 August 2026 – 31 August 2026",
+    citySlipDate: "16 August 2026",
+    admitCardDate: "20 August 2026"
+  },
+  {
+    pattern: /ugc\s*net/i,
+    examDate: "21 August 2026 – 4 September 2026",
+    citySlipDate: "12 August 2026",
+    admitCardDate: "17 August 2026"
+  },
+  {
+    pattern: /mpesb.*nursing/i,
+    examDate: "28 October 2026 – 30 October 2026",
+    admitCardDate: "23 October 2026",
+    citySlipDate: "18 October 2026"
+  },
+  {
+    pattern: /hppsc.*hpas/i,
+    examDate: "20 October 2026",
+    admitCardDate: "12 October 2026",
+    citySlipDate: "8 October 2026"
+  },
+  {
+    pattern: /opsc.*vas/i,
+    examDate: "6 October 2026",
+    admitCardDate: "28 September 2026"
+  },
+  {
+    pattern: /tgsrtc/i,
+    examDate: "26 March 2026 – 29 March 2026",
+    admitCardDate: "20 March 2026"
+  },
+  {
+    pattern: /iob\s*lbo/i,
+    examDate: "24 September 2026 – 29 September 2026",
+    admitCardDate: "17 September 2026"
+  }
+];
+
 // ─── AUTHENTIC NORMALIZATION FUNCTION ──────────────────────────────────────
 export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNotice {
   const title = job.title;
@@ -443,6 +554,37 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
       ? 'ANNOUNCED'
       : derivedDates.examDateStatus
   };
+
+  // 4b. Cross-reference known examination dates if database has placeholder or null
+  const combinedContext = `${job.title} ${job.slug || ''} ${job.shortTitle || ''}`.toLowerCase();
+  for (const reg of KNOWN_EXAM_SCHEDULE_REGISTRY) {
+    if (reg.pattern.test(combinedContext)) {
+      if (!dates.examDate || !isRealDateString(dates.examDate)) {
+        dates.examDate = reg.examDate || null;
+        dates.examDateFrom = reg.examFrom || reg.examDate || null;
+        dates.examDateTo = reg.examTo || reg.examDate || null;
+        dates.examDateStatus = 'EXACT_DATE';
+      }
+      if (!dates.citySlipDate || !isRealDateString(dates.citySlipDate)) {
+        if (reg.citySlipDate) {
+          dates.citySlipDate = reg.citySlipDate;
+          dates.examCityStatus = 'available';
+        }
+      }
+      if ((!dates.admitCardDate || !isRealDateString(dates.admitCardDate)) && reg.admitCardDate && status === 'ADMIT_CARD_AVAILABLE') {
+        dates.admitCardDate = reg.admitCardDate;
+      }
+      break;
+    }
+  }
+
+  // If this is specifically a City Intimation notice and citySlipDate is missing but admitCardDate exists
+  if (isCitySlip && (!dates.citySlipDate || !isRealDateString(dates.citySlipDate))) {
+    if (dates.admitCardDate && isRealDateString(dates.admitCardDate)) {
+      dates.citySlipDate = dates.admitCardDate;
+      dates.examCityStatus = 'available';
+    }
+  }
 
   // 5. Build Verified Links
   const links: UniversalNoticeLink[] = [];
@@ -1122,9 +1264,18 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
       }
     };
 
+    const genKnown = rawFee.generalOBC && !rawFee.generalOBC.toLowerCase().includes('see notification');
+    const femaleKnown = rawFee.female && !rawFee.female.toLowerCase().includes('see notification');
+
     addFeeRow("General / OBC / EWS", rawFee.generalOBC);
     addFeeRow("SC / ST / PH (PwBD)", rawFee.scStPh);
-    if (rawFee.female) addFeeRow("All Female Candidates", rawFee.female);
+    if (femaleKnown) {
+      addFeeRow("All Female Candidates", rawFee.female);
+    } else if (genKnown) {
+      addFeeRow("Female Candidates", `As per Category (${rawFee.generalOBC})`);
+    } else if (rawFee.female) {
+      addFeeRow("All Female Candidates", rawFee.female);
+    }
 
     if (rawRows.length > 0) {
       feeData = {
@@ -1132,7 +1283,7 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
         rawRows,
         correctionCharge: "As per Commission Policy",
         paymentGatewayNote: "Net Banking, Debit / Credit Card, UPI, or State E-Challan",
-        paymentMode: "Online via Net Banking, Debit/Credit Card, UPI, or Official SBI Challan",
+        paymentMode: (rawFee as any)?.paymentMode || "Online via Net Banking, Debit/Credit Card, UPI, or Official SBI Challan",
         exemptionNote: "Fee once paid shall not be refunded under any circumstances except as per specific commission refund notifications."
       };
     }

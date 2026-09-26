@@ -271,15 +271,24 @@ export function extractDatesFromText(
   // e.g.:
   // - "city intimation slips on 22 September 2026"
   // - "city slip released on September 10"
+  // - "exam city available 18/09/2026"
   // ─────────────────────────────────────────────────────────────────────────────
-  const citySlipRegex = new RegExp(
-    `(?:city slip|city intimation|exam city)\\s*(?:out|released|active)?\\s*(?:on|from)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
+  const citySlipRegex1 = new RegExp(
+    `(?:city slip|city intimation|exam city|exam district)\\s*(?:out|released|active|available)?\\s*(?:on|from|dated|[:\\s]+)?\\s*([0-3]?\\d(?:st|nd|rd|th)?)\\s*(${MONTH_NAMES})(?:\\s*,?\\s*(20\\d\\d))?`,
     "i"
   );
-  const csMatch = cleanText.match(citySlipRegex);
-  if (csMatch && csMatch[1] && csMatch[2]) {
-    citySlipDate = formatCalendarDate(csMatch[1], csMatch[2], csMatch[3], establishedYear);
-    citySlipEvidence = csMatch[0].trim();
+  const citySlipRegex2 = new RegExp(
+    `(?:city slip|city intimation|exam city|exam district)\\s*(?:out|released|active|available)?\\s*(?:on|from|dated|[:\\s]+)?\\s*(${MONTH_NAMES})\\s*([0-3]?\\d(?:st|nd|rd|th)?)(?:\\s*,?\\s*(20\\d\\d))?`,
+    "i"
+  );
+  const csMatch1 = cleanText.match(citySlipRegex1);
+  const csMatch2 = cleanText.match(citySlipRegex2);
+  if (csMatch1 && csMatch1[1] && csMatch1[2]) {
+    citySlipDate = formatCalendarDate(csMatch1[1], csMatch1[2], csMatch1[3], establishedYear);
+    citySlipEvidence = csMatch1[0].trim();
+  } else if (csMatch2 && csMatch2[1] && csMatch2[2]) {
+    citySlipDate = formatCalendarDate(csMatch2[2], csMatch2[1], csMatch2[3], establishedYear);
+    citySlipEvidence = csMatch2[0].trim();
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -517,9 +526,9 @@ export async function deepExtractFromNotice(
               admitCardStatus: sd.admitCardDate ? "released" : extracted.admitCardStatus,
               admitCardEvidence: sd.admitCardDate ? "Official admit card schedule" : extracted.admitCardEvidence,
 
-              citySlipDate: extracted.citySlipDate,
-              citySlipStatus: extracted.citySlipStatus,
-              citySlipEvidence: extracted.citySlipEvidence,
+              citySlipDate: sd.citySlipDate || extracted.citySlipDate,
+              citySlipStatus: (sd.citySlipDate || extracted.citySlipDate) ? "available" : extracted.citySlipStatus,
+              citySlipEvidence: sd.citySlipDate ? "Official exam city intimation slip" : extracted.citySlipEvidence,
 
               applicationStart: sd.startDate || extracted.applicationStart,
               applicationStartEvidence: sd.startDate ? "Official online application begin date" : extracted.applicationStartEvidence,

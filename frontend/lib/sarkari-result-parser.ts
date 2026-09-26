@@ -42,6 +42,7 @@ export interface ExtractedSarkariNotice {
     examDateFrom?: string | null;
     examDateTo?: string | null;
     admitCardDate: string | null;
+    citySlipDate?: string | null;
     answerKeyDate: string | null;
     resultDate: string | null;
     examDateStatus?: "not_announced" | "announced" | "completed";
@@ -242,20 +243,9 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
   let examDateFrom: string | null = null;
   let examDateTo: string | null = null;
   let admitCardDate: string | null = null;
+  let citySlipDate: string | null = null;
   let answerKeyDate: string | null = null;
   let resultDate: string | null = null;
-
-  function formatFeeAmount(val: string): string {
-    const s = val.trim();
-    const digits = s.replace(/[^\d]/g, "");
-    if (/nil|free|exempted/i.test(s) || (digits !== "" && parseInt(digits, 10) === 0) || s === "0/-" || s === "0") {
-      return "₹0 (Exempted)";
-    }
-    if (digits) {
-      return `₹${digits}/-`;
-    }
-    return s;
-  }
 
   for (const line of lines) {
     // Application Begin
@@ -280,9 +270,17 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
       correctionStartDate = range.from;
       correctionLastDate = range.to || range.dateStr;
     }
-    // Exam Date
-    if (/(?:Exam|CBT|Written\s*Exam)\s*Date\s*[:|-]/i.test(line) && !/Fee|Last\s*Date/i.test(line)) {
-      const val = line.replace(/.*?(?:Exam|CBT|Written\s*Exam)\s*Date\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
+    // Exam City / City Intimation Slip Available
+    if (/(?:Exam\s*City|City\s*Intimation|City\s*Slip|Exam\s*District(?:\s*Details)?|Check\s*Exam\s*City)(?:\s*Available|\s*Released)?\s*[:|-]/i.test(line)) {
+      const val = line.replace(/.*?(?:Exam\s*City|City\s*Intimation|City\s*Slip|Exam\s*District(?:\s*Details)?|Check\s*Exam\s*City)(?:\s*Available|\s*Released)?\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
+      const parsedCity = normalizeSarkariDateString(val);
+      if (parsedCity) {
+        citySlipDate = parsedCity;
+      }
+    }
+    // Exam Date (covers CBT, Written, PET, PST, Tier I/II, Pre, Mains, and line prefixes like 'MPESB SI / Subedar Exam Date Start : 28/10/2026')
+    if (/(?:(?:CBT|Written|Pre|Mains|PET|PST|Physical|Skill\s*Test|Typing\s*Test|Tier\s*[-–I|1|2|II|III|IV]+)?\s*Exam\s*(?:Date|Start)?|Exam\s*Date(?:\s*Start)?)\s*[:|-]/i.test(line) && !/Fee|Last\s*Date/i.test(line)) {
+      const val = line.replace(/.*?(?:(?:CBT|Written|Pre|Mains|PET|PST|Physical|Skill\s*Test|Typing\s*Test|Tier\s*[-–I|1|2|II|III|IV]+)?\s*Exam\s*(?:Date|Start)?|Exam\s*Date(?:\s*Start)?)\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
       const range = normalizeSarkariDateRange(val);
       if (range.dateStr) {
         examDate = range.dateStr;
@@ -290,10 +288,13 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
         examDateTo = range.to;
       }
     }
-    // Admit Card Available
-    if (/Admit\s*Card\s*Available\s*[:|-]/i.test(line)) {
-      const val = line.replace(/.*?Admit\s*Card\s*Available\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
-      admitCardDate = normalizeSarkariDateString(val);
+    // Admit Card / Hall Ticket Available
+    if (/(?:(?:PET|PST|Mains|Tier\s*[-–I|1|2|II|III|IV]+)?\s*Admit\s*Card|Hall\s*Ticket|Call\s*Letter)(?:\s*Available|\s*Released)?\s*[:|-]/i.test(line)) {
+      const val = line.replace(/.*?(?:(?:PET|PST|Mains|Tier\s*[-–I|1|2|II|III|IV]+)?\s*Admit\s*Card|Hall\s*Ticket|Call\s*Letter)(?:\s*Available|\s*Released)?\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
+      const parsedAdmit = normalizeSarkariDateString(val);
+      if (parsedAdmit) {
+        admitCardDate = parsedAdmit;
+      }
     }
     // Answer Key Available
     if (/Answer\s*Key\s*Available\s*[:|-]/i.test(line)) {
@@ -307,43 +308,147 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
     }
   }
 
+  function formatFeeAmount(val: string): string {
+    const s = val.trim();
+    const digits = s.replace(/[^\d]/g, "");
+    if (/nil|free|exempted|zero/i.test(s) || (digits !== "" && parseInt(digits, 10) === 0) || s === "0/-" || s === "0") {
+      return "₹0 (Exempted)";
+    }
+    if (digits) {
+      return `₹${digits}/-`;
+    }
+    return s;
+  }
+
+  function extractFeeAmountFromLine(line: string): string | null {
+    // 1. Look for amount after colon, hyphen, or 'is'
+    const m = line.match(/[:|-]\s*(?:Rs\.?|₹)?\s*([0-9\/-]+|\b(?:Nil|Free|Exempted|Zero)\b)/i);
+    if (m) {
+      return formatFeeAmount(m[1]);
+    }
+    // 2. Look for explicit currency amounts
+    const m2 = line.match(/(?:Rs\.?|₹)\s*(\d+)/i) || line.match(/(\d+)\s*\/-/);
+    if (m2) {
+      return formatFeeAmount(m2[1]);
+    }
+    // 3. Look for explicit keyword exemption
+    if (/\b(?:nil|free|exempted|zero)\b/i.test(line)) {
+      return "₹0 (Exempted)";
+    }
+    return null;
+  }
+
   // 3. Extract Application Fee
-  let generalFee = "See Notification";
-  let scStFee = "See Notification";
-  let femaleFee = "See Notification";
+  let generalFee: string | null = null;
+  let scStFee: string | null = null;
+  let femaleFee: string | null = null;
   let paymentMode = "Online Payment / E-Challan";
 
-  for (const line of lines) {
-    if (/(?:General|OBC|EWS|UR)\s*(?:\/|\s)\s*(?:OBC|EWS|General)\s*[:|-]/i.test(line)) {
-      const match = line.match(/(?:General|OBC|EWS|UR)[^:]*[:|-]\s*(?:Rs\.?|₹)?\s*([0-9\/-]+|Nil|Free|Exempted)/i);
-      if (match) {
-        generalFee = formatFeeAmount(match[1]);
+  // Step A: Isolate Application Fee block from raw HTML to prevent false matches against age limit or physical criteria
+  const cleanForFee = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ");
+
+  const feeBlockMatch = cleanForFee.match(/Application\s*Fees?[\s\S]*?(?:<\/ul>|<\/td>)/i);
+  let targetFeeLines: string[] = [];
+
+  if (feeBlockMatch) {
+    const feeBlockClean = feeBlockMatch[0]
+      .replace(/<li[^>]*>/gi, "\n• ")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&bull;/g, "•");
+    targetFeeLines = feeBlockClean.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  } else {
+    let inFeeBlock = false;
+    for (const line of lines) {
+      if (/Application\s*Fees?\b/i.test(line)) {
+        inFeeBlock = true;
+        continue;
       }
-    } else if (/(?:General|UR)\s*(?:Candidates)?\s*[:|-]/i.test(line) && !/Age|Post/i.test(line)) {
-      const match = line.match(/(?:General|UR)[^:]*[:|-]\s*(?:Rs\.?|₹)?\s*([0-9\/-]+|Nil|Free|Exempted)/i);
-      if (match) {
-        generalFee = formatFeeAmount(match[1]);
+      if (inFeeBlock) {
+        if (/^(?:Age\s*Limit|Vacancy|Eligibility|Educational|Important\s*Dates|How\s*to\s*Fill|Useful\s*Important\s*Links)/i.test(line.replace(/^[•|\s-]+/, ""))) {
+          break;
+        }
+        targetFeeLines.push(line);
       }
     }
-
-    if (/SC\s*\/\s*ST[^:]*[:|-]/i.test(line)) {
-      const match = line.match(/SC\s*\/\s*ST[^:]*[:|-]\s*(?:Rs\.?|₹)?\s*([0-9\/-]+|Nil|Free|Exempted)/i);
-      if (match) {
-        scStFee = formatFeeAmount(match[1]);
-      }
+    if (targetFeeLines.length === 0) {
+      targetFeeLines = lines;
     }
+  }
 
-    if (/(?:All\s*Category\s*)?Female\s*[:|-]/i.test(line)) {
-      const match = line.match(/(?:All\s*Category\s*)?Female[^:]*[:|-]\s*(?:Rs\.?|₹)?\s*([0-9\/-]+|Nil|Free|Exempted)/i);
-      if (match) {
-        femaleFee = formatFeeAmount(match[1]);
-      }
+  // Step B: Check for global zero fee & payment mode
+  for (const line of targetFeeLines) {
+    if (/No\s*Application\s*Fee\s*(?:for\s*All\s*Candidates)?/i.test(line) || /Application\s*Fee\s*[:|-]?\s*(?:Nil|Free|0\b)/i.test(line)) {
+      generalFee = "₹0 (Exempted)";
+      scStFee = "₹0 (Exempted)";
+      femaleFee = "₹0 (Exempted)";
     }
-
     if (/Pay\s*(?:the\s*)?(?:Examination\s*)?Fee\s*(?:Through|Mode)\s*[:|-]?\s*(.+)/i.test(line)) {
       const m = line.match(/Pay\s*(?:the\s*)?(?:Examination\s*)?Fee\s*(?:Through|Mode)\s*[:|-]?\s*(.+)/i);
       if (m && m[1].length > 5) {
         paymentMode = cleanSarkariText(m[1].slice(0, 100));
+      }
+    }
+  }
+
+  // Step C: Line-by-line categorization
+  for (const line of targetFeeLines) {
+    if (/^(?:Note|Refund\s*After)/i.test(line.replace(/^[•|\s-]+/, ""))) continue;
+
+    const amt = extractFeeAmountFromLine(line);
+    if (!amt) continue;
+
+    // 1. Female / Women / Mahila
+    if (/female|women|mahila/i.test(line)) {
+      if (!femaleFee) femaleFee = amt;
+      if (!scStFee && (/\bsc\b/i.test(line) || /\bst\b/i.test(line) || /\bph\b/i.test(line) || /\bpwd\b/i.test(line))) {
+        scStFee = amt;
+      }
+      continue;
+    }
+
+    // 2. SC / ST / PH / PwD / Divyang
+    if (/\b(?:SC|ST|PH|PwD|Divyang)\b/i.test(line)) {
+      if (!scStFee) {
+        scStFee = amt;
+      }
+      continue;
+    }
+
+    // 3. General / UR / OBC / EWS / Other State / Unreserved / All Candidates
+    if (/\b(?:General|UR|Unreserved|OBC|EWS|BC|EBC|Other\s*State|All\s*Category|All\s*Candidates|Single\s*Post)\b/i.test(line)) {
+      if (!generalFee) {
+        generalFee = amt;
+      }
+    }
+  }
+
+  // Step D: Smart context-aware deductions if General fee is known
+  if (generalFee) {
+    const isSSC = /ssc\b/i.test(cleanHtml.slice(0, 1200));
+    const isUPSC = /upsc\b/i.test(cleanHtml.slice(0, 1200));
+    const isRailway = /railway|rrb\b|rrc\b/i.test(cleanHtml.slice(0, 1200));
+    const isBihar = /bihar|bpsc|btsc|bssc/i.test(cleanHtml.slice(0, 1200));
+
+    if (!scStFee) {
+      if (isSSC || isUPSC) {
+        scStFee = "₹0 (Exempted)";
+      } else {
+        scStFee = generalFee;
+      }
+    }
+
+    if (!femaleFee) {
+      if (isSSC || isUPSC) {
+        femaleFee = "₹0 (Exempted)";
+      } else if (isRailway || isBihar) {
+        femaleFee = scStFee;
+      } else {
+        femaleFee = generalFee;
       }
     }
   }
@@ -524,15 +629,16 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
       examDateFrom,
       examDateTo,
       admitCardDate,
+      citySlipDate,
       answerKeyDate,
       resultDate,
       examDateStatus: examDate ? "announced" : "not_announced",
-      admitCardStatus: admitCardDate ? "released" : "not_announced",
+      admitCardStatus: admitCardDate ? "released" : (citySlipDate ? "upcoming" : "not_announced"),
     },
     applicationFee: {
-      generalOBC: generalFee,
-      scStPh: scStFee,
-      female: femaleFee,
+      generalOBC: generalFee || "See Notification",
+      scStPh: scStFee || (generalFee ? generalFee : "Exempted / As per rules"),
+      female: femaleFee || (generalFee ? generalFee : "See Notification"),
       paymentMode,
     },
     ageLimit: {

@@ -26,7 +26,23 @@ import { coreWebVitalsOptimizingInpUnder50ms } from "./blog-content/core-web-vit
 import { microFrontends2026ModuleFederationVsMonorepo } from "./blog-content/micro-frontends-2026-module-federation-vs-monorepo";
 import { fullstackFrontendEdgeRuntimesServerActionsGuide } from "./blog-content/fullstack-frontend-edge-runtimes-server-actions-guide";
 
+// High-Demand Search Series (Google PAA & Core Framework Queries)
+import { isFrontendWebDevelopmentDead2026AiTruth } from "./blog-content/is-frontend-web-development-dead-2026-ai-truth";
+import { whatIsAFrontendFrameworkArchitectureGuide } from "./blog-content/what-is-a-frontend-framework-architecture-guide";
+import { doesNetflixUseReactOrAngularEnterpriseFrameworks2026 } from "./blog-content/does-netflix-use-react-or-angular-enterprise-frameworks-2026";
+import { top10FrontendFrameworksForWebDevelopment2026 } from "./blog-content/top-10-frontend-frameworks-for-web-development-2026";
+import { frontendVsBackendFrameworksFullstackArchitectureGuide2026 } from "./blog-content/frontend-vs-backend-frameworks-fullstack-architecture-guide-2026";
+import { topJsCssHtmlFrameworksForModernWebDevelopment2026 } from "./blog-content/top-js-css-html-frameworks-for-modern-web-development-2026";
+
 export const BLOG_POSTS: BlogPost[] = [
+  // High-Demand Google Search & PAA Series - Live Today
+  isFrontendWebDevelopmentDead2026AiTruth,
+  whatIsAFrontendFrameworkArchitectureGuide,
+  doesNetflixUseReactOrAngularEnterpriseFrameworks2026,
+  top10FrontendFrameworksForWebDevelopment2026,
+  frontendVsBackendFrameworksFullstackArchitectureGuide2026,
+  topJsCssHtmlFrameworksForModernWebDevelopment2026,
+
   // 3-Day Frontend Frameworks & Architecture Series (2 Posts Daily)
   // Day 1 (Sep 26, 2026) - Live Today
   react19VsNextjs15MetaFrameworkGuide,

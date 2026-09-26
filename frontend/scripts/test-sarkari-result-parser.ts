@@ -173,6 +173,93 @@ function runTests() {
   assert("Extracts SSC SC/ST Free/Exempted", parsed2.applicationFee.scStPh === "₹0 (Exempted)", parsed2.applicationFee.scStPh);
   assert("Extracts SSC Female Free/Exempted", parsed2.applicationFee.female === "₹0 (Exempted)", parsed2.applicationFee.female);
 
+  // ── TEST 3: Bihar BTSC State Fee Parsing ──
+  console.log("\n--- TEST 3: Bihar BTSC Notice Fee Parsing ---");
+  const SAMPLE_BTSC_HTML = `
+  <table>
+    <tr>
+      <td><h3>Important Dates</h3><ul><li>Application Begin : <b>24/09/2026</b></li></ul></td>
+      <td>
+        <h3>Application Fee</h3>
+        <ul>
+          <li>General / BC/ Other State : <b>100/-</b></li>
+          <li>SC / ST / PH : <b>100/-</b></li>
+          <li>Female Candidate (Bihar Dom.) : <b>100/-</b></li>
+          <li>Pay the Exam Fee Through Online / Offline Fee Mode Only</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  `;
+  const parsed3 = parseSarkariResultHtml(SAMPLE_BTSC_HTML);
+  assert("Extracts BTSC General/BC/Other State Fee", parsed3.applicationFee.generalOBC === "₹100/-", parsed3.applicationFee.generalOBC);
+  assert("Extracts BTSC SC/ST/PH Fee", parsed3.applicationFee.scStPh === "₹100/-", parsed3.applicationFee.scStPh);
+  assert("Extracts BTSC Female (Bihar Dom) Fee", parsed3.applicationFee.female === "₹100/-", parsed3.applicationFee.female);
+
+  // ── TEST 4: MPESB SI Fee Parsing ──
+  console.log("\n--- TEST 4: MPESB SI Fee Parsing ---");
+  const SAMPLE_MPESB_HTML = `
+  <table>
+    <tr>
+      <td><h3>Important Dates</h3><ul><li>Application Begin : <b>09/09/2026</b></li></ul></td>
+      <td>
+        <h3>Application Fee</h3>
+        <ul>
+          <li>General / Other State : <b>560/-</b></li>
+          <li>OBC / SC / ST : <b>310/-</b></li>
+          <li>Portal Charges: Rs. 60/- (Include)</li>
+          <li>Pay the Examination Fee Through Cast at E Challan or Debit Card, Credit Card, Net Banking</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  `;
+  const parsed4 = parseSarkariResultHtml(SAMPLE_MPESB_HTML);
+  assert("Extracts MPESB General/Other State Fee", parsed4.applicationFee.generalOBC === "₹560/-", parsed4.applicationFee.generalOBC);
+  assert("Extracts MPESB OBC/SC/ST Fee", parsed4.applicationFee.scStPh === "₹310/-", parsed4.applicationFee.scStPh);
+
+  // ── TEST 5: Patna High Court Multi-Category Fee Parsing ──
+  console.log("\n--- TEST 5: Patna High Court Fee Parsing ---");
+  const SAMPLE_PATNA_HTML = `
+  <table>
+    <tr>
+      <td><h3>Important Dates</h3><ul><li>Application Begin : <b>15/07/2026</b></li></ul></td>
+      <td>
+        <h3>Application Fee</h3>
+        <ul>
+          <li>General / BC / EBC / EWS : <b>1500/-</b></li>
+          <li>SC / ST / PH : <b>750/-</b></li>
+          <li>Pay the Exam Fee Through Online / Offline Fee Mode Only</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  `;
+  const parsed5 = parseSarkariResultHtml(SAMPLE_PATNA_HTML);
+  assert("Extracts Patna HC General/BC/EBC/EWS Fee", parsed5.applicationFee.generalOBC === "₹1500/-", parsed5.applicationFee.generalOBC);
+  assert("Extracts Patna HC SC/ST/PH Fee", parsed5.applicationFee.scStPh === "₹750/-", parsed5.applicationFee.scStPh);
+
+  // ── TEST 6: Zero Fee / Exempted Notice Parsing ──
+  console.log("\n--- TEST 6: Free Form / Zero Fee Parsing ---");
+  const SAMPLE_FREE_HTML = `
+  <table>
+    <tr>
+      <td><h3>Important Dates</h3><ul><li>Application Begin : <b>01/08/2026</b></li></ul></td>
+      <td>
+        <h3>Application Fee</h3>
+        <ul>
+          <li>No Application Fee for All Candidates : <b>0/-</b></li>
+          <li>Only Registration Done Online</li>
+        </ul>
+      </td>
+    </tr>
+  </table>
+  `;
+  const parsed6 = parseSarkariResultHtml(SAMPLE_FREE_HTML);
+  assert("Extracts Zero General Fee", parsed6.applicationFee.generalOBC === "₹0 (Exempted)", parsed6.applicationFee.generalOBC);
+  assert("Extracts Zero SC/ST Fee", parsed6.applicationFee.scStPh === "₹0 (Exempted)", parsed6.applicationFee.scStPh);
+  assert("Extracts Zero Female Fee", parsed6.applicationFee.female === "₹0 (Exempted)", parsed6.applicationFee.female);
+
   console.log(`\n==================================================`);
   console.log(`RESULTS: ${passed} / ${total} tests passed.`);
   console.log(`==================================================`);

@@ -822,23 +822,62 @@ function quickParseNotice(
   let generalFee = "See notification";
   let scStFee = "Exempted / See notification";
   let femaleFee = "See notification";
+  let paymentMode = "Online via Net Banking, Debit/Credit Card, UPI, or Official Challan";
 
-  if (feeMatch) {
-    generalFee = `₹${feeMatch[1]}`;
+  const contextStr = `${t} ${desc}`.toLowerCase();
+
+  if (feeMatch && parseInt(feeMatch[1], 10) > 0 && parseInt(feeMatch[1], 10) < 5000) {
+    generalFee = `₹${feeMatch[1]}/-`;
     scStFee = "Exempted / As per rules";
     femaleFee = generalFee;
-  } else if (/\bssc\b/i.test(t + desc) || /\bupsc\b/i.test(t + desc)) {
-    generalFee = "₹100";
-    scStFee = "Exempted / Nil";
-    femaleFee = "Exempted / Nil";
-  } else if (/railway|\brrb\b|\brrc\b/i.test(t + desc)) {
-    generalFee = "₹500 (₹400 refunded after CBT)";
-    scStFee = "₹250 (Full ₹250 refunded after CBT)";
-    femaleFee = "₹250 (Full ₹250 refunded after CBT)";
-  } else if (/banking|ibps|\bsbi\b|\brbi\b/i.test(t + desc)) {
-    generalFee = "₹850 (Application + Intimation)";
-    scStFee = "₹175 (Intimation charges only)";
-    femaleFee = "₹850";
+  } else if (/\bssc\b/i.test(contextStr) || /\bupsc\b/i.test(contextStr)) {
+    generalFee = "₹100/-";
+    scStFee = "₹0 (Exempted)";
+    femaleFee = "₹0 (Exempted)";
+  } else if (/railway|\brrb\b|\brrc\b/i.test(contextStr)) {
+    generalFee = "₹500/- (₹400 refunded after CBT)";
+    scStFee = "₹250/- (Full ₹250 refunded after CBT)";
+    femaleFee = "₹250/- (Full ₹250 refunded after CBT)";
+  } else if (/banking|ibps|\bsbi\b|\brbi\b|nabard/i.test(contextStr)) {
+    generalFee = "₹850/- (Application + Intimation)";
+    scStFee = "₹175/- (Intimation charges only)";
+    femaleFee = "₹850/-";
+  } else if (/\bupsssc\b/i.test(contextStr)) {
+    generalFee = "₹25/- (Online Processing Fee)";
+    scStFee = "₹25/-";
+    femaleFee = "₹25/-";
+  } else if (/up\s*police|\buppbpb\b/i.test(contextStr)) {
+    generalFee = "₹400/-";
+    scStFee = "₹400/-";
+    femaleFee = "₹400/-";
+  } else if (/\bbpsc\b/i.test(contextStr)) {
+    generalFee = "₹600/-";
+    scStFee = "₹150/- (Bihar Domicile)";
+    femaleFee = "₹150/- (Bihar Domicile)";
+  } else if (/\bbtsc\b|\bbssc\b/i.test(contextStr)) {
+    generalFee = "₹100/-";
+    scStFee = "₹100/-";
+    femaleFee = "₹100/-";
+  } else if (/\bdsssb\b/i.test(contextStr)) {
+    generalFee = "₹100/-";
+    scStFee = "₹0 (Exempted)";
+    femaleFee = "₹0 (Exempted)";
+  } else if (/\bmpesb\b|mp\s*police|vyapam/i.test(contextStr)) {
+    generalFee = "₹560/- (Incl. Portal Charge)";
+    scStFee = "₹310/- (Incl. Portal Charge)";
+    femaleFee = "₹560/-";
+  } else if (/\brpsc\b|\brssb\b|rajasthan/i.test(contextStr)) {
+    generalFee = "₹600/- (OTR / One Time)";
+    scStFee = "₹400/-";
+    femaleFee = "₹400/-";
+  } else if (/\bagniveer\b|indian\s*army|indian\s*navy|air\s*force/i.test(contextStr)) {
+    generalFee = "₹0 (Exempted / Free)";
+    scStFee = "₹0 (Exempted / Free)";
+    femaleFee = "₹0 (Exempted / Free)";
+  } else if (/\bnta\b|cuet|neet|jee|ugc\s*net|aiapget/i.test(contextStr)) {
+    generalFee = "₹1000 - ₹2700 (As per exam level)";
+    scStFee = "₹500 - ₹1800 (Concessional)";
+    femaleFee = "₹1000 - ₹2700";
   }
 
   // 16. Age Limit & Highlights
@@ -1158,19 +1197,19 @@ export async function GET(request: Request) {
             });
 
             if (valResult.isValid) {
-              if (deepDates.examDate && !parsed.important_dates.examDate) {
+              if (deepDates.examDate && (!parsed.important_dates.examDate || isPlaceholderText(parsed.important_dates.examDate))) {
                 parsed.important_dates.examDate = deepDates.examDate;
                 parsed.important_dates.examDateFrom = deepDates.examDateFrom;
                 parsed.important_dates.examDateTo = deepDates.examDateTo;
                 parsed.important_dates.examDateEvidence = deepDates.examDateEvidence;
                 parsed.important_dates.exam_date = deepDates.exam_date;
               }
-              if (deepDates.admitCardDate && !parsed.important_dates.admitCardDate) {
+              if (deepDates.admitCardDate && (!parsed.important_dates.admitCardDate || isPlaceholderText(parsed.important_dates.admitCardDate))) {
                 parsed.important_dates.admitCardDate = deepDates.admitCardDate;
                 parsed.important_dates.admitCardEvidence = deepDates.admitCardEvidence;
                 parsed.important_dates.admit_card_date = deepDates.admit_card_date;
               }
-              if (deepDates.citySlipDate && !parsed.important_dates.citySlipDate) {
+              if (deepDates.citySlipDate && (!parsed.important_dates.citySlipDate || isPlaceholderText(parsed.important_dates.citySlipDate))) {
                 parsed.important_dates.citySlipDate = deepDates.citySlipDate;
                 parsed.important_dates.citySlipEvidence = deepDates.citySlipEvidence;
                 parsed.important_dates.city_intimation_date = deepDates.city_intimation_date;
@@ -1192,7 +1231,7 @@ export async function GET(request: Request) {
             }
 
             // Rich metadata extraction from Sarkari Result and structured pages:
-            if (deepExtracted.applicationFee && deepExtracted.applicationFee.generalOBC && deepExtracted.applicationFee.generalOBC !== "See Notification") {
+            if (deepExtracted.applicationFee && deepExtracted.applicationFee.generalOBC && !deepExtracted.applicationFee.generalOBC.toLowerCase().includes("see notification")) {
               parsed.application_fee = deepExtracted.applicationFee;
             }
             if (deepExtracted.ageLimit && deepExtracted.ageLimit !== "18 - 40 Years (as per category)") {

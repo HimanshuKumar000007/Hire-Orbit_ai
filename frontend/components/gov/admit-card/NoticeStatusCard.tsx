@@ -81,7 +81,7 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
       </div>
 
       {/* Release Date & Exam Date Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${notice.dates.citySlipDate ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3 pt-1`}>
         <div className="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1">
           <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
             Admit Card Status
@@ -112,7 +112,18 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
           </span>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 sm:col-span-2 lg:col-span-1">
+        {notice.dates.citySlipDate && (
+          <div className="p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1">
+            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+              City Intimation Slip
+            </span>
+            <span className="text-sm font-bold text-cyan-400 block">
+              Released ({notice.dates.citySlipDate})
+            </span>
+          </div>
+        )}
+
+        <div className={`p-3.5 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 ${notice.dates.citySlipDate ? '' : 'sm:col-span-2 lg:col-span-1'}`}>
           <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
             Authentication Required
           </span>

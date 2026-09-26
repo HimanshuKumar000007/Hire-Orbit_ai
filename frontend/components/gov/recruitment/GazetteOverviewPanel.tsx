@@ -79,8 +79,13 @@ export function GazetteOverviewPanel({ notice }: GazetteOverviewPanelProps) {
     { label: "Admit Card Release:", raw: dates.admitCardDate },
   ];
 
+  const hasKnownFee = fee && fee.categories && fee.categories.length > 0;
+  const displayFeeRows = hasKnownFee 
+    ? (fee?.rawRows || []).filter(r => r.isKnown) 
+    : [];
+
   const hasAnyDate = dateRows.some((r) => !!r.raw);
-  const hasFee = fee && fee.rawRows && fee.rawRows.length > 0;
+  const hasFee = hasKnownFee || (fee && fee.rawRows && fee.rawRows.length > 0);
   const hasAge = ageLimit && (ageLimit.rawText || ageLimit.maxAge);
 
   // Don't render this section at all if we have no data
@@ -163,13 +168,11 @@ export function GazetteOverviewPanel({ notice }: GazetteOverviewPanelProps) {
           </div>
 
           <div className="flex-1 space-y-0">
-            {hasFee ? (
+            {hasKnownFee ? (
               <>
-                {fee.rawRows.map((row, i) => {
+                {displayFeeRows.map((row, i) => {
                   const valueClass = row.isExempt
                     ? "text-emerald-400 font-bold"
-                    : !row.isKnown
-                    ? "text-blue-400 font-semibold"
                     : "text-white font-bold";
                   return (
                     <OverviewRow
@@ -182,7 +185,7 @@ export function GazetteOverviewPanel({ notice }: GazetteOverviewPanelProps) {
                 })}
 
                 {/* Payment Gateway box */}
-                {fee.paymentGatewayNote && (
+                {fee?.paymentGatewayNote && (
                   <div className="mt-3 pt-2 border-t border-white/5">
                     <p className="text-[10px] text-zinc-500 mb-1.5">Payment Gateway Options:</p>
                     <div className="bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-[11px] text-zinc-300 leading-relaxed">
@@ -192,7 +195,7 @@ export function GazetteOverviewPanel({ notice }: GazetteOverviewPanelProps) {
                 )}
 
                 {/* Correction charge */}
-                {fee.correctionCharge && (
+                {fee?.correctionCharge && (
                   <OverviewRow
                     label="Correction Charge:"
                     value={fee.correctionCharge}
@@ -201,9 +204,12 @@ export function GazetteOverviewPanel({ notice }: GazetteOverviewPanelProps) {
                 )}
               </>
             ) : (
-              <p className="text-[11px] text-zinc-600 italic py-2">
-                Fee details are being verified — refer official notification.
-              </p>
+              <div className="py-3">
+                <p className="text-xs text-zinc-300 font-semibold">Official Fee Under Verification</p>
+                <p className="text-[11px] text-zinc-500 mt-1 leading-relaxed">
+                  Prescribed fee payable as per official commission advertisement.
+                </p>
+              </div>
             )}
           </div>
         </div>
