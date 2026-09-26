@@ -1,10 +1,4 @@
 {
-  "crons": [
-    {
-      "path": "/api/gov/sync",
-      "schedule": "0 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/gov",
