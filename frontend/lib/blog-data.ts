@@ -19,9 +19,26 @@ import { howToUseChatGptToWriteAnAtsResumePrompts } from "./blog-content/how-to-
 import { whyFindingJobsOnLinkedinIsDeadHireorbitAi } from "./blog-content/why-finding-jobs-on-linkedin-is-dead-hireorbit-ai";
 import { latestGovtJobsIndia2026RecruitmentGuide } from "./blog-content/latest-govt-jobs-india-2026-recruitment-guide";
 import { modernFrontendFrameworks2026Guide } from "./blog-content/modern-frontend-frameworks-2026-guide";
+import { react19VsNextjs15MetaFrameworkGuide } from "./blog-content/react-19-vs-nextjs-15-meta-framework-guide";
+import { svelte5RunesVsSignalsVirtualDomFuture } from "./blog-content/svelte-5-runes-vs-signals-virtual-dom-future";
+import { seniorFrontendSystemDesignInterviewGuide2026 } from "./blog-content/senior-frontend-system-design-interview-guide-2026";
+import { coreWebVitalsOptimizingInpUnder50ms } from "./blog-content/core-web-vitals-optimizing-inp-under-50ms";
+import { microFrontends2026ModuleFederationVsMonorepo } from "./blog-content/micro-frontends-2026-module-federation-vs-monorepo";
+import { fullstackFrontendEdgeRuntimesServerActionsGuide } from "./blog-content/fullstack-frontend-edge-runtimes-server-actions-guide";
 
 export const BLOG_POSTS: BlogPost[] = [
-  // High-Converting Growth & Search Guides (Live Today)
+  // 3-Day Frontend Frameworks & Architecture Series (2 Posts Daily)
+  // Day 1 (Sep 26, 2026) - Live Today
+  react19VsNextjs15MetaFrameworkGuide,
+  svelte5RunesVsSignalsVirtualDomFuture,
+  // Day 2 (Sep 27, 2026) - Scheduled
+  seniorFrontendSystemDesignInterviewGuide2026,
+  coreWebVitalsOptimizingInpUnder50ms,
+  // Day 3 (Sep 28, 2026) - Scheduled
+  microFrontends2026ModuleFederationVsMonorepo,
+  fullstackFrontendEdgeRuntimesServerActionsGuide,
+
+  // High-Converting Growth & Search Guides
   modernFrontendFrameworks2026Guide,
   latestGovtJobsIndia2026RecruitmentGuide,
   whyFindingJobsOnLinkedinIsDeadHireorbitAi,
