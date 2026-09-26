@@ -96,8 +96,8 @@ export function isAggregatorUrl(urlStr?: string | null): boolean {
 }
 
 
-export { cleanDateValue, isRealDateString, type DateStatus, validateNoticeDates, type DateValidationResult } from "./universal-date-normalizer";
-import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus, validateNoticeDates, DateValidationResult } from "./universal-date-normalizer";
+export { cleanDateValue, isRealDateString, type DateStatus, validateNoticeDates, type DateValidationResult, isFutureDate, parseIndianDate } from "./universal-date-normalizer";
+import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus, validateNoticeDates, DateValidationResult, isFutureDate } from "./universal-date-normalizer";
 
 export type FieldConfidenceStatus = 'EXACT' | 'INFERRED' | 'MISSING' | 'CONFLICTED' | 'FAILED';
 
@@ -586,6 +586,15 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
     }
   }
 
+  // 4c. Intelligent Status Refinement based on calendar date vs today
+  // If status is ADMIT_CARD_AVAILABLE, but the admitCardDate is in the future,
+  // the exam timetable has been announced, but the actual hall ticket download is scheduled for that date.
+  const isAdmitFuture = (status === 'ADMIT_CARD_AVAILABLE') && !!dates.admitCardDate && isFutureDate(dates.admitCardDate);
+  if (isAdmitFuture && dates.admitCardDate) {
+    statusLabel = `Admit Card on ${dates.admitCardDate}`;
+    statusBadgeColor = 'blue';
+  }
+
   // 5. Build Verified Links
   const links: UniversalNoticeLink[] = [];
   const cleanPdfUrl = (job.officialPdfUrl && !isAggregatorUrl(job.officialPdfUrl))
@@ -600,16 +609,18 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
   if (status === 'ADMIT_CARD_AVAILABLE' || status === 'EXAM_CITY_SLIP_AVAILABLE') {
     links.push({
       title: status === 'ADMIT_CARD_AVAILABLE' 
-        ? `Download ${examName} Admit Card / Hall Ticket`
+        ? (isAdmitFuture && dates.admitCardDate ? `Official Portal (Admit Card on ${dates.admitCardDate})` : `Download ${examName} Admit Card / Hall Ticket`)
         : `Download ${examName} Exam City Intimation Slip`,
       url: cleanApplyUrl,
       type: status === 'ADMIT_CARD_AVAILABLE' ? 'admit_card' : 'city_slip',
-      badge: status === 'ADMIT_CARD_AVAILABLE' ? 'Link Active' : 'City Slip Active',
-      badgeColor: 'emerald',
+      badge: status === 'ADMIT_CARD_AVAILABLE' 
+        ? (isAdmitFuture && dates.admitCardDate ? `Releases ${dates.admitCardDate}` : 'Link Active')
+        : 'City Slip Active',
+      badgeColor: isAdmitFuture ? 'blue' : 'emerald',
       isOfficial: true,
       isExternal: true,
       verificationLevel: 'VERIFIED',
-      sourceNote: 'Direct official download server'
+      sourceNote: isAdmitFuture ? 'Official candidate portal for scheduled release' : 'Direct official download server'
     });
   }
 
@@ -771,7 +782,9 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
     {
       question: `Is the ${examName} Admit Card 2026 released?`,
       answer: status === 'ADMIT_CARD_AVAILABLE'
-        ? `Yes, ${authority} has officially released the ${examName} Admit Card / Hall Ticket. Candidates can download it directly using the verified link provided on this page.`
+        ? (isAdmitFuture && dates.admitCardDate
+            ? `The examination schedule for ${examName} has been officially announced. The Admit Card / Hall Ticket will be available for download starting ${dates.admitCardDate} from the official portal.`
+            : `Yes, ${authority} has officially released the ${examName} Admit Card / Hall Ticket. Candidates can download it directly using the verified link provided on this page.`)
         : status === 'EXAM_CITY_SLIP_AVAILABLE'
         ? `The Exam City Intimation Slip is currently available. The formal Admit Card will be activated 3 to 4 days prior to the scheduled examination date.`
         : `The ${examName} Admit Card is expected to be released shortly by ${authority}. Please refer to the official timetable circular on this page.`

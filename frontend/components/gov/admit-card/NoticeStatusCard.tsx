@@ -1,5 +1,6 @@
 import React from 'react';
 import { UniversalNotice } from '@/lib/universal-notice-model';
+import { isFutureDate } from '@/lib/universal-date-normalizer';
 import { 
   CheckCircle2, 
   MapPin, 
@@ -17,13 +18,23 @@ interface NoticeStatusCardProps {
 export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
   const getStatusConfig = () => {
     switch (notice.status) {
-      case 'ADMIT_CARD_AVAILABLE':
+      case 'ADMIT_CARD_AVAILABLE': {
+        const isFuture = notice.dates.admitCardDate ? isFutureDate(notice.dates.admitCardDate) : false;
+        if (isFuture && notice.dates.admitCardDate) {
+          return {
+            icon: Calendar,
+            headline: `🔵 ADMIT CARD SCHEDULE ANNOUNCED (Releases ${notice.dates.admitCardDate})`,
+            colorClass: 'text-blue-400 border-blue-500/30 bg-blue-950/20',
+            badgeText: 'Release Date Set'
+          };
+        }
         return {
           icon: CheckCircle2,
           headline: '🟢 ADMIT CARD AVAILABLE NOW',
           colorClass: 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20',
           badgeText: 'Live Download Active'
         };
+      }
       case 'EXAM_CITY_SLIP_AVAILABLE':
         return {
           icon: MapPin,
@@ -88,7 +99,9 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
           </span>
           <span className="text-sm font-bold text-white block">
             {notice.dates.admitCardDate
-              ? `Available (${notice.dates.admitCardDate})`
+              ? (isFutureDate(notice.dates.admitCardDate)
+                  ? `Releasing on ${notice.dates.admitCardDate}`
+                  : `Available (${notice.dates.admitCardDate})`)
               : (notice.dates.admitCardStatus === 'AVAILABLE_NOW' || notice.dates.admitCardStatus === 'released' || notice.status === 'ADMIT_CARD_AVAILABLE')
               ? "Available Now"
               : (notice.dates.admitCardStatus === 'CITY_SLIP_OUT' || notice.dates.admitCardStatus === 'available' || notice.dates.examCityStatus === 'available' || notice.status === 'EXAM_CITY_SLIP_AVAILABLE')
@@ -118,7 +131,9 @@ export function NoticeStatusCard({ notice }: NoticeStatusCardProps) {
               City Intimation Slip
             </span>
             <span className="text-sm font-bold text-cyan-400 block">
-              Released ({notice.dates.citySlipDate})
+              {isFutureDate(notice.dates.citySlipDate)
+                ? `Releasing on ${notice.dates.citySlipDate}`
+                : `Released (${notice.dates.citySlipDate})`}
             </span>
           </div>
         )}

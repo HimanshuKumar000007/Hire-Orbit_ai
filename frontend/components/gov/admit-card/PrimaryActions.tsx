@@ -1,5 +1,5 @@
 import React from 'react';
-import { UniversalNotice } from '@/lib/universal-notice-model';
+import { UniversalNotice, isFutureDate } from '@/lib/universal-notice-model';
 import { Download, ExternalLink, MapPin, Building2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
@@ -9,6 +9,7 @@ interface PrimaryActionsProps {
 
 export function PrimaryActions({ notice }: PrimaryActionsProps) {
   const { downloadAdmitCardUrl, downloadCitySlipUrl, officialPortalUrl } = notice.primaryActionUrls;
+  const isAdmitFuture = !!notice.dates.admitCardDate && isFutureDate(notice.dates.admitCardDate);
 
   return (
     <>
@@ -23,7 +24,7 @@ export function PrimaryActions({ notice }: PrimaryActionsProps) {
             className="flex-1 sm:flex-initial px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black text-sm flex items-center justify-center gap-2 transition-all shadow-glow-sm cursor-pointer"
           >
             <Download className="w-4 h-4" />
-            Download Admit Card
+            {isAdmitFuture ? `Admit Card Portal (Releases ${notice.dates.admitCardDate})` : "Download Admit Card"}
             <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </a>
         ) : (
@@ -84,7 +85,7 @@ export function PrimaryActions({ notice }: PrimaryActionsProps) {
             className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 text-zinc-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-glow-sm"
           >
             <Download className="w-4 h-4" />
-            Download Admit Card ↗
+            {isAdmitFuture ? `Admit Card (${notice.dates.admitCardDate}) ↗` : 'Download Admit Card ↗'}
           </a>
         ) : downloadCitySlipUrl ? (
           <a

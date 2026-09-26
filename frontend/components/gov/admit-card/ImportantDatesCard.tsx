@@ -1,5 +1,5 @@
 import React from 'react';
-import { UniversalNoticeDates, isRealDateString } from '@/lib/universal-notice-model';
+import { UniversalNoticeDates, isRealDateString, isFutureDate } from '@/lib/universal-notice-model';
 import { Calendar, Clock, CheckCircle2, Flame, MapPin } from 'lucide-react';
 
 interface ImportantDatesCardProps {
@@ -35,8 +35,9 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
   }
 
   if (dates.citySlipDate && isRealDateString(dates.citySlipDate)) {
+    const isCityFuture = isFutureDate(dates.citySlipDate);
     items.push({
-      label: "Exam City Slip Release",
+      label: isCityFuture ? "Exam City Slip (Scheduled)" : "Exam City Slip Release",
       value: dates.citySlipDate,
       isHighlight: true,
       highlightColor: "text-blue-400",
@@ -53,12 +54,13 @@ export function ImportantDatesCard({ dates }: ImportantDatesCardProps) {
   }
 
   if (dates.admitCardDate && isRealDateString(dates.admitCardDate)) {
+    const isAdmitFuture = isFutureDate(dates.admitCardDate);
     items.push({
-      label: "Admit Card Download Date",
+      label: isAdmitFuture ? "Admit Card Scheduled Release" : "Admit Card Download Date",
       value: dates.admitCardDate,
       isHighlight: true,
-      highlightColor: "text-emerald-400",
-      icon: CheckCircle2
+      highlightColor: isAdmitFuture ? "text-blue-400" : "text-emerald-400",
+      icon: isAdmitFuture ? Calendar : CheckCircle2
     });
   } else if (dates.admitCardStatus === 'AVAILABLE_NOW' || dates.admitCardStatus === 'released') {
     items.push({

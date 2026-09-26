@@ -37,6 +37,52 @@ export function isRealDateString(val?: string | null): boolean {
   return !!cleanDateValue(val);
 }
 
+/**
+ * Safely parse standard Indian government exam date formats
+ * Supports: "8 October 2026", "08/10/2026", "08-10-2026", "2026-10-08", or ranges "12 Oct 2026 – 16 Oct 2026"
+ */
+export function parseIndianDate(dateStr?: string | null): Date | null {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  const s = dateStr.trim();
+  if (s.length < 4) return null;
+
+  // Clean ordinal suffixes like "8th October" -> "8 October"
+  const cleaned = s.replace(/(\d+)(st|nd|rd|th)/gi, '$1');
+
+  // If it's a date range like "12 October 2026 – 16 October 2026", extract first date
+  // Note: Only split on hyphens surrounded by spaces (\s+[-–—]\s+) or 'to', preserving hyphenated dates like 08-10-2026
+  const firstPart = cleaned.split(/\s+[–—\-]\s+|\s+to\s+/i)[0].trim();
+
+  // Try parsing DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY (standard Indian format)
+  const dmyMatch = firstPart.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const d = new Date(year, month, day);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Try standard Date.parse (handles "8 October 2026", "October 8, 2026", "2026-10-08")
+  const standardMs = Date.parse(firstPart);
+  if (!isNaN(standardMs)) {
+    return new Date(standardMs);
+  }
+
+  return null;
+}
+
+/**
+ * Check if a date string refers to a future calendar date relative to today (midnight local time)
+ */
+export function isFutureDate(dateStr?: string | null): boolean {
+  const d = parseIndianDate(dateStr);
+  if (!d) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return d.getTime() > today.getTime();
+}
+
 export type DateStatus =
   | "confirmed"
   | "announced"
