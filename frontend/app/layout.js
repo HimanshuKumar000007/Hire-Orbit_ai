@@ -15,6 +15,13 @@ export const metadata = {
   },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#09090b",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${outfit.variable} dark antialiased`}>
@@ -26,8 +33,8 @@ export default function RootLayout({ children }) {
           crossOrigin="anonymous"
         />
       </head>
-      <body className="bg-background text-foreground min-h-screen">
-        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_#1e293b_0%,_transparent_50%)] opacity-20" />
+      <body className="bg-background text-foreground min-h-screen overflow-x-hidden">
+        <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_#1e293b_0%,_transparent_50%)] opacity-20 pointer-events-none" />
         {children}
         <Toaster position="top-center" richColors />
       </body>

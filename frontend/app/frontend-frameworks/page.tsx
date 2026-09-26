@@ -198,7 +198,7 @@ export default function FrontendFrameworksPage() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-950 selection:bg-emerald-500/30 text-zinc-100">
+    <main className="min-h-screen bg-zinc-950 selection:bg-emerald-500/30 text-zinc-100 overflow-x-hidden">
       <Navigation />
 
       {/* Structured Data Scripts for Google SEO */}
@@ -220,32 +220,32 @@ export default function FrontendFrameworksPage() {
       />
 
       {/* ── Hero Section ── */}
-      <section className="relative pt-32 pb-20 overflow-hidden border-b border-zinc-800/80">
+      <section className="relative pt-24 sm:pt-32 pb-12 sm:pb-20 overflow-hidden border-b border-zinc-800/80">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
-          <div className="absolute top-1/3 -right-20 w-[450px] h-[450px] bg-blue-500/10 rounded-full blur-[120px]" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[350px] sm:w-[800px] h-[350px] sm:h-[500px] bg-emerald-500/10 rounded-full blur-[140px]" />
+          <div className="absolute top-1/3 -right-20 w-[300px] sm:w-[450px] h-[300px] sm:h-[450px] bg-blue-500/10 rounded-full blur-[120px]" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             {/* Breadcrumb Navigation */}
-            <nav className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs text-zinc-400 mb-6">
-              <Link href="/" className="hover:text-emerald-400 transition-colors">Home</Link>
+            <nav className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 text-xs text-zinc-400 mb-5 sm:mb-6 max-w-full truncate">
+              <Link href="/" className="hover:text-emerald-400 transition-colors shrink-0">Home</Link>
               <span>/</span>
-              <span className="text-zinc-200 font-medium">Frontend Frameworks</span>
+              <span className="text-zinc-200 font-medium truncate">Frontend Frameworks</span>
             </nav>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] mb-6">
+            <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.15] sm:leading-[1.1] mb-4 sm:mb-6 break-words">
               Modern <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">Frontend Frameworks</span> Guide (2026)
             </h1>
 
-            <p className="text-lg sm:text-xl text-zinc-400 leading-relaxed max-w-3xl mx-auto mb-10">
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 leading-relaxed max-w-3xl mx-auto mb-8 sm:mb-10 font-light">
               The definitive architectural comparison of <strong className="text-zinc-200">React 19, Next.js 15, Vue 3.5, Angular 19, Svelte 5, and Solid.js</strong>. 
               Explore bundle benchmarks, Core Web Vitals performance, recruiter hiring demand, and developer salary bands.
             </p>
 
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-10 text-left">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-4xl mx-auto mb-8 sm:mb-10 text-left">
               <div className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
                 <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-1">
                   <TrendingUp className="w-3.5 h-3.5" />
@@ -335,17 +335,25 @@ export default function FrontendFrameworksPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950/70 shadow-2xl">
-            <table className="w-full text-left text-sm text-zinc-300">
-              <thead className="bg-zinc-900 text-xs uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
-                <tr>
-                  <th className="py-4 px-6 font-semibold">Architectural Paradigm</th>
-                  <th className="py-4 px-6 font-semibold">Primary Frameworks</th>
-                  <th className="py-4 px-6 font-semibold">How DOM Updates Execute</th>
-                  <th className="py-4 px-6 font-semibold">INP & Core Web Vitals</th>
-                  <th className="py-4 px-6 font-semibold">Developer Trade-Off</th>
-                </tr>
-              </thead>
+          <div className="rounded-xl sm:rounded-2xl border border-zinc-800 bg-zinc-950/70 shadow-2xl overflow-hidden max-w-full">
+            <div className="flex sm:hidden items-center justify-between px-3.5 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-[11px] text-emerald-400 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Scroll table horizontally
+              </span>
+              <span className="text-[10px] text-emerald-300 font-mono tracking-wider">Swipe ➔</span>
+            </div>
+            <div className="overflow-x-auto max-w-full -webkit-overflow-scrolling-touch">
+              <table className="min-w-[640px] w-full text-left text-xs sm:text-sm text-zinc-300">
+                <thead className="bg-zinc-900 text-[11px] sm:text-xs uppercase tracking-wider text-zinc-400 border-b border-zinc-800">
+                  <tr>
+                    <th className="py-3 px-4 sm:py-4 sm:px-6 font-semibold whitespace-nowrap">Architectural Paradigm</th>
+                    <th className="py-3 px-4 sm:py-4 sm:px-6 font-semibold whitespace-nowrap">Primary Frameworks</th>
+                    <th className="py-3 px-4 sm:py-4 sm:px-6 font-semibold">How DOM Updates Execute</th>
+                    <th className="py-3 px-4 sm:py-4 sm:px-6 font-semibold whitespace-nowrap">INP & Core Web Vitals</th>
+                    <th className="py-3 px-4 sm:py-4 sm:px-6 font-semibold">Developer Trade-Off</th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-zinc-800/60 font-normal">
                 <tr className="hover:bg-zinc-900/40 transition-colors">
                   <td className="py-4 px-6 font-bold text-white">Virtual DOM</td>
@@ -386,7 +394,8 @@ export default function FrontendFrameworksPage() {
             </table>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* ── Career & ATS Optimization Section ── */}
       <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

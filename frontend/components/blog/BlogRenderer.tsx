@@ -46,7 +46,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         parts.push(
           <code
             key={key++}
-            className="px-1.5 py-0.5 rounded bg-white/10 text-emerald-300 font-mono text-xs border border-white/10"
+            className="px-1.5 py-0.5 rounded bg-white/10 text-emerald-300 font-mono text-[11px] sm:text-xs border border-white/10 break-all"
           >
             {token.slice(1, -1)}
           </code>
@@ -60,7 +60,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
             href={linkHref}
             target={linkHref.startsWith("http") ? "_blank" : undefined}
             rel={linkHref.startsWith("http") ? "noopener noreferrer" : undefined}
-            className="text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/30 hover:decoration-emerald-400 transition-colors"
+            className="text-emerald-400 hover:text-emerald-300 underline underline-offset-4 decoration-emerald-500/30 hover:decoration-emerald-400 transition-colors break-words"
           >
             {linkText}
           </a>
@@ -71,7 +71,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         parts.push(
           <span
             key={key++}
-            className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono text-sm border border-emerald-500/20"
+            className="inline-block px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 font-mono text-xs sm:text-sm border border-emerald-500/20 max-w-full overflow-x-auto align-middle"
           >
             {formula}
           </span>
@@ -110,32 +110,33 @@ export function BlogRenderer({ content }: BlogRendererProps) {
       elements.push(
         <div
           key={`code-${i}`}
-          className="my-6 rounded-2xl border border-white/10 bg-zinc-900/90 overflow-hidden shadow-2xl backdrop-blur-md"
+          className="my-5 sm:my-6 rounded-xl sm:rounded-2xl border border-white/10 bg-zinc-900/95 overflow-hidden shadow-2xl backdrop-blur-md max-w-full"
         >
-          <div className="flex items-center justify-between px-4 py-2.5 bg-white/5 border-b border-white/10 text-xs font-mono text-zinc-400">
-            <span className="flex items-center gap-2 uppercase tracking-wider text-emerald-400 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 bg-white/5 border-b border-white/10 text-xs font-mono text-zinc-400">
+            <span className="flex items-center gap-1.5 sm:gap-2 uppercase tracking-wider text-emerald-400 font-semibold text-[11px] sm:text-xs truncate">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
               {language || "code"}
             </span>
             <button
               onClick={() => copyCode(codeString, blockId)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-medium"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white transition-colors text-xs font-medium shrink-0"
+              aria-label="Copy code to clipboard"
             >
               {copiedCodeId === blockId ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Copied</span>
+                  <span className="text-emerald-400 text-[11px] sm:text-xs">Copied</span>
                 </>
               ) : (
                 <>
                   <Copy className="w-3.5 h-3.5" />
-                  <span>Copy</span>
+                  <span className="text-[11px] sm:text-xs">Copy</span>
                 </>
               )}
             </button>
           </div>
-          <pre className="p-5 text-xs sm:text-sm font-mono text-zinc-200 overflow-x-auto leading-relaxed">
-            <code>{codeString}</code>
+          <pre className="p-3.5 sm:p-5 text-xs sm:text-sm font-mono text-zinc-200 overflow-x-auto leading-relaxed max-w-full">
+            <code className="block">{codeString}</code>
           </pre>
         </div>
       );
@@ -160,35 +161,45 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         const rowLines = tableLines.slice(2); // skip header separator line
 
         elements.push(
-          <div key={`table-${i}`} className="my-8 overflow-x-auto rounded-2xl border border-white/10 glass-strong">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-white/5">
-                  {headerCells.map((header, idx) => (
-                    <th key={idx} className="py-3.5 px-4 font-semibold text-emerald-400 uppercase tracking-wider text-xs">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {rowLines.map((r, rIdx) => {
-                  const cells = r
-                    .split("|")
-                    .map((c) => c.trim())
-                    .filter(Boolean);
-                  return (
-                    <tr key={rIdx} className="hover:bg-white/[0.02] transition-colors">
-                      {cells.map((cell, cIdx) => (
-                        <td key={cIdx} className="py-3.5 px-4 text-zinc-300">
-                          {renderInline(cell)}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div key={`table-${i}`} className="my-6 sm:my-8 rounded-xl sm:rounded-2xl border border-white/10 glass-strong overflow-hidden max-w-full">
+            {/* Mobile horizontal scroll indicator */}
+            <div className="flex sm:hidden items-center justify-between px-3.5 py-2 bg-emerald-500/10 border-b border-emerald-500/20 text-[11px] text-emerald-400 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Scroll table horizontally
+              </span>
+              <span className="text-[10px] text-emerald-300 font-mono tracking-wider">Swipe ➔</span>
+            </div>
+            <div className="overflow-x-auto max-w-full -webkit-overflow-scrolling-touch">
+              <table className="min-w-[540px] w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/5">
+                    {headerCells.map((header, idx) => (
+                      <th key={idx} className="py-3 px-3.5 sm:py-3.5 sm:px-4 font-semibold text-emerald-400 uppercase tracking-wider text-[11px] sm:text-xs whitespace-nowrap">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {rowLines.map((r, rIdx) => {
+                    const cells = r
+                      .split("|")
+                      .map((c) => c.trim())
+                      .filter(Boolean);
+                    return (
+                      <tr key={rIdx} className="hover:bg-white/[0.02] transition-colors">
+                        {cells.map((cell, cIdx) => (
+                          <td key={cIdx} className="py-2.5 px-3.5 sm:py-3.5 sm:px-4 text-zinc-300 leading-relaxed break-words">
+                            {renderInline(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
       }
@@ -201,7 +212,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
       elements.push(
         <div
           key={`math-${i}`}
-          className="my-6 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center text-emerald-300 font-mono text-sm sm:text-base overflow-x-auto"
+          className="my-5 sm:my-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-500/5 border border-emerald-500/20 text-center text-emerald-300 font-mono text-xs sm:text-sm md:text-base overflow-x-auto max-w-full"
         >
           {formula}
         </div>
@@ -226,13 +237,13 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         <h2
           key={`h2-${i}`}
           id={anchorId}
-          className="scroll-mt-28 text-2xl sm:text-3xl font-bold text-white mt-12 mb-5 flex items-center gap-3 group"
+          className="scroll-mt-24 text-xl sm:text-2xl lg:text-3xl font-bold text-white mt-9 sm:mt-14 mb-3.5 sm:mb-5 flex items-start gap-2.5 sm:gap-3 group"
         >
-          <span className="w-1.5 h-6 rounded-full bg-emerald-500 inline-block" />
-          <span>{title}</span>
+          <span className="w-1.5 h-6 rounded-full bg-emerald-500 inline-block shrink-0 mt-1" />
+          <span className="break-words min-w-0 flex-1">{title}</span>
           <a
             href={`#${anchorId}`}
-            className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-emerald-400 text-base transition-opacity ml-1"
+            className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-emerald-400 text-sm sm:text-base transition-opacity ml-1 shrink-0 mt-1"
             aria-label="Link to section"
           >
             #
@@ -251,7 +262,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         <h3
           key={`h3-${i}`}
           id={anchorId}
-          className="scroll-mt-28 text-xl sm:text-2xl font-semibold text-zinc-100 mt-8 mb-4"
+          className="scroll-mt-24 text-lg sm:text-xl lg:text-2xl font-semibold text-zinc-100 mt-6 sm:mt-8 mb-2.5 sm:mb-3.5 break-words"
         >
           {title}
         </h3>
@@ -273,7 +284,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
       elements.push(
         <div
           key={`quote-${i}`}
-          className={`my-6 p-5 rounded-2xl border flex gap-4 ${
+          className={`my-5 sm:my-6 p-3.5 sm:p-5 rounded-xl sm:rounded-2xl border flex items-start gap-3 sm:gap-4 ${
             isKeyTakeaway
               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
               : "bg-white/5 border-white/10 text-zinc-300"
@@ -281,12 +292,12 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         >
           <div className="shrink-0 mt-0.5">
             {isKeyTakeaway ? (
-              <Sparkles className="w-5 h-5 text-emerald-400" />
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
             ) : (
-              <Info className="w-5 h-5 text-zinc-400" />
+              <Info className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
             )}
           </div>
-          <div className="text-sm leading-relaxed">{renderInline(fullQuote)}</div>
+          <div className="text-xs sm:text-sm leading-relaxed break-words flex-1 min-w-0">{renderInline(fullQuote)}</div>
         </div>
       );
       continue;
@@ -297,11 +308,11 @@ export function BlogRenderer({ content }: BlogRendererProps) {
       const isChecked = line.trim().startsWith("- [x]");
       const itemText = line.trim().replace(/- \[[ x]\]\s*/, "");
       elements.push(
-        <div key={`check-${i}`} className="flex items-start gap-3 my-2.5 text-zinc-300 text-sm sm:text-base">
-          <div className="w-5 h-5 rounded-md border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-            <Check className="w-3.5 h-3.5 text-emerald-400" />
+        <div key={`check-${i}`} className="flex items-start gap-2.5 sm:gap-3 my-2 text-zinc-300 text-xs sm:text-sm md:text-base leading-relaxed break-words">
+          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-md border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
           </div>
-          <span>{renderInline(itemText)}</span>
+          <div className="flex-1 min-w-0">{renderInline(itemText)}</div>
         </div>
       );
       i++;
@@ -312,7 +323,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
     if (line.trim().startsWith("* ") || line.trim().startsWith("- ")) {
       const itemText = line.trim().slice(2);
       elements.push(
-        <li key={`li-${i}`} className="ml-5 list-disc text-zinc-300 text-sm sm:text-base leading-relaxed my-1.5 pl-1 marker:text-emerald-400">
+        <li key={`li-${i}`} className="ml-4 sm:ml-5 list-disc text-zinc-300 text-xs sm:text-sm md:text-base leading-relaxed my-1.5 pl-1 break-words marker:text-emerald-400">
           {renderInline(itemText)}
         </li>
       );
@@ -327,11 +338,11 @@ export function BlogRenderer({ content }: BlogRendererProps) {
         const number = match[1];
         const itemText = match[2];
         elements.push(
-          <div key={`oli-${i}`} className="flex items-start gap-3 my-2 text-zinc-300 text-sm sm:text-base leading-relaxed">
-            <span className="w-6 h-6 rounded-full bg-white/10 text-emerald-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+          <div key={`oli-${i}`} className="flex items-start gap-2.5 sm:gap-3 my-2 text-zinc-300 text-xs sm:text-sm md:text-base leading-relaxed break-words">
+            <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white/10 text-emerald-400 text-[10px] sm:text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
               {number}
             </span>
-            <div>{renderInline(itemText)}</div>
+            <div className="flex-1 min-w-0">{renderInline(itemText)}</div>
           </div>
         );
       }
@@ -341,7 +352,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
 
     // Horizontal Rule (---)
     if (line.trim() === "---") {
-      elements.push(<hr key={`hr-${i}`} className="my-10 border-white/10" />);
+      elements.push(<hr key={`hr-${i}`} className="my-8 sm:my-10 border-white/10" />);
       i++;
       continue;
     }
@@ -349,7 +360,7 @@ export function BlogRenderer({ content }: BlogRendererProps) {
     // Standard Paragraph
     if (line.trim() !== "") {
       elements.push(
-        <p key={`p-${i}`} className="text-zinc-300 text-base sm:text-lg leading-relaxed my-4">
+        <p key={`p-${i}`} className="text-zinc-300 text-[15px] sm:text-base md:text-lg leading-relaxed my-3.5 sm:my-4 break-words">
           {renderInline(line)}
         </p>
       );
@@ -358,5 +369,5 @@ export function BlogRenderer({ content }: BlogRendererProps) {
     i++;
   }
 
-  return <div className="blog-content space-y-2">{elements}</div>;
+  return <div className="blog-content space-y-1.5 sm:space-y-2 max-w-full overflow-hidden break-words">{elements}</div>;
 }

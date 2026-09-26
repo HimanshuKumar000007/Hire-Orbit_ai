@@ -306,10 +306,10 @@ export function FrameworkInteractiveHub() {
   return (
     <div className="space-y-16">
       {/* ── Search & Category Filter Bar ── */}
-      <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-2xl p-6 shadow-2xl">
+      <div className="bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-2xl">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Category Tabs */}
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1.5 sm:pb-0 scrollbar-none flex-nowrap w-full md:w-auto -mx-2 px-2 sm:mx-0 sm:px-0">
             {[
               { id: "all", label: "All Frameworks" },
               { id: "fullstack", label: "Full-Stack (RSC / SSR)" },
@@ -320,7 +320,7 @@ export function FrameworkInteractiveHub() {
               <button
                 key={tab.id}
                 onClick={() => setSelectedCategory(tab.id as any)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                className={`shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap ${
                   selectedCategory === tab.id
                     ? "bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20"
                     : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-800"
@@ -346,50 +346,50 @@ export function FrameworkInteractiveHub() {
       </div>
 
       {/* ── Framework Cards Grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8">
         {filteredFrameworks.map((fw) => (
           <div
             key={fw.id}
-            className="group relative bg-zinc-900/40 hover:bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 rounded-3xl p-6 sm:p-8 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl"
+            className="group relative bg-zinc-900/40 hover:bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 rounded-2xl sm:rounded-3xl p-5 sm:p-8 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl"
           >
             {/* Top Accent Glow */}
             <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${fw.accentColor}`} />
 
             <div>
               {/* Header Info */}
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-bold text-white tracking-tight">{fw.name}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-zinc-800 border border-zinc-700 text-zinc-300">
+              <div className="flex items-start justify-between gap-3 sm:gap-4 mb-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight break-words">{fw.name}</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-zinc-800 border border-zinc-700 text-zinc-300 shrink-0">
                       v{fw.version}
                     </span>
                   </div>
-                  <p className="text-sm text-emerald-400 font-medium mt-1">{fw.tagline}</p>
+                  <p className="text-xs sm:text-sm text-emerald-400 font-medium mt-1 leading-snug">{fw.tagline}</p>
                 </div>
 
-                <div className="flex flex-col items-end">
-                  <div className="flex items-center gap-1 text-amber-400 font-bold text-base">
+                <div className="flex flex-col items-end shrink-0">
+                  <div className="flex items-center gap-1 text-amber-400 font-bold text-sm sm:text-base">
                     <span>★</span>
                     <span>{fw.rating}</span>
                   </div>
-                  <span className="text-[11px] text-zinc-500">HireScore™</span>
+                  <span className="text-[10px] sm:text-[11px] text-zinc-500">HireScore™</span>
                 </div>
               </div>
 
               {/* Quick Metrics Bar */}
-              <div className="grid grid-cols-3 gap-2.5 my-5 p-3 rounded-2xl bg-zinc-950/60 border border-zinc-800/80 text-center">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 my-4 sm:my-5 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-zinc-950/60 border border-zinc-800/80 text-center">
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Job Share</div>
-                  <div className="text-base font-bold text-emerald-400 mt-0.5">{fw.marketSharePercent}%</div>
+                  <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium truncate">Job Share</div>
+                  <div className="text-sm sm:text-base font-bold text-emerald-400 mt-0.5">{fw.marketSharePercent}%</div>
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Bundle Size</div>
-                  <div className="text-base font-bold text-cyan-400 mt-0.5">{fw.bundleSizeKb} KB</div>
+                  <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium truncate">Bundle</div>
+                  <div className="text-sm sm:text-base font-bold text-cyan-400 mt-0.5">{fw.bundleSizeKb} KB</div>
                 </div>
                 <div>
-                  <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Avg US Salary</div>
-                  <div className="text-base font-bold text-amber-400 mt-0.5">{fw.salaryUs.split(" ")[0]}</div>
+                  <div className="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium truncate">Avg US Pay</div>
+                  <div className="text-sm sm:text-base font-bold text-amber-400 mt-0.5">{fw.salaryUs.split(" ")[0]}</div>
                 </div>
               </div>
 

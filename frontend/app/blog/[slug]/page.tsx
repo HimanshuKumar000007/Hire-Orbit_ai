@@ -22,7 +22,13 @@ import {
   BlogPost 
 } from "@/lib/blog-data";
 import { BlogRenderer } from "@/components/blog/BlogRenderer";
-import { BlogInteractions } from "@/components/blog/BlogInteractions";
+import { 
+  ReadingProgressBar,
+  MobileTableOfContents,
+  DesktopSidebar,
+  BlogFaqSection,
+  ShareArticleButtons
+} from "@/components/blog/BlogInteractions";
 
 // Next.js ISR: revalidate every hour so scheduled posts go live automatically
 export const revalidate = 3600;
@@ -185,8 +191,9 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
       : null;
 
   return (
-    <main className="min-h-screen bg-zinc-950 selection:bg-emerald-500/30 text-zinc-100">
+    <main className="min-h-screen bg-zinc-950 selection:bg-emerald-500/30 text-zinc-100 overflow-x-hidden">
       <Navigation />
+      <ReadingProgressBar />
 
       {/* Structured Data Scripts for Google SEO */}
       <script
@@ -212,101 +219,116 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
       )}
 
       {/* Hero / Article Header Section */}
-      <section className="relative pt-32 pb-16 overflow-hidden">
+      <section className="relative pt-24 sm:pt-32 pb-10 sm:pb-16 overflow-hidden">
         {/* Ambient Glows */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 -left-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 -right-1/4 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 -left-1/4 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 -right-1/4 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-violet-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
           {/* Breadcrumbs Navigation */}
-          <nav className="flex items-center gap-2 text-xs text-zinc-500 mb-8" aria-label="Breadcrumbs">
+          <nav className="flex items-center gap-1.5 sm:gap-2 text-xs text-zinc-500 mb-6 sm:mb-8 flex-wrap" aria-label="Breadcrumbs">
             <Link href="/" className="hover:text-zinc-300 transition-colors">
               Home
             </Link>
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className="w-3 h-3 shrink-0" />
             <Link href="/blog" className="hover:text-zinc-300 transition-colors">
               Blog
             </Link>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-emerald-400 font-medium">{post.category}</span>
+            <ChevronRight className="w-3 h-3 shrink-0" />
+            <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-none">{post.category}</span>
           </nav>
 
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-emerald-400 transition-colors mb-6"
+            className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-emerald-400 transition-colors mb-5 sm:mb-6"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-3.5 h-3.5" />
             Back to All Articles
           </Link>
 
           {/* Metadata badges */}
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-5 sm:mb-6">
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 sm:px-3 py-1 rounded-full uppercase tracking-wider">
               {post.category}
             </span>
             <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+              <Calendar className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span>{formattedDate}</span>
             </div>
-            <span className="text-zinc-600">•</span>
+            <span className="text-zinc-600 hidden xs:inline">•</span>
             <div className="flex items-center gap-1.5 text-xs text-zinc-400">
-              <Clock className="w-3.5 h-3.5 text-zinc-500" />
+              <Clock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span>{post.readTime}</span>
             </div>
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-tight mb-8 max-w-4xl">
+          <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-snug sm:leading-tight mb-4 sm:mb-6 max-w-4xl break-words">
             {post.title}
           </h1>
 
           {/* Excerpt Lead */}
-          <p className="text-lg sm:text-xl text-zinc-300 leading-relaxed max-w-3xl mb-8 font-light">
+          <p className="text-sm sm:text-lg lg:text-xl text-zinc-300 leading-relaxed max-w-3xl mb-6 sm:mb-8 font-light break-words">
             {post.excerpt}
           </p>
 
           {/* Author Badge */}
-          <div className="flex items-center gap-3 pt-6 border-t border-white/10 max-w-3xl">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-black text-sm shadow-lg shadow-emerald-500/20">
+          <div className="flex items-center gap-3 pt-5 sm:pt-6 border-t border-white/10 max-w-3xl">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-black text-sm shadow-lg shadow-emerald-500/20 shrink-0">
               {post.author.name[0]}
             </div>
-            <div>
-              <div className="text-sm font-semibold text-white">{post.author.name}</div>
-              <div className="text-xs text-zinc-400">{post.author.role}</div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-white truncate">{post.author.name}</div>
+              <div className="text-xs text-zinc-400 truncate">{post.author.role}</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Main Content Layout with Sticky Sidebar */}
-      <section className="pb-24 relative">
+      <section className="pb-16 sm:pb-24 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Main Article Column (8 cols) */}
-            <article className="lg:col-span-8 min-w-0">
+            <article className="lg:col-span-8 min-w-0 max-w-full overflow-hidden">
+              {/* Mobile Table of Contents (shown on small screens at top) */}
+              <MobileTableOfContents tableOfContents={post.tableOfContents} />
+
               {/* Blog Content Renderer */}
               <BlogRenderer content={post.content} />
 
+              {/* Frequently Asked Questions Section (rendered full-width in main column) */}
+              <BlogFaqSection faq={post.faq} />
+
+              {/* Mobile Share Article Box */}
+              <div className="lg:hidden mt-8 p-4 sm:p-5 rounded-2xl glass-strong border border-white/10">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                  <Share2 className="w-4 h-4 text-emerald-400" />
+                  Share Article
+                </div>
+                <ShareArticleButtons slug={post.slug} title={post.title} />
+              </div>
+
               {/* Contextual HireOrbit Conversion CTA Card */}
               {post.cta && (
-                <div className="my-16 rounded-[2.5rem] p-8 sm:p-12 glass-strong border border-emerald-500/30 relative overflow-hidden shadow-2xl">
+                <div className="my-10 sm:my-16 rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-12 glass-strong border border-emerald-500/30 relative overflow-hidden shadow-2xl">
                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
                   <div className="relative z-10 max-w-2xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-4">
                       <Sparkles className="w-3.5 h-3.5" />
                       HireOrbitAi Power Feature
                     </div>
-                    <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 leading-snug">
+                    <h3 className="text-xl sm:text-3xl font-bold text-white mb-3 leading-snug break-words">
                       {post.cta.headline}
                     </h3>
-                    <p className="text-zinc-300 text-sm sm:text-base leading-relaxed mb-8">
+                    <p className="text-zinc-300 text-xs sm:text-base leading-relaxed mb-6 sm:mb-8 break-words">
                       {post.cta.subheadline}
                     </p>
                     <Link
                       href={post.cta.buttonLink}
-                      className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-all hover:scale-105 shadow-lg shadow-emerald-500/25"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-all hover:scale-105 shadow-lg shadow-emerald-500/25"
                     >
                       <span>{post.cta.buttonText}</span>
                       <ArrowRight className="w-4 h-4" />
@@ -316,28 +338,28 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
               )}
 
               {/* Author Bio Box */}
-              <div className="p-8 rounded-3xl glass-strong border border-white/10 mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-black text-xl shrink-0 shadow-lg shadow-emerald-500/20">
+              <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl glass-strong border border-white/10 mt-8 sm:mt-12 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-black text-lg sm:text-xl shrink-0 shadow-lg shadow-emerald-500/20">
                   {post.author.name[0]}
                 </div>
-                <div>
-                  <h4 className="text-lg font-bold text-white mb-1">Written by {post.author.name}</h4>
+                <div className="min-w-0">
+                  <h4 className="text-base sm:text-lg font-bold text-white mb-0.5 sm:mb-1">Written by {post.author.name}</h4>
                   <p className="text-xs text-emerald-400 mb-2">{post.author.role}</p>
-                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed break-words">
                     Building next-generation AI agents and semantic career intelligence platforms. Helping engineers and leaders bridge the gap between technical capability and dream job offers.
                   </p>
                 </div>
               </div>
 
               {/* Article Tags */}
-              <div className="mt-8 pt-8 border-t border-white/10 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mr-2">
+              <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-white/10 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider mr-1 sm:mr-2">
                   Tags:
                 </span>
                 {post.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-zinc-300"
+                    className="px-2.5 sm:px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] sm:text-xs text-zinc-300"
                   >
                     #{tag}
                   </span>
@@ -345,14 +367,13 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
               </div>
             </article>
 
-            {/* Sidebar Column (4 cols) */}
-            <div className="lg:col-span-4">
+            {/* Desktop Sidebar Column (4 cols, hidden on mobile) */}
+            <div className="hidden lg:block lg:col-span-4">
               <div className="sticky top-28 space-y-6">
-                <BlogInteractions
+                <DesktopSidebar
                   slug={post.slug}
                   title={post.title}
                   tableOfContents={post.tableOfContents}
-                  faq={post.faq}
                 />
               </div>
             </div>
@@ -362,11 +383,11 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
 
       {/* Related Articles Section */}
       {relatedPosts.length > 0 && (
-        <section className="py-20 border-t border-white/5 bg-white/[0.01]">
+        <section className="py-12 sm:py-20 border-t border-white/5 bg-white/[0.01]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-10">
-              <h3 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-emerald-400" />
+            <div className="flex items-center justify-between mb-8 sm:mb-10">
+              <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
                 Related Articles
               </h3>
               <Link
@@ -377,25 +398,25 @@ export default async function BlogPostPage({ params, searchParams }: PageProps) 
               </Link>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6">
               {relatedPosts.map((rel) => (
                 <Link
                   key={rel.slug}
                   href={`/blog/${rel.slug}`}
-                  className="group rounded-3xl border border-white/5 hover:border-white/20 glass-strong p-6 flex flex-col justify-between transition-all hover:-translate-y-1"
+                  className="group rounded-2xl sm:rounded-3xl border border-white/5 hover:border-white/20 glass-strong p-5 sm:p-6 flex flex-col justify-between transition-all hover:-translate-y-1"
                 >
                   <div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
                       {rel.category}
                     </span>
-                    <h4 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors mt-4 mb-2 leading-snug">
+                    <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-emerald-400 transition-colors mt-3.5 mb-2 leading-snug break-words">
                       {rel.title}
                     </h4>
                     <p className="text-xs text-zinc-400 line-clamp-3 leading-relaxed">
                       {rel.excerpt}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between pt-6 border-t border-white/5 text-xs text-zinc-500 mt-6">
+                  <div className="flex items-center justify-between pt-5 border-t border-white/5 text-xs text-zinc-500 mt-5">
                     <span>{rel.readTime}</span>
                     <span className="text-emerald-400 flex items-center gap-1 font-semibold group-hover:translate-x-1 transition-transform">
                       Read <ArrowRight className="w-3.5 h-3.5" />

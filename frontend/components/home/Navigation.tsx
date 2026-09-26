@@ -11,9 +11,9 @@ import { useRouter } from 'next/navigation';
 const navLinks = [
   { label: 'Features', href: '/features' },
   { label: 'Govt Jobs', href: '/gov' },
-  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Blog', href: '/blog' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'About', href: '#about' },
+  { label: 'About', href: '/about' },
 ];
 
 export function Navigation() {
@@ -83,11 +83,9 @@ export function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
-            <motion.a
-              href="#"
+            <Link
+              href="/"
               className="flex items-center gap-2 group"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
             >
               <div className="relative">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-glow-sm">
@@ -98,22 +96,19 @@ export function Navigation() {
               <span className="text-lg font-bold text-white">
                 HireOrbit<span className="text-emerald-400">AI</span>
               </span>
-            </motion.a>
+            </Link>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link, index) => (
-                <motion.a
+                <Link
                   key={link.label}
                   href={link.href}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 + 0.2 }}
-                  className="text-sm text-zinc-400 hover:text-white transition-colors relative group"
+                  className="text-sm text-zinc-400 hover:text-white transition-colors relative group py-1"
                 >
                   {link.label}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-emerald-500 group-hover:w-full transition-all duration-300" />
-                </motion.a>
+                </Link>
               ))}
             </nav>
 
@@ -202,14 +197,14 @@ export function Navigation() {
             <div className="bg-zinc-950/95 backdrop-blur-xl border-b border-white/5 p-4">
               <nav className="space-y-2">
                 {navLinks.map((link) => (
-                  <a
+                  <Link
                     key={link.label}
                     href={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block px-4 py-3 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    className="block px-4 py-3 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm font-medium"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 ))}
               </nav>
               <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
