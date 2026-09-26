@@ -22,7 +22,12 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
   const primaryApplyLink = notice.links.find(l => l.type === 'apply_online')?.url || notice.source.officialUrl;
   const primaryPdfLink = notice.links.find(l => l.type === 'notification_pdf')?.url || notice.source.officialUrl;
 
-  const isLive = notice.status === 'APPLICATION_OPEN';
+  const isAnswerKey = notice.status === 'ANSWER_KEY_OUT' || 
+    (notice as any).type === 'answer-key' ||
+    /answer\s*key/i.test(notice.title) ||
+    /answer\s*key/i.test(notice.statusLabel);
+
+  const isLive = notice.status === 'APPLICATION_OPEN' || notice.status === 'ANSWER_KEY_OUT';
   const isStartingSoon = notice.status === 'APPLICATION_STARTING_SOON';
   const isClosed = notice.status === 'APPLICATION_CLOSED';
   const isCorrection = notice.status === 'CORRECTION_OPEN';
@@ -53,7 +58,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
                 {notice.statusLabel}
               </span>
 
-              {notice.dates.applicationLastDate && isLive && isRealDateString(notice.dates.applicationLastDate) && (
+              {notice.dates.applicationLastDate && isLive && isRealDateString(notice.dates.applicationLastDate) && !isAnswerKey && (
                 <span className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
                   <Clock className="w-3.5 h-3.5" />
                   Last Date: {notice.dates.applicationLastDate}
@@ -74,7 +79,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
                   <span>{notice.vacancy.total} Verified Vacancies</span>
                 </div>
               )}
-              {notice.dates.applicationStart && isRealDateString(notice.dates.applicationStart) && (
+              {notice.dates.applicationStart && isRealDateString(notice.dates.applicationStart) && !isAnswerKey && (
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Calendar className="w-4 h-4 text-zinc-500" />
                   <span>Started: {notice.dates.applicationStart}</span>
@@ -92,7 +97,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
                 rel="noopener noreferrer"
                 className="w-full py-3.5 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-glow hover:scale-[1.02] text-center"
               >
-                <span>Apply Online (Official)</span>
+                <span>{isAnswerKey ? "Check Answer Key (Official)" : "Apply Online (Official)"}</span>
                 <ExternalLink className="w-4 h-4" />
               </a>
             ) : (
@@ -109,7 +114,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
               className="w-full py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all border border-white/10 text-center"
             >
               <FileText className="w-4 h-4 text-blue-400" />
-              <span>Download Official Notification PDF</span>
+              <span>{isAnswerKey ? "Download Official Circular PDF" : "Download Official Notification PDF"}</span>
             </a>
 
             <Link
@@ -132,7 +137,7 @@ export function RecruitmentStatusCard({ notice }: RecruitmentStatusCardProps) {
             rel="noopener noreferrer"
             className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-glow transition-all"
           >
-            <span>Apply Online Now</span>
+            <span>{isAnswerKey ? "Check Answer Key" : "Apply Online Now"}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
         ) : (

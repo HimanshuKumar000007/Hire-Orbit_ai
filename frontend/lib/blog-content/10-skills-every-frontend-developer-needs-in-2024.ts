@@ -9,8 +9,17 @@ export const tenSkillsEveryFrontendDeveloperNeedsIn2024: BlogPost = {
   readTime: "11 min read",
   category: "Career Growth",
   author: {"name": "Himanshu Kumar", "role": "Founder & AI Systems Architect, HireOrbitAi"},
-  tags: ["Frontend", "React", "Next.js", "TypeScript", "Career Advice", "Web Development"],
-  seoKeywords: ["frontend developer skills 2024", "react developer roadmap", "next.js web development", "core web vitals optimization", "react server components"],
+  tags: ["Frontend", "Frontend Frameworks", "React", "Next.js", "TypeScript", "Career Advice", "Web Development"],
+  seoKeywords: [
+    "%frontend frameworks",
+    "frontend frameworks",
+    "frontend developer skills 2024",
+    "modern frontend frameworks",
+    "react developer roadmap",
+    "next.js web development",
+    "core web vitals optimization",
+    "react server components"
+  ],
   gradient: "from-emerald-500/20 via-teal-500/10 to-transparent",
   tableOfContents: [
   {

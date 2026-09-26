@@ -45,7 +45,7 @@ export function GovHubListing({ initialNotifications }: GovHubListingProps) {
   // Tab counts derived from live server data (not the old static array)
   const tabCounts = useMemo(() => ({
     all: notifications.length,
-    job: notifications.filter(i => i.type === 'job').length,
+    job: notifications.filter(i => i.type === 'job' || i.type === 'recruitment').length,
     'admit-card': notifications.filter(i => i.type === 'admit-card').length,
     result: notifications.filter(i => i.type === 'result').length,
     'answer-key': notifications.filter(i => i.type === 'answer-key').length,
@@ -55,8 +55,12 @@ export function GovHubListing({ initialNotifications }: GovHubListingProps) {
   const filteredNotifications = useMemo(() => {
     return notifications.filter((item) => {
       // Type tab filter
-      if (activeTab !== 'all' && item.type !== activeTab) {
-        return false;
+      if (activeTab !== 'all') {
+        if (activeTab === 'job') {
+          if (item.type !== 'job' && item.type !== 'recruitment') return false;
+        } else if (item.type !== activeTab) {
+          return false;
+        }
       }
       // Category filter
       if (selectedCategory !== 'all') {

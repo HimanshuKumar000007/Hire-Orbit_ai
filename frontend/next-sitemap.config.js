@@ -20,7 +20,8 @@ module.exports = {
   additionalPaths: async (config) => {
     const paths = [];
 
-    // ── Static high-priority gov listing pages ──
+    // ── Static high-priority landing pages ──
+    paths.push(await config.transform(config, '/frontend-frameworks'));
     paths.push(await config.transform(config, '/gov'));
     paths.push(await config.transform(config, '/gov/jobs'));
 

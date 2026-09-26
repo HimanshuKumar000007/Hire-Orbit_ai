@@ -6,7 +6,7 @@
  */
 
 import { cleanDateValue, isRealDateString, detectExamStage, ExamStage } from "./universal-date-normalizer";
-import { parseSarkariResultHtml } from "./sarkari-result-parser";
+import { parseSarkariResultHtml, isAggregatorLink } from "./sarkari-result-parser";
 
 const MONTH_NAMES = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
 
@@ -539,9 +539,17 @@ export async function deepExtractFromNotice(
               ageLimit: sarkari.ageLimit.rawText,
               qualification: sarkari.qualification || undefined,
               qualificationLevel: sarkari.qualificationLevel,
-              vacancies: sarkari.vacancies || undefined,
-              officialPdfUrl: sarkari.officialLinks.notificationPdfUrl,
-              applyUrl: sarkari.officialLinks.applyOnlineUrl,
+              officialPdfUrl: isAggregatorLink(sarkari.officialLinks.notificationPdfUrl) ? null : sarkari.officialLinks.notificationPdfUrl,
+              applyUrl: (() => {
+                const isAnswerKey = /answer\s*key/i.test(title);
+                const isAdmit = /admit\s*card|hall\s*ticket/i.test(title);
+                const candidate = isAnswerKey
+                  ? (sarkari.officialLinks.answerKeyUrl || sarkari.officialLinks.applyOnlineUrl || sarkari.officialLinks.officialWebsiteUrl)
+                  : isAdmit
+                  ? (sarkari.officialLinks.admitCardUrl || sarkari.officialLinks.applyOnlineUrl || sarkari.officialLinks.officialWebsiteUrl)
+                  : (sarkari.officialLinks.applyOnlineUrl || sarkari.officialLinks.officialWebsiteUrl);
+                return isAggregatorLink(candidate) ? null : candidate;
+              })(),
             };
           }
         }

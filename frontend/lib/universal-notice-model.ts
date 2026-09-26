@@ -66,6 +66,35 @@ export function isOfficialGovDomain(urlStr: string): boolean {
   }
 }
 
+export function isAggregatorUrl(urlStr?: string | null): boolean {
+  if (!urlStr) return true;
+  const s = urlStr.toLowerCase();
+  return (
+    s.includes("sarkariresult") ||
+    s.includes("sarkari") ||
+    s.includes("news.google.com") ||
+    s.includes("employmentnews.gov.in") ||
+    s.includes("t.me/") ||
+    s.includes("telegram") ||
+    s.includes("whatsapp") ||
+    s.includes("youtube") ||
+    s.includes("youtu.be") ||
+    s.includes("instagram") ||
+    s.includes("twitter") ||
+    s.includes("x.com") ||
+    s.includes("facebook") ||
+    s.includes("play.google") ||
+    s.includes("itunes.apple") ||
+    s.includes("apps.apple") ||
+    s.includes("tinyurl") ||
+    s.includes("bit.ly") ||
+    s.includes("testbook") ||
+    s.includes("adda247") ||
+    s.includes("jagranjosh") ||
+    s.includes("careers360")
+  );
+}
+
 
 export { cleanDateValue, isRealDateString, type DateStatus, validateNoticeDates, type DateValidationResult } from "./universal-date-normalizer";
 import { normalizeGovernmentNoticeDates, UniversalNoticeDateSet, cleanDateValue, isRealDateString, DateStatus, validateNoticeDates, DateValidationResult } from "./universal-date-normalizer";
@@ -335,7 +364,7 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
   // 2. Exam Name & Authority Resolution
   let authority = job.organization;
   let examName = job.shortTitle || job.title;
-  let officialPortalUrl = job.applyUrl;
+  let officialPortalUrl = (!isAggregatorUrl(job.applyUrl) ? job.applyUrl : null) || "https://employmentnews.gov.in";
 
   for (const [key, mapping] of Object.entries(OFFICIAL_PORTAL_REGISTRY)) {
     if (new RegExp(`\\b${key}\\b`, 'i').test(rawCombined)) {
@@ -343,6 +372,9 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
       officialPortalUrl = mapping.portalUrl;
       break;
     }
+  }
+  if (isAggregatorUrl(officialPortalUrl)) {
+    officialPortalUrl = "https://employmentnews.gov.in";
   }
 
   // Refine exam name from title
@@ -414,11 +446,11 @@ export function normalizeToUniversalNotice(job: GovJobNotification): UniversalNo
 
   // 5. Build Verified Links
   const links: UniversalNoticeLink[] = [];
-  const cleanPdfUrl = (job.officialPdfUrl && !job.officialPdfUrl.includes('news.google.com'))
+  const cleanPdfUrl = (job.officialPdfUrl && !isAggregatorUrl(job.officialPdfUrl))
     ? job.officialPdfUrl
     : officialPortalUrl;
 
-  const cleanApplyUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
+  const cleanApplyUrl = (job.applyUrl && !isAggregatorUrl(job.applyUrl))
     ? job.applyUrl
     : officialPortalUrl;
 
@@ -673,6 +705,7 @@ export type RecruitmentStatus =
   | 'CORRECTION_OPEN'
   | 'EXAM_DATE_ANNOUNCED'
   | 'ADMIT_CARD_LIVE'
+  | 'ANSWER_KEY_OUT'
   | 'EXAM_COMPLETED'
   | 'RESULT_DECLARED';
 
@@ -901,7 +934,7 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
 
   // 1. Resolve Authority & Portal URL
   let authority = job.organization;
-  let officialPortalUrl = job.applyUrl || "https://employmentnews.gov.in";
+  let officialPortalUrl = (!isAggregatorUrl(job.applyUrl) ? job.applyUrl : null) || "https://employmentnews.gov.in";
 
   for (const [key, mapping] of Object.entries(OFFICIAL_PORTAL_REGISTRY)) {
     if (new RegExp(`\\b${key}\\b`, 'i').test(rawCombined)) {
@@ -909,6 +942,9 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
       officialPortalUrl = mapping.portalUrl;
       break;
     }
+  }
+  if (isAggregatorUrl(officialPortalUrl)) {
+    officialPortalUrl = "https://employmentnews.gov.in";
   }
 
   // 2. Refined Exam & Recruitment Name (Generic Normalization, Zero Hardcoded Exams)
@@ -946,7 +982,15 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   const isCorrectionActive = /correction/i.test(job.badgeStatus) || 
     (rawDates.correctionLastDate && !rawDates.correctionLastDate.includes('N/A'));
 
-  if (isCorrectionActive) {
+  const isAnswerKeyActive = job.type === 'answer-key' ||
+    /answer\s*key/i.test(job.title) ||
+    /answer\s*key/i.test(job.badgeStatus || "");
+
+  if (isAnswerKeyActive) {
+    status = 'ANSWER_KEY_OUT';
+    statusLabel = 'Answer Key Released';
+    statusBadgeColor = 'emerald';
+  } else if (isCorrectionActive) {
     status = 'CORRECTION_OPEN';
     statusLabel = 'Correction Window Open';
     statusBadgeColor = 'blue';
@@ -1148,16 +1192,28 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
         "Active personal Mobile Number and Email ID for receiving registration OTP and official communications."
       ];
 
-  // 15. How to Apply Steps (Priority: Admit Card Download -> DB -> Curated -> Standard Guided Walkthrough)
-  const cleanApplyUrl = (job.applyUrl && !job.applyUrl.includes('news.google.com') && !job.applyUrl.includes('employmentnews.gov.in'))
+  // 15. How to Apply Steps (Priority: Answer Key -> Admit Card Download -> DB -> Curated -> Standard Guided Walkthrough)
+  const cleanApplyUrl = (job.applyUrl && !isAggregatorUrl(job.applyUrl))
     ? job.applyUrl
     : officialPortalUrl;
+
+  const isAnswerKeyNotice = status === 'ANSWER_KEY_OUT' || 
+    job.type === 'answer-key' || 
+    /answer\s*key/i.test(title);
 
   const isAdmitNotice = job.type === 'admit-card' || 
     /admit card|hall ticket|call letter|city slip|city intimation/i.test(title) ||
     /admit card/i.test(job.badgeStatus || "");
 
-  const howToApply: string[] = isAdmitNotice
+  const howToApply: string[] = isAnswerKeyNotice
+    ? [
+        `Step 1: Visit the official commission portal at ${officialPortalUrl} or click the direct verified link below.`,
+        `Step 2: On the candidate portal homepage, locate and click '${examName} Answer Key / Objection Tracker'.`,
+        "Step 3: Enter your verified credentials (Roll Number / Registration Number & Date of Birth) if required, or download the question paper booklet.",
+        "Step 4: Cross-check your attempted responses against the official provisional answer keys.",
+        "Step 5: If you detect any discrepancy, submit an online objection with standard proof before the prescribed deadline."
+      ]
+    : isAdmitNotice
     ? [
         `Step 1: Visit the official commission portal at ${officialPortalUrl} or click the direct verified link below.`,
         `Step 2: On the candidate portal homepage, locate and click the active notice link for '${examName} Admit Card / Hall Ticket'.`,
@@ -1181,12 +1237,24 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
 
   // 16. Official Links Command Center
   const links: UniversalNoticeLink[] = [];
-  const cleanPdfUrl = (job.officialPdfUrl && !job.officialPdfUrl.includes('news.google.com'))
+  const cleanPdfUrl = (job.officialPdfUrl && !isAggregatorUrl(job.officialPdfUrl))
     ? job.officialPdfUrl
     : officialPortalUrl;
 
-  // Primary Apply Online Link
-  if (status === 'APPLICATION_OPEN' || status === 'CORRECTION_OPEN') {
+  // Primary Action Link: Answer Key or Apply Online Link
+  if (status === 'ANSWER_KEY_OUT' || isAnswerKeyNotice) {
+    links.push({
+      title: `Check Official Answer Key (${examName})`,
+      url: cleanApplyUrl,
+      type: 'apply_online',
+      badge: 'Answer Key Out',
+      badgeColor: 'emerald',
+      isOfficial: true,
+      isExternal: true,
+      verificationLevel: 'VERIFIED',
+      sourceNote: 'Direct official commission answer key gateway'
+    });
+  } else if (status === 'APPLICATION_OPEN' || status === 'CORRECTION_OPEN') {
     links.push({
       title: `Apply Online for ${examName}`,
       url: cleanApplyUrl,
@@ -1203,7 +1271,9 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
   // Official Notification PDF
   if (cleanPdfUrl) {
     links.push({
-      title: `Download Official Recruitment Notification PDF (${examName})`,
+      title: isAnswerKeyNotice
+        ? `Download Official Notice / Exam Circular PDF (${examName})`
+        : `Download Official Recruitment Notification PDF (${examName})`,
       url: cleanPdfUrl,
       type: 'notification_pdf',
       badge: 'Official PDF',
@@ -1211,7 +1281,6 @@ export function normalizeToUniversalRecruitment(job: GovJobNotification): Univer
       isOfficial: true,
       isExternal: true,
       verificationLevel: 'VERIFIED',
-      sourceNote: 'Full gazette notification circular with post-wise rules'
     });
   }
 
@@ -1547,7 +1616,7 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
 
   // 1. Resolve Authority & Official Portal
   let authority = job.organization;
-  let officialPortalUrl = job.applyUrl || "https://employmentnews.gov.in";
+  let officialPortalUrl = (!isAggregatorUrl(job.applyUrl) ? job.applyUrl : null) || "https://employmentnews.gov.in";
 
   for (const [key, mapping] of Object.entries(OFFICIAL_PORTAL_REGISTRY)) {
     if (new RegExp(`\\b${key}\\b`, 'i').test(rawCombined)) {
@@ -1555,6 +1624,9 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
       officialPortalUrl = mapping.portalUrl;
       break;
     }
+  }
+  if (isAggregatorUrl(officialPortalUrl)) {
+    officialPortalUrl = "https://employmentnews.gov.in";
   }
 
   // 2. Exam Name & Stage Resolution (Generic Zero-Hardcoding)
@@ -1670,12 +1742,12 @@ export function normalizeToUniversalResult(job: GovJobNotification): UniversalRe
     ? 'Official Source Verified' 
     : 'Source Confirmed';
 
-  // Candidate Access Link: NEVER block or drop the link, even if from Sarkari Result!
-  const cleanResultUrl = (rawResultUrl && !rawResultUrl.includes('news.google.com') && !rawResultUrl.includes('employmentnews.gov.in'))
+  // Candidate Access Link: STRICT ZERO AGGREGATOR POLICY - Always verified official links
+  const cleanResultUrl = (rawResultUrl && !isAggregatorUrl(rawResultUrl))
     ? rawResultUrl
-    : (rawPdfUrl && !rawPdfUrl.includes('news.google.com') ? rawPdfUrl : officialPortalUrl);
+    : (rawPdfUrl && !isAggregatorUrl(rawPdfUrl) ? rawPdfUrl : officialPortalUrl);
 
-  const cleanPdfUrl = (rawPdfUrl && !rawPdfUrl.includes('news.google.com') && !rawPdfUrl.includes('employmentnews.gov.in'))
+  const cleanPdfUrl = (rawPdfUrl && !isAggregatorUrl(rawPdfUrl))
     ? rawPdfUrl
     : (isOfficialResultLink ? cleanResultUrl : officialPortalUrl);
 

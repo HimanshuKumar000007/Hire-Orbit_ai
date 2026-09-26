@@ -71,6 +71,9 @@ export interface ExtractedSarkariNotice {
     applyOnlineUrl: string | null;
     notificationPdfUrl: string | null;
     officialWebsiteUrl: string | null;
+    admitCardUrl?: string | null;
+    answerKeyUrl?: string | null;
+    resultUrl?: string | null;
   };
 }
 
@@ -174,6 +177,39 @@ export function cleanSarkariText(text: string): string {
 }
 
 /**
+ * Detects whether a URL belongs to a news aggregator, Sarkari Result domain, social media, or app store.
+ * Official action links MUST NEVER point to these domains.
+ */
+export function isAggregatorLink(url?: string | null): boolean {
+  if (!url) return true;
+  const s = url.toLowerCase();
+  return (
+    s.includes("sarkariresult") ||
+    s.includes("sarkari") ||
+    s.includes("news.google.com") ||
+    s.includes("employmentnews.gov.in") ||
+    s.includes("t.me/") ||
+    s.includes("telegram") ||
+    s.includes("whatsapp") ||
+    s.includes("youtube") ||
+    s.includes("youtu.be") ||
+    s.includes("instagram") ||
+    s.includes("twitter") ||
+    s.includes("x.com") ||
+    s.includes("facebook") ||
+    s.includes("play.google") ||
+    s.includes("itunes.apple") ||
+    s.includes("apps.apple") ||
+    s.includes("tinyurl") ||
+    s.includes("bit.ly") ||
+    s.includes("testbook") ||
+    s.includes("adda247") ||
+    s.includes("jagranjosh") ||
+    s.includes("careers360")
+  );
+}
+
+/**
  * Main parser: Parses full Sarkari Result HTML page
  */
 export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
@@ -232,9 +268,9 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
       const val = line.replace(/.*?Last\s*Date\s*(?:for|to)?\s*(?:Apply|Registration)(?:\s*Online)?\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
       lastDate = normalizeSarkariDateString(val);
     }
-    // Pay Exam Fee Last Date
-    if (/(?:Pay\s*(?:Exam\s*)?Fee(?:\s*Last\s*Date)?|Last\s*Date\s*(?:for\s*)?Fee\s*Payment)\s*[:|-]/i.test(line)) {
-      const val = line.replace(/.*?(?:Pay\s*(?:Exam\s*)?Fee(?:\s*Last\s*Date)?|Last\s*Date\s*(?:for\s*)?Fee\s*Payment)\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
+    // Pay Exam Fee Last Date / Complete Form Last Date
+    if (/(?:Pay\s*(?:Exam\s*)?Fee(?:\s*Last\s*Date)?|Last\s*Date\s*(?:for\s*)?Fee\s*Payment|Complete\s*Form\s*Last\s*Date)\s*[:|-]/i.test(line)) {
+      const val = line.replace(/.*?(?:Pay\s*(?:Exam\s*)?Fee(?:\s*Last\s*Date)?|Last\s*Date\s*(?:for\s*)?Fee\s*Payment|Complete\s*Form\s*Last\s*Date)\s*[:|-]\s*/i, "").split(/[|\n]/)[0];
       feeLastDate = normalizeSarkariDateString(val);
     }
     // Correction Date
@@ -378,38 +414,110 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
   const qualification = qualificationText ? qualificationText.slice(0, 200).trim() : null;
   const qualificationLevel = classifyQualificationLevel(qualification || cleanHtml);
 
-  // 7. Extract Direct Official Links from HTML anchors
+  // 7. Extract Direct Official Links from table rows, containers, and anchors
   let applyOnlineUrl: string | null = null;
   let notificationPdfUrl: string | null = null;
   let officialWebsiteUrl: string | null = null;
+  let admitCardUrl: string | null = null;
+  let answerKeyUrl: string | null = null;
+  let resultUrl: string | null = null;
 
-  // Regex to extract <a> tags with text and href (using [\s\S]*? for ES compatibility)
+  // Strategy A: Scan table rows <tr>...</tr> (standard Sarkari Result table layout)
+  const trMatches = html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi);
+  for (const tr of trMatches) {
+    const rowHtml = tr[1];
+    const rowText = rowHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+    const rowLinks = [...rowHtml.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+      .map(m => ({
+        href: m[1]?.trim(),
+        text: m[2]?.replace(/<[^>]+>/g, " ").trim().toLowerCase()
+      }))
+      .filter(l => l.href && !l.href.startsWith("#") && !l.href.startsWith("javascript:"));
+
+    for (const link of rowLinks) {
+      if (isAggregatorLink(link.href)) continue;
+
+      // 1. Direct anchor text check (Highest precision)
+      if (!applyOnlineUrl && (/apply\s*online|online\s*application/i.test(link.text) || (link.text.includes("registration") && !link.text.includes("otr")))) {
+        applyOnlineUrl = link.href;
+        continue;
+      }
+      if (!notificationPdfUrl && /download\s*notification|notification\s*pdf|detailed\s*notification/i.test(link.text)) {
+        notificationPdfUrl = link.href;
+        continue;
+      }
+      if (!officialWebsiteUrl && /official\s*website|commission\s*portal|official\s*portal/i.test(link.text)) {
+        officialWebsiteUrl = link.href;
+        continue;
+      }
+      if (!admitCardUrl && /admit\s*card|hall\s*ticket|call\s*letter/i.test(link.text)) {
+        admitCardUrl = link.href;
+        continue;
+      }
+      if (!answerKeyUrl && /answer\s*key/i.test(link.text)) {
+        answerKeyUrl = link.href;
+        continue;
+      }
+      if (!resultUrl && /download\s*result|check\s*result|scorecard/i.test(link.text)) {
+        resultUrl = link.href;
+        continue;
+      }
+
+      // 2. Row context check for generic anchors like "Click Here", "Link 1", "Server 1", "English"
+      if (!answerKeyUrl && rowText.includes("answer key")) {
+        answerKeyUrl = link.href;
+      } else if (!applyOnlineUrl && (rowText.includes("apply online") || (rowText.includes("registration") && !rowText.includes("otr")))) {
+        applyOnlineUrl = link.href;
+      } else if (!admitCardUrl && (rowText.includes("admit card") || rowText.includes("hall ticket"))) {
+        admitCardUrl = link.href;
+      } else if (!resultUrl && (rowText.includes("download result") || (rowText.includes("result") && !rowText.includes("sarkari")))) {
+        resultUrl = link.href;
+      } else if (!notificationPdfUrl && rowText.includes("notification")) {
+        notificationPdfUrl = link.href;
+      } else if (!officialWebsiteUrl && (rowText.includes("official website") || rowText.includes("commission portal"))) {
+        officialWebsiteUrl = link.href;
+      }
+    }
+  }
+
+  // Strategy B: Scan individual <a> tags across the entire document
   const linkMatches = html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi);
   for (const match of linkMatches) {
     const href = match[1]?.trim();
-    const anchorText = match[2]?.replace(/<[^>]+>/g, " ").trim();
-    if (!href || href.startsWith("#") || href.startsWith("javascript:")) continue;
+    const anchorText = match[2]?.replace(/<[^>]+>/g, " ").trim().toLowerCase();
+    if (!href || href.startsWith("#") || href.startsWith("javascript:") || isAggregatorLink(href)) continue;
 
-    // Apply Online link
     if (!applyOnlineUrl && /apply\s*online|registration|login|online\s*application/i.test(anchorText)) {
       applyOnlineUrl = href;
     }
-    // Notification PDF link
     if (!notificationPdfUrl && /download\s*notification|notification\s*pdf|detailed\s*notification/i.test(anchorText)) {
       notificationPdfUrl = href;
     }
-    // Official Website link
     if (!officialWebsiteUrl && /official\s*website|commission\s*portal|portal/i.test(anchorText)) {
       officialWebsiteUrl = href;
     }
+    if (!admitCardUrl && /admit\s*card|hall\s*ticket/i.test(anchorText)) {
+      admitCardUrl = href;
+    }
+    if (!answerKeyUrl && /answer\s*key/i.test(anchorText)) {
+      answerKeyUrl = href;
+    }
   }
+
+  // Final Sanitization: Zero tolerance for aggregator URLs in official fields
+  if (isAggregatorLink(applyOnlineUrl)) applyOnlineUrl = null;
+  if (isAggregatorLink(notificationPdfUrl)) notificationPdfUrl = null;
+  if (isAggregatorLink(officialWebsiteUrl)) officialWebsiteUrl = null;
+  if (isAggregatorLink(admitCardUrl)) admitCardUrl = null;
+  if (isAggregatorLink(answerKeyUrl)) answerKeyUrl = null;
+  if (isAggregatorLink(resultUrl)) resultUrl = null;
 
   return {
     isSarkariLayout,
     importantDates: {
       startDate,
       lastDate,
-      feeLastDate,
+      feeLastDate: feeLastDate || lastDate,
       correctionStartDate,
       correctionLastDate,
       examDate,
@@ -440,6 +548,9 @@ export function parseSarkariResultHtml(html: string): ExtractedSarkariNotice {
       applyOnlineUrl,
       notificationPdfUrl,
       officialWebsiteUrl,
+      admitCardUrl,
+      answerKeyUrl,
+      resultUrl,
     },
   };
 }

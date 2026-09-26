@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { generateRecruitmentFingerprint, generateResultFingerprint } from "@/lib/universal-notice-model";
 import { extractDatesFromText, deepExtractFromNotice, ExtractedUniversalDates } from "@/lib/deep-date-extractor";
+import { isAggregatorLink } from "@/lib/sarkari-result-parser";
 import { validateNoticeDates, cleanDateValue, isRealDateString } from "@/lib/universal-date-normalizer";
 import { diffNoticeFields, appendChangeHistory, createInitialNoticeLog } from "@/lib/notice-audit-engine";
 
@@ -783,11 +784,10 @@ function quickParseNotice(
       official_pdf_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
       apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
     } else {
-      // RESULT SOURCE POLICY: Sarkari Result / Aggregator candidate access is NEVER blocked!
-      // Retain the aggregator link so candidates have direct immediate result access.
+      // AGGREGATOR DISCOVERY: Default to verified commission headquarters portal
       verification_status = "pending";
       official_pdf_url = null;
-      apply_url = raw.link;
+      apply_url = officialMapping?.portalUrl || "https://employmentnews.gov.in";
     }
   } else {
     if (isDirectOfficialUrl) {
@@ -924,6 +924,67 @@ function extractRssItems(
   return items;
 }
 
+// ─── DIRECT SARKARI RESULT HOMEPAGE SCRAPER ─────────────────────────────
+async function fetchSarkariResultDirect(): Promise<Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }>> {
+  try {
+    const res = await fetch("https://www.sarkariresult.com/", {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return [];
+    const html = await res.text();
+    const ulRegex = /<ul class="sarkari-quick-list">([\s\S]*?)<\/ul>/gi;
+    const sections: string[] = [];
+    let match;
+    while ((match = ulRegex.exec(html)) !== null) {
+      sections.push(match[1]);
+    }
+
+    const items: Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }> = [];
+    const sourceDef: DiscoverySource = {
+      id: "sarkari_result_direct",
+      name: "Sarkari Result",
+      url: "https://www.sarkariresult.com/",
+      type: "aggregator_feed",
+      trustLevel: "trusted_aggregator",
+      isAggregator: true
+    };
+
+    // Columns: 0 = Result, 1 = Admit Card, 2 = Latest Job, 3 = Answer Key
+    for (let i = 0; i < Math.min(4, sections.length); i++) {
+      const liRegex = /<li><a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a><\/li>/gi;
+      let liMatch;
+      let count = 0;
+      while ((liMatch = liRegex.exec(sections[i])) !== null && count < 25) {
+        const link = liMatch[1].trim();
+        const rawTitle = liMatch[2]
+          .replace(/<[^>]+>/g, "")
+          .replace(/&amp;/g, "&")
+          .replace(/&#39;/g, "'")
+          .replace(/&quot;/g, '"')
+          .trim();
+        if (rawTitle && link) {
+          items.push({
+            title: rawTitle,
+            link,
+            pubDate: new Date().toUTCString(),
+            description: rawTitle,
+            source: sourceDef
+          });
+          count++;
+        }
+      }
+    }
+    return items;
+  } catch (e) {
+    console.error("Direct Sarkari Result scrape failed:", e);
+    return [];
+  }
+}
+
 // ─── MAIN GET / CRON HANDLER ──────────────────────────────────────────────
 export async function GET(request: Request) {
   const syncStartedAt = new Date().toISOString();
@@ -935,22 +996,25 @@ export async function GET(request: Request) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // 1. Parallel Fetch with Promise.allSettled & Timeouts
-    const feedResults = await Promise.allSettled(
-      DISCOVERY_SOURCES.map(source =>
-        fetch(source.url, {
-          next: { revalidate: 0 },
-          headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; HireOrbitAI-GovBot/2.0; +https://hireorbitai.in/bot)",
-            "Accept": "application/rss+xml, application/xml, text/xml, */*"
-          },
-          signal: AbortSignal.timeout(8000)
-        }).then(async r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return { source, text: await r.text() };
-        })
+    // 1. Parallel Fetch with Promise.allSettled & Timeouts (including direct Sarkari Result)
+    const [directSarkariItems, feedResults] = await Promise.all([
+      fetchSarkariResultDirect(),
+      Promise.allSettled(
+        DISCOVERY_SOURCES.map(source =>
+          fetch(source.url, {
+            next: { revalidate: 0 },
+            headers: {
+              "User-Agent": "Mozilla/5.0 (compatible; HireOrbitAI-GovBot/2.0; +https://hireorbitai.in/bot)",
+              "Accept": "application/rss+xml, application/xml, text/xml, */*"
+            },
+            signal: AbortSignal.timeout(8000)
+          }).then(async r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return { source, text: await r.text() };
+          })
+        )
       )
-    );
+    ]);
 
     // 2. Tally Source Metrics & Collect Items
     let sourcesSuccessful = 0;
@@ -974,7 +1038,7 @@ export async function GET(request: Request) {
       }
     });
 
-    const totalItemsFetched = perSourceItems.reduce((acc, curr) => acc + curr.length, 0);
+    const totalItemsFetched = perSourceItems.reduce((acc, curr) => acc + curr.length, 0) + directSarkariItems.length;
 
     // 3. Load Existing Database Rows for Cross-Source Deduplication
     const { data: existingRows } = await supabase
@@ -989,11 +1053,19 @@ export async function GET(request: Request) {
       if (row.slug) existingBySlug.set(row.slug, row);
     }
 
-    // 4. Round-Robin Item Selection (Ensure fair representation across sources)
+    // 4. Item Selection (Direct Sarkari Result first, then round-robin discovery)
     const toProcess: Array<{ title: string; link: string; pubDate: string; description: string; source: DiscoverySource }> = [];
     const seenTitlesThisRun = new Set<string>();
     const ITEMS_PER_FEED = 3;
-    const MAX_PROCESS_TOTAL = 60;
+    const MAX_PROCESS_TOTAL = 120;
+
+    // Top Priority: Ingest direct live Sarkari Result items first
+    for (const item of directSarkariItems) {
+      const dedupeKey = item.title.toLowerCase().slice(0, 35);
+      if (seenTitlesThisRun.has(dedupeKey)) continue;
+      seenTitlesThisRun.add(dedupeKey);
+      toProcess.push(item);
+    }
 
     for (const items of perSourceItems) {
       let count = 0;
@@ -1025,8 +1097,9 @@ export async function GET(request: Request) {
     const INGESTION_CUTOFF = new Date("2026-08-01T00:00:00.000Z");
 
     for (const rawItem of toProcess) {
-      // ── DATE GATE: Skip old notices published before August 2026 ──────────
-      if (rawItem.pubDate) {
+      // ── DATE GATE: Skip old notices published before August 2026 (ignore for direct live scraper) ──
+      const isDirectSarkari = rawItem.source.id === "sarkari_result_direct";
+      if (!isDirectSarkari && rawItem.pubDate) {
         const itemDate = new Date(rawItem.pubDate);
         // If date is parseable and before our cutoff, skip entirely
         if (!isNaN(itemDate.getTime()) && itemDate < INGESTION_CUTOFF) {
@@ -1037,15 +1110,14 @@ export async function GET(request: Request) {
 
       // ── TITLE YEAR GATE: Skip titles that are clearly 2025-era historical notices ──
       // If the title mentions 2025 but NOT 2026, it's an old/expired exam.
-      // Exception: if title mentions "result" or "answer key" for a 2025 exam published recently,
-      // those are still relevant — but recruitment/admit-card for 2025 are expired.
+      // Exception: if title mentions "result", "answer key", "admit card", "extended", or from direct homepage
       const titleLower = rawItem.title.toLowerCase();
       const has2025 = /\b2025\b/.test(rawItem.title);
       const has2026 = /\b2026\b/.test(rawItem.title);
-      if (has2025 && !has2026) {
+      if (has2025 && !has2026 && !isDirectSarkari) {
         const isResultOrAnswerKey = /result|answer key|scorecard|merit list|cutoff/i.test(titleLower);
-        if (!isResultOrAnswerKey) {
-          // This is a recruitment/admit-card for 2025 — skip it, the exam has already happened
+        const isAdmitOrActive = /admit card|exam date|exam schedule|hall ticket|call letter|date extend/i.test(titleLower);
+        if (!isResultOrAnswerKey && !isAdmitOrActive) {
           duplicates++;
           continue;
         }
@@ -1134,10 +1206,14 @@ export async function GET(request: Request) {
               parsed.vacancies = deepExtracted.vacancies;
             }
             if (deepExtracted.officialPdfUrl && (!parsed.official_pdf_url || parsed.official_pdf_url.includes("employmentnews.gov.in"))) {
-              parsed.official_pdf_url = deepExtracted.officialPdfUrl;
+              if (!isAggregatorLink(deepExtracted.officialPdfUrl)) {
+                parsed.official_pdf_url = deepExtracted.officialPdfUrl;
+              }
             }
             if (deepExtracted.applyUrl && (!parsed.apply_url || parsed.apply_url.includes("employmentnews.gov.in"))) {
-              parsed.apply_url = deepExtracted.applyUrl;
+              if (!isAggregatorLink(deepExtracted.applyUrl)) {
+                parsed.apply_url = deepExtracted.applyUrl;
+              }
             }
           }
         } catch (deepErr) {
