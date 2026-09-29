@@ -28,8 +28,8 @@ export const metadata: Metadata = {
   title: "Top Frontend Frameworks (2026): Best Web Frameworks Compared | HireOrbitAi",
   description: "Comprehensive 2026 guide to modern frontend frameworks: React 19, Next.js 15, Vue 3.5, Angular 19, Svelte 5, and Solid.js. Compare performance benchmarks, bundle sizes, developer salaries, ATS keywords, and interview guides.",
   keywords: [
-    "%frontend frameworks",
     "frontend frameworks",
+    "top 10 frontend frameworks",
     "best frontend frameworks 2026",
     "modern frontend frameworks",
     "frontend framework comparison",

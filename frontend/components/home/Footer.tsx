@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Orbit, Twitter, Linkedin, Github, Mail } from 'lucide-react';
 
 const footerLinks = {
-  Product: ['Features', 'Govt Jobs Desk', 'Pricing', 'Integrations', 'Changelog'],
+  Product: ['Features', 'Govt Jobs Desk', 'Frontend Frameworks', 'Pricing', 'Integrations', 'Changelog'],
   Company: ['About', 'Founder', 'Blog', 'Careers', 'Press', 'Partners'],
   Resources: ['Documentation', 'Help Center', 'Community', 'Templates', 'Webinars'],
   Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
@@ -73,6 +73,7 @@ export function Footer() {
                       href={
                         link === 'Features' ? '/features' : 
                         link === 'Govt Jobs Desk' ? '/gov' : 
+                        link === 'Frontend Frameworks' ? '/frontend-frameworks' :
                         link === 'Pricing' ? '/pricing' : 
                         link === 'Integrations' ? '/integrations' : 
                         link === 'Roadmap' ? '/roadmap' : 

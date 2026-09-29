@@ -176,6 +176,13 @@ export default function BlogPage() {
             {/* Quick RSS link & Admin preview notification */}
             <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 text-xs text-zinc-500">
               <Link
+                href="/frontend-frameworks"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-medium transition-colors shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>2026 Frontend Frameworks Hub & Benchmarks</span>
+              </Link>
+              <Link
                 href="/blog/rss.xml"
                 target="_blank"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/5 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400 transition-colors bg-white/[0.02]"
