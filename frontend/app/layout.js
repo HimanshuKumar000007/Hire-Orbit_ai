@@ -25,6 +25,64 @@ export const viewport = {
 export default function RootLayout({ children }) {
   const rawGaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-82W7CWTG5N";
   const gaId = rawGaId.startsWith("G-") ? rawGaId : `G-${rawGaId}`;
+  const siteUrl = process.env.SITE_URL || "https://hireorbitai.in";
+
+  const rootJsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "HireOrbitAi",
+        alternateName: "HireOrbit AI",
+        url: siteUrl,
+        logo: {
+          "@type": "ImageObject",
+          "@id": `${siteUrl}/#logo`,
+          url: `${siteUrl}/favicon.ico`,
+          caption: "HireOrbitAi",
+        },
+        sameAs: [
+          "https://twitter.com/hireorbitai",
+          "https://linkedin.com/company/hireorbitai",
+          "https://github.com/HimanshuKumar000007",
+        ],
+        description:
+          "AI-powered career intelligence platform providing semantic resume analysis, ATS scoring, and automated job matching.",
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "HireOrbitAi",
+        description: "AI-Powered Resume Analysis & Job Discovery Engine",
+        publisher: {
+          "@id": `${siteUrl}/#organization`,
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${siteUrl}/blog?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${siteUrl}/#software`,
+        name: "HireOrbitAi Career Copilot",
+        operatingSystem: "All",
+        applicationCategory: "BusinessApplication",
+        url: siteUrl,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+    ],
+  };
 
   return (
     <html lang="en" className={`${outfit.variable} dark antialiased`}>
@@ -34,6 +92,11 @@ export default function RootLayout({ children }) {
           async={true}
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7428853562205065"
           crossOrigin="anonymous"
+        />
+        {/* Global JSON-LD Schema (Organization, WebSite, SoftwareApplication) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(rootJsonLd) }}
         />
         {/* Google tag (gtag.js) */}
         <script
