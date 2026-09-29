@@ -45,9 +45,11 @@ import { dataEngineerRoadmapModernStackSalaries2026 } from "./blog-content/data-
 import { advancedPromptEngineeringRagArchitectureGuide2026 } from "./blog-content/advanced-prompt-engineering-rag-architecture-guide-2026";
 import { backendArchitectureGuideMicroservicesVsModularMonolith2026 } from "./blog-content/backend-architecture-guide-microservices-vs-modular-monolith-2026";
 import { crackFaangTechInterviewCodingPatternsRoadmap2026 } from "./blog-content/crack-faang-tech-interview-coding-patterns-roadmap-2026";
+import { jobsExtinctDueToAi2030FutureOfWorkGuide } from "./blog-content/jobs-extinct-due-to-ai-2030-future-of-work-guide";
 
 export const BLOG_POSTS: BlogPost[] = [
-  // 10 Global High-Demand & High-RPM Career & Architecture Series - Live Today
+  // Future of Work & High-Demand Series - Live Today
+  jobsExtinctDueToAi2030FutureOfWorkGuide,
   aiEngineerRoadmap2026CompleteGuide,
   cloudSolutionsArchitectRoadmapSalaryGuide2026,
   cybersecurityCareerRoadmapCertificationsSalary2026,
