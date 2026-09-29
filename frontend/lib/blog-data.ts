@@ -34,7 +34,30 @@ import { top10FrontendFrameworksForWebDevelopment2026 } from "./blog-content/top
 import { frontendVsBackendFrameworksFullstackArchitectureGuide2026 } from "./blog-content/frontend-vs-backend-frameworks-fullstack-architecture-guide-2026";
 import { topJsCssHtmlFrameworksForModernWebDevelopment2026 } from "./blog-content/top-js-css-html-frameworks-for-modern-web-development-2026";
 
+// 10 Global High-Demand & High-RPM Career & Architecture Series (2026)
+import { aiEngineerRoadmap2026CompleteGuide } from "./blog-content/ai-engineer-roadmap-2026-complete-guide";
+import { cloudSolutionsArchitectRoadmapSalaryGuide2026 } from "./blog-content/cloud-solutions-architect-roadmap-salary-guide-2026";
+import { cybersecurityCareerRoadmapCertificationsSalary2026 } from "./blog-content/cybersecurity-career-roadmap-certifications-salary-2026";
+import { devopsPlatformEngineerRoadmapSalary2026 } from "./blog-content/devops-platform-engineer-roadmap-salary-2026";
+import { howToLandHighPayingUsRemoteTechJobs2026 } from "./blog-content/how-to-land-high-paying-us-remote-tech-jobs-2026";
+import { machineLearningSystemDesignInterviewGuide2026 } from "./blog-content/machine-learning-system-design-interview-guide-2026";
+import { dataEngineerRoadmapModernStackSalaries2026 } from "./blog-content/data-engineer-roadmap-modern-stack-salaries-2026";
+import { advancedPromptEngineeringRagArchitectureGuide2026 } from "./blog-content/advanced-prompt-engineering-rag-architecture-guide-2026";
+import { backendArchitectureGuideMicroservicesVsModularMonolith2026 } from "./blog-content/backend-architecture-guide-microservices-vs-modular-monolith-2026";
+import { crackFaangTechInterviewCodingPatternsRoadmap2026 } from "./blog-content/crack-faang-tech-interview-coding-patterns-roadmap-2026";
+
 export const BLOG_POSTS: BlogPost[] = [
+  // 10 Global High-Demand & High-RPM Career & Architecture Series - Live Today
+  aiEngineerRoadmap2026CompleteGuide,
+  cloudSolutionsArchitectRoadmapSalaryGuide2026,
+  cybersecurityCareerRoadmapCertificationsSalary2026,
+  devopsPlatformEngineerRoadmapSalary2026,
+  howToLandHighPayingUsRemoteTechJobs2026,
+  machineLearningSystemDesignInterviewGuide2026,
+  dataEngineerRoadmapModernStackSalaries2026,
+  advancedPromptEngineeringRagArchitectureGuide2026,
+  backendArchitectureGuideMicroservicesVsModularMonolith2026,
+  crackFaangTechInterviewCodingPatternsRoadmap2026,
   // High-Demand Google Search & PAA Series - Live Today
   isFrontendWebDevelopmentDead2026AiTruth,
   whatIsAFrontendFrameworkArchitectureGuide,
