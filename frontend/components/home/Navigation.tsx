@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { resetMixpanel } from '@/lib/mixpanel';
 
 const navLinks = [
   { label: 'Features', href: '/features' },
@@ -63,6 +64,7 @@ export function Navigation() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    resetMixpanel();
     setSession(null);
     setHasResume(false);
     router.push('/');

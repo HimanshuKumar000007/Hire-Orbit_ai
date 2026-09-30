@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Mail, Lock, LogIn, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { identifyUser, trackEvent } from "@/lib/mixpanel"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -37,6 +38,15 @@ export default function Login() {
       toast.error(error.message)
       setLoading(false)
     } else {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        identifyUser(session.user.id, {
+          $email: session.user.email,
+        })
+        trackEvent("login_completed", {
+          login_method: "email",
+        })
+      }
       toast.success("Welcome back! 🚀")
       setTimeout(() => {
         router.replace("/dashboard")

@@ -1,6 +1,7 @@
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { MixpanelInitializer } from "@/components/analytics/MixpanelInitializer";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -116,6 +117,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="bg-background text-foreground min-h-screen overflow-x-hidden">
+        <MixpanelInitializer />
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_#1e293b_0%,_transparent_50%)] opacity-20 pointer-events-none" />
         {children}
         <Toaster position="top-center" richColors />

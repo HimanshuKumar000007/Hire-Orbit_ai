@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase";
+import { trackEvent } from "@/lib/mixpanel";
 
 export default function Onboarding() {
   const [step, setStep] = useState("upload");
@@ -128,6 +129,10 @@ export default function Onboarding() {
         setExtractedExp(resumeData.experience || "");
         setUploading(false);
         setStep("verify");
+        trackEvent("resume_uploaded", {
+          role: resumeData.role || "Professional",
+          skills_count: (resumeData.skills || []).length,
+        });
         toast.success("AI extraction completed! 🚀");
       });
 
@@ -170,6 +175,11 @@ export default function Onboarding() {
       if (error) {
         throw new Error(error.message);
       }
+
+      trackEvent("onboarding_completed", {
+        role: extractedRole,
+        skills_count: extractedSkills.length,
+      });
 
       toast.success("Profile verified! Welcome to HireOrbit 🚀");
       router.push("/dashboard");

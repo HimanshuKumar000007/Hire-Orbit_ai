@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Mail, Lock, UserPlus, Sparkles, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
+import { identifyUser, trackEvent } from "@/lib/mixpanel"
 
 export default function Signup() {
   const [email, setEmail] = useState("")
@@ -57,6 +58,15 @@ export default function Signup() {
             full_name: email.split('@')[0],
           },
         ], { onConflict: 'user_id' });
+
+        identifyUser(data.user.id, {
+          $email: email,
+          name: email.split('@')[0],
+        });
+        trackEvent("sign_up_completed", {
+          sign_up_method: "email",
+          has_session: !!data.session,
+        });
       }
       
       toast.success("🎉 Account created! Welcome to HireOrbitAi.")
