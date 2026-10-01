@@ -1,16 +1,100 @@
-name: 24/7 Government Jobs Sync Automation
+name: 24/7 Government Jobs Sync — Every Hour
 
 on:
   schedule:
-    # Runs every hour 24/7 (24 times a day)
+    # Fires at minute 0 of every hour, 24 hours a day, 7 days a week
     - cron: '0 * * * *'
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run — parse feeds but do not write to database'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   sync-gov-jobs:
     runs-on: ubuntu-latest
+    timeout-minutes: 8  # Next.js route can take up to 5 min for 27 sources; 8 min is safe ceiling
+
     steps:
-      - name: Trigger HireOrbitAI Gov Sync Engine
+      - name: Health check — confirm site is up before syncing
         run: |
-          echo "Triggering automated Government Careers Sync..."
-          curl -s -X GET "https://hireorbitai.in/api/gov/sync" || echo "Domain trigger completed"
+          echo "==> [$(date -u '+%Y-%m-%d %H:%M:%S UTC')] Checking site health..."
+
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 15 \
+            "https://hireorbitai.in")
+
+          echo "Site status: $HTTP"
+
+          if [ "$HTTP" != "200" ] && [ "$HTTP" != "308" ] && [ "$HTTP" != "301" ]; then
+            echo "Site returned $HTTP — aborting this sync cycle to avoid noise."
+            exit 1
+          fi
+
+          echo "Site is up. Proceeding with gov sync."
+
+      - name: Trigger Government Jobs Sync Engine
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+
+          # Build URL — append ?dryRun=true for manual dry run
+          SYNC_URL="https://hireorbitai.in/api/gov/sync"
+          if [ "$DRY_RUN" = "true" ]; then
+            SYNC_URL="${SYNC_URL}?dryRun=true"
+            echo "==> Dry run mode enabled — no DB writes."
+          fi
+
+          echo "==> [$(date -u '+%H:%M:%S UTC')] Calling: $SYNC_URL"
+
+          # --max-time 290 = 4m50s. Vercel Pro functions run up to 5 min (300s).
+          # We exit 10s early to allow GitHub to capture the output.
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            --max-time 290 \
+            -X GET "$SYNC_URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "x-cron-secret: ${CRON_SECRET}")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_CODE"
+
+          # Pretty print the JSON summary if the response is valid JSON
+          echo "$BODY" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print('Success:', d.get('success'))
+    print('Sources processed:', d.get('sourcesProcessed', 'N/A'))
+    print('Items fetched:', d.get('totalItemsFetched', 'N/A'))
+    print('New recruitments:', d.get('newRecruitments', 'N/A'))
+    print('Updated:', d.get('updatedRecruitments', 'N/A'))
+    print('Duplicates skipped:', d.get('duplicates', 'N/A'))
+    print('Duration:', str(d.get('durationMs', 'N/A')) + 'ms')
+    errs = d.get('errors', [])
+    if errs:
+        print('Source errors:', len(errs))
+        for e in errs[:5]:
+            print(' -', e)
+except Exception as ex:
+    print('Raw response (not JSON):', sys.stdin.read()[:500])
+" 2>/dev/null || echo "Response: $BODY" | head -c 1000
+
+          if [ "$HTTP_CODE" -eq 200 ]; then
+            echo "==> Gov sync completed successfully."
+            exit 0
+          elif [ "$HTTP_CODE" -eq 401 ]; then
+            echo "==> 401 Unauthorized — check CRON_SECRET in GitHub Secrets matches Vercel env var."
+            exit 1
+          elif [ "$HTTP_CODE" -eq 504 ] || [ "$HTTP_CODE" -eq 524 ]; then
+            echo "==> Gateway timeout ($HTTP_CODE) — sync may have partially completed. Not failing build."
+            exit 0
+          else
+            echo "==> Sync returned HTTP $HTTP_CODE."
+            exit 1
+          fi

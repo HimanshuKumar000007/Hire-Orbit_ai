@@ -1031,7 +1031,19 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const isTestMode = searchParams.get("test") === "true" || searchParams.get("dryRun") === "true";
+
+    // ── Auth Guard ──────────────────────────────────────────────────────────
+    // Real syncs (DB writes) require a valid CRON_SECRET in Authorization header.
+    // Requests without the secret are treated as safe dry-runs (no DB writes).
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = request.headers.get("authorization") || request.headers.get("x-cron-secret");
+    const isAuthorized = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+    // isTestMode: explicit ?dryRun=true param OR missing/wrong secret
+    const isTestMode =
+      searchParams.get("test") === "true" ||
+      searchParams.get("dryRun") === "true" ||
+      !isAuthorized;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
