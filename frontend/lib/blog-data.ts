@@ -126,7 +126,12 @@ export function getPublishedPosts(includePreview = false): BlogPost[] {
  * Checks publishDate unless includePreview is set.
  */
 export function getPostBySlug(slug: string, includePreview = false): BlogPost | undefined {
-  const post = BLOG_POSTS.find((p) => p.slug === slug);
+  const post = BLOG_POSTS.find(
+    (p) =>
+      p.slug === slug ||
+      (slug === "frontend-frameworks-in-2026-ranked" &&
+        p.slug === "semantic-job-search-vs-keyword-matching")
+  );
   if (!post) return undefined;
 
   if (includePreview) return post;
