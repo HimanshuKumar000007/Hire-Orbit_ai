@@ -25,6 +25,7 @@ import { seniorFrontendSystemDesignInterviewGuide2026 } from "./blog-content/sen
 import { coreWebVitalsOptimizingInpUnder50ms } from "./blog-content/core-web-vitals-optimizing-inp-under-50ms";
 import { microFrontends2026ModuleFederationVsMonorepo } from "./blog-content/micro-frontends-2026-module-federation-vs-monorepo";
 import { fullstackFrontendEdgeRuntimesServerActionsGuide } from "./blog-content/fullstack-frontend-edge-runtimes-server-actions-guide";
+import { frontendFrameworksIn2026Ranked } from "./blog-content/frontend-frameworks-in-2026-ranked";
 
 // High-Demand Search Series (Google PAA & Core Framework Queries)
 import { isFrontendWebDevelopmentDead2026AiTruth } from "./blog-content/is-frontend-web-development-dead-2026-ai-truth";
@@ -61,6 +62,7 @@ export const BLOG_POSTS: BlogPost[] = [
   backendArchitectureGuideMicroservicesVsModularMonolith2026,
   crackFaangTechInterviewCodingPatternsRoadmap2026,
   // High-Demand Google Search & PAA Series - Live Today
+  frontendFrameworksIn2026Ranked,
   isFrontendWebDevelopmentDead2026AiTruth,
   whatIsAFrontendFrameworkArchitectureGuide,
   doesNetflixUseReactOrAngularEnterpriseFrameworks2026,
@@ -126,12 +128,7 @@ export function getPublishedPosts(includePreview = false): BlogPost[] {
  * Checks publishDate unless includePreview is set.
  */
 export function getPostBySlug(slug: string, includePreview = false): BlogPost | undefined {
-  const post = BLOG_POSTS.find(
-    (p) =>
-      p.slug === slug ||
-      (slug === "frontend-frameworks-in-2026-ranked" &&
-        p.slug === "semantic-job-search-vs-keyword-matching")
-  );
+  const post = BLOG_POSTS.find((p) => p.slug === slug);
   if (!post) return undefined;
 
   if (includePreview) return post;
