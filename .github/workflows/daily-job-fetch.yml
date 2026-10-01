@@ -1,80 +1,20 @@
-name: Daily Job Fetcher — Adzuna Jobs
+name: Daily Job Fetcher
 
 on:
   schedule:
     # Runs at 20:30 UTC daily (02:00 AM IST)
-    # Fetches fresh Adzuna jobs into the database once per day
     - cron: '30 20 * * *'
+  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run — skip DB write (for testing the endpoint)'
-        required: false
-        default: 'false'
-        type: boolean
 
 jobs:
   fetch-jobs:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
     steps:
-      - name: Health check — confirm API is up before fetching
+      - name: Hit CRON Endpoint
         run: |
-          echo "==> [$(date -u '+%Y-%m-%d %H:%M:%S UTC')] Checking API health..."
-
-          HTTP=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 15 \
-            "https://api.hireorbitai.in/health")
-
-          echo "API health status: $HTTP"
-
-          if [ "$HTTP" != "200" ]; then
-            echo "API returned $HTTP — aborting to avoid a failed job fetch."
-            exit 1
-          fi
-
-          echo "API is up. Proceeding with daily job fetch."
-
-      - name: Fetch and store daily Adzuna jobs
-        env:
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          echo "==> [$(date -u '+%H:%M:%S UTC')] Triggering Adzuna job fetch..."
-
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
-            --max-time 90 \
-            -X POST "https://api.hireorbitai.in/api/fetch-jobs" \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            -H "Content-Type: application/json")
-
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-
-          echo "HTTP Status: $HTTP_CODE"
-
-          # Pretty print JSON if valid
-          echo "$BODY" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    print('Success:', d.get('success'))
-    print('Jobs stored:', d.get('stored', 'N/A'))
-    print('Keywords used:', d.get('keywords', 'N/A'))
-except:
-    print('Response:', sys.stdin.read()[:500])
-" 2>/dev/null || echo "Response: $BODY"
-
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "==> Daily job fetch completed successfully."
-            exit 0
-          elif [ "$HTTP_CODE" -eq 401 ]; then
-            echo "==> 401 Unauthorized — check that CRON_SECRET in GitHub Secrets matches the backend .env CRON_SECRET."
-            exit 1
-          elif [ "$HTTP_CODE" -eq 429 ]; then
-            echo "==> 429 Rate limited — cron limiter already fired once this hour. Safe to ignore."
-            exit 0
-          else
-            echo "==> Fetch returned HTTP $HTTP_CODE."
-            exit 1
-          fi
+          curl -X POST "https://api.hireorbitai.in/api/fetch-jobs" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail || exit 1
+        # The `--fail` command ensures the action fails if the server responds with a 4xx or 5xx code.
