@@ -48,7 +48,20 @@ import { backendArchitectureGuideMicroservicesVsModularMonolith2026 } from "./bl
 import { crackFaangTechInterviewCodingPatternsRoadmap2026 } from "./blog-content/crack-faang-tech-interview-coding-patterns-roadmap-2026";
 import { jobsExtinctDueToAi2030FutureOfWorkGuide } from "./blog-content/jobs-extinct-due-to-ai-2030-future-of-work-guide";
 
+// Flagship Job & Career Acquisition Series (2026)
+import { howToGetATechJobIn30DaysUsingAi2026 } from "./blog-content/how-to-get-a-tech-job-in-30-days-using-ai-2026";
+import { highestPayingRemoteTechJobsWithoutCoding2026 } from "./blog-content/highest-paying-remote-tech-jobs-without-coding-2026";
+import { govtJobsVsPrivateItJobsSalarySecurityReality2026 } from "./blog-content/govt-jobs-vs-private-it-jobs-salary-security-reality-2026";
+import { atsResumeScannerSecretsHowRecruitersFilterYou } from "./blog-content/ats-resume-scanner-secrets-how-recruiters-filter-you";
+import { crushTheTellMeAboutYourselfInterviewScript2026 } from "./blog-content/crush-the-tell-me-about-yourself-interview-script-2026";
+
 export const BLOG_POSTS: BlogPost[] = [
+  // Flagship Job & Career Series - Featured & Live
+  howToGetATechJobIn30DaysUsingAi2026,
+  highestPayingRemoteTechJobsWithoutCoding2026,
+  govtJobsVsPrivateItJobsSalarySecurityReality2026,
+  atsResumeScannerSecretsHowRecruitersFilterYou,
+  crushTheTellMeAboutYourselfInterviewScript2026,
   // Future of Work & High-Demand Series - Live Today
   jobsExtinctDueToAi2030FutureOfWorkGuide,
   aiEngineerRoadmap2026CompleteGuide,
