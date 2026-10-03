@@ -1,15 +1,26 @@
 "use client";
 
 import { useEffect } from "react";
-import { initMixpanel, identifyUser, resetMixpanel } from "@/lib/mixpanel";
+import { usePathname } from "next/navigation";
+import {
+  initMixpanel,
+  identifyUser,
+  resetMixpanel,
+  captureAndRegisterUTMs,
+} from "@/lib/mixpanel";
 import { getSupabaseClient } from "@/lib/supabase";
 
 export function MixpanelInitializer() {
+  const pathname = usePathname();
+
   useEffect(() => {
-    // 1. Initialize Mixpanel on mount
+    // 1. Initialize Mixpanel
     initMixpanel();
 
-    // 2. Sync with Supabase Auth session
+    // 2. Capture and register UTM parameters & first-touch attribution
+    captureAndRegisterUTMs();
+
+    // 3. Sync with Supabase Auth session
     const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -36,7 +47,7 @@ export function MixpanelInitializer() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
