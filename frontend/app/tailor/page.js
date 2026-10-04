@@ -118,7 +118,7 @@ export default function TailorPage() {
     <div className="min-h-screen bg-zinc-950 text-white flex">
       <Sidebar activeItem="tailor" user={userProfile} />
 
-      <main className="lg:ml-72 flex-1 min-h-screen relative p-6 overflow-y-auto">
+      <main className="lg:ml-72 flex-1 min-h-screen relative p-4 pt-16 sm:p-6 sm:pt-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto space-y-8 relative z-10">
           {/* Header */}
           <div className="flex items-center justify-between">
