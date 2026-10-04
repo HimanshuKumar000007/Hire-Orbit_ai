@@ -59,6 +59,8 @@ export default function AdminDashboardPage() {
   // Data states
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [govCount, setGovCount] = useState<number>(0);
+  const [privateJobsCount, setPrivateJobsCount] = useState<number>(0);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [resumeFilter, setResumeFilter] = useState<"all" | "with_resume" | "no_resume">("all");
@@ -86,7 +88,7 @@ export default function AdminDashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch user profiles
+      // 1. Fetch user profiles directly from Supabase
       const { data: profileData, error: profileErr } = await supabase
         .from("profiles")
         .select("*")
@@ -96,13 +98,24 @@ export default function AdminDashboardPage() {
       setProfiles((profileData as Profile[]) || []);
 
       // 2. Fetch government notifications count
-      const { count, error: govErr } = await supabase
+      const { count: govNotifCount, error: govErr } = await supabase
         .from("gov_notifications")
         .select("*", { count: "exact", head: true });
 
-      if (!govErr && count !== null) {
-        setGovCount(count);
+      if (!govErr && govNotifCount !== null) {
+        setGovCount(govNotifCount);
       }
+
+      // 3. Fetch private tech jobs count
+      const { count: jobCount, error: jobsErr } = await supabase
+        .from("jobs")
+        .select("*", { count: "exact", head: true });
+
+      if (!jobsErr && jobCount !== null) {
+        setPrivateJobsCount(jobCount);
+      }
+
+      setLastRefreshedAt(new Date());
     } catch (err: any) {
       console.error("[Admin Dashboard] Data fetch error:", err);
       toast.error("Failed to refresh some metrics: " + (err.message || "Unknown error"));
@@ -151,11 +164,27 @@ export default function AdminDashboardPage() {
     all: "All Time",
   };
 
+  // Safe UTC date parser: Postgres returns timestamps like "2026-10-03 16:10:22.659677" without timezone.
+  // Adding 'Z' ensures browsers treat it as UTC rather than confusing it with local time.
+  const parseUtcDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+    let str = dateStr.trim();
+    if (!str) return null;
+    if (str.includes(" ") && !str.includes("T")) {
+      str = str.replace(" ", "T");
+    }
+    if (!str.endsWith("Z") && !str.includes("+") && !/-\d{2}:\d{2}$/.test(str)) {
+      str = str + "Z";
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const isWithinTimeRange = (dateStr: string | null | undefined, range: "today" | "7d" | "30d" | "all") => {
     if (range === "all") return true;
-    if (!dateStr) return false;
-    const itemDate = new Date(dateStr).getTime();
-    if (isNaN(itemDate)) return false;
+    const parsed = parseUtcDate(dateStr);
+    if (!parsed) return false;
+    const itemDate = parsed.getTime();
     const now = Date.now();
     const diffMs = now - itemDate;
 
@@ -174,13 +203,38 @@ export default function AdminDashboardPage() {
     return true;
   };
 
-  // Time-scoped profiles for KPI metrics
+  const formatCandidateTimeAgo = (dateStr: string | null | undefined) => {
+    const parsed = parseUtcDate(dateStr);
+    if (!parsed) return "N/A";
+    const diffMs = Date.now() - parsed.getTime();
+    const diffMins = Math.floor(diffMs / (60 * 1000));
+    const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+    if (diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return parsed.toLocaleDateString();
+  };
+
+  // Time-scoped profiles for KPI metrics (candidates who registered in this timeframe)
   const timeScopedProfiles = useMemo(() => {
     return profiles.filter((p) => isWithinTimeRange(p.created_at, timeRange));
   }, [profiles, timeRange]);
 
   const scopedTotalUsers = timeScopedProfiles.length;
-  const scopedUsersWithResumes = timeScopedProfiles.filter((p) => p.resume_url).length;
+
+  // Time-scoped resumes (candidates who uploaded or updated a resume in this timeframe)
+  const scopedResumes = useMemo(() => {
+    return profiles.filter((p) => {
+      if (!p.resume_url) return false;
+      if (timeRange === "all") return true;
+      const activityDate = p.updated_at || p.created_at;
+      return isWithinTimeRange(activityDate, timeRange) || isWithinTimeRange(p.created_at, timeRange);
+    });
+  }, [profiles, timeRange]);
+
+  const scopedUsersWithResumes = scopedResumes.length;
   const scopedResumeConversionRate =
     scopedTotalUsers > 0 ? Math.round((scopedUsersWithResumes / scopedTotalUsers) * 100) : 0;
 
@@ -361,14 +415,25 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Supabase Live DB</span>
+            </div>
+
+            {lastRefreshedAt && (
+              <span className="hidden lg:inline text-[11px] text-zinc-500 font-mono">
+                Synced {lastRefreshedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+            )}
+
             <button
               onClick={fetchData}
               disabled={loading}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 text-xs text-zinc-300 hover:text-white transition-all cursor-pointer"
-              title="Refresh Data"
+              title="Refresh Data from Supabase"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-emerald-400" : ""}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">{loading ? "Refreshing..." : "Live Refresh"}</span>
             </button>
 
             <Link
@@ -505,17 +570,20 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* Card 3: Govt Notifications Synced */}
+          {/* Card 3: Live Jobs Synced in Database */}
           <div className="p-5 rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm">
             <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Live Govt Jobs Synced</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">Total Jobs in Engine</span>
               <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400">
                 <Database className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-white tracking-tight">{loading ? "..." : govCount.toLocaleString()}</div>
-            <div className="text-xs text-zinc-400 mt-2 flex items-center gap-1">
-              <span className="text-emerald-400 font-medium">Auto-sync</span> active via Supabase
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              {loading ? "..." : (govCount + privateJobsCount > 0 ? (govCount + privateJobsCount).toLocaleString() : govCount.toLocaleString())}
+            </div>
+            <div className="text-xs text-zinc-400 mt-2 flex items-center justify-between">
+              <span className="text-emerald-400 font-medium">{govCount.toLocaleString()} Govt</span>
+              <span className="text-zinc-500 text-[11px]">• {privateJobsCount} Private Tech</span>
             </div>
           </div>
 
@@ -701,7 +769,9 @@ export default function AdminDashboardPage() {
                   ) : (
                     filteredProfiles.map((p) => {
                       const displayName = p.full_name || p.name || "Anonymous Candidate";
-                      const dateStr = p.created_at ? new Date(p.created_at).toLocaleDateString() : "N/A";
+                      const timeAgo = formatCandidateTimeAgo(p.created_at);
+                      const exactDate = p.created_at ? new Date(p.created_at).toLocaleDateString() : "N/A";
+                      const fullTooltip = p.created_at ? parseUtcDate(p.created_at)?.toLocaleString() : "";
                       const skills = p.skills || [];
 
                       return (
@@ -753,8 +823,11 @@ export default function AdminDashboardPage() {
                               <span className="text-zinc-600 text-[11px]">No file</span>
                             )}
                           </td>
-                          <td className="py-3.5 px-4 text-zinc-500 text-[11px]">
-                            {dateStr}
+                          <td className="py-3.5 px-4 text-zinc-400 text-[11px]" title={fullTooltip || undefined}>
+                            <div className="font-medium text-white">{timeAgo}</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">
+                              {exactDate}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -786,16 +859,20 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="space-y-2 text-xs text-zinc-300">
                   <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                    <span>Active Users (Today)</span>
-                    <span className="font-semibold text-white">39 Unique</span>
+                    <span>Candidates in Window</span>
+                    <span className="font-semibold text-white">{scopedTotalUsers} Registered</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                    <span>Events Tracked</span>
-                    <span className="font-semibold text-emerald-400">sign_up, resume_uploaded, pageview</span>
+                    <span>All-Time Candidates</span>
+                    <span className="font-semibold text-emerald-400">{profiles.length} Profiles</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-zinc-800/60">
+                    <span>Resumes in DB</span>
+                    <span className="font-semibold text-emerald-400">{usersWithResumes} Uploaded</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span>Attribution</span>
-                    <span className="font-semibold text-purple-400">First-Touch & Last-Touch</span>
+                    <span>Events Auto-Recorded</span>
+                    <span className="font-semibold text-purple-400">sign_up, resume_uploaded, pageview</span>
                   </div>
                 </div>
                 <a
@@ -804,7 +881,7 @@ export default function AdminDashboardPage() {
                   rel="noreferrer"
                   className="mt-5 w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold transition-colors"
                 >
-                  Open Mixpanel Workspace <ExternalLink className="w-3 h-3" />
+                  Open Live Mixpanel Workspace <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
 
@@ -824,16 +901,16 @@ export default function AdminDashboardPage() {
                 </p>
                 <div className="space-y-2 text-xs text-zinc-300">
                   <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                    <span>Total 24h Impressions</span>
-                    <span className="font-semibold text-white">9,910 impressions</span>
+                    <span>Verified Domain</span>
+                    <span className="font-semibold text-white">hireorbitai.in</span>
                   </div>
                   <div className="flex justify-between py-1 border-b border-zinc-800/60">
-                    <span>Average Position</span>
-                    <span className="font-semibold text-amber-400">4.1 (Page 1)</span>
+                    <span>Sitemap XML Pages</span>
+                    <span className="font-semibold text-emerald-400">116 Pages Generated</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span>Target Opportunity</span>
-                    <span className="font-semibold text-emerald-400">CTR Growth to 3.5%</span>
+                    <span>Search Index Status</span>
+                    <span className="font-semibold text-blue-400">Active (Auto-Crawl)</span>
                   </div>
                 </div>
                 <a
