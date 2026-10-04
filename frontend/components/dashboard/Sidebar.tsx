@@ -67,8 +67,8 @@ const drawerVariants: Variants = {
   closed: {
     x: "-100%",
     transition: {
-      duration: 0.24,
-      ease: [0.32, 0.72, 0, 1], // Smooth immediate exit with no spring tail delay
+      duration: 0.26,
+      ease: [0.32, 0.72, 0, 1], // Crisp, swift sliding exit with speed
     },
   },
   open: {
@@ -83,7 +83,7 @@ const drawerVariants: Variants = {
 const backdropVariants: Variants = {
   closed: {
     opacity: 0,
-    transition: { duration: 0.2, ease: "easeOut" },
+    transition: { duration: 0.22, ease: "easeOut" },
   },
   open: {
     opacity: 1,
@@ -156,7 +156,7 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
         <motion.button
           type="button"
           whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.88 }}
+          whileTap={{ scale: 0.88, rotate: 90 }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -165,7 +165,7 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
           aria-label="Close Navigation"
           className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all cursor-pointer shrink-0"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 transition-transform duration-150" />
         </motion.button>
       </div>
 
@@ -309,38 +309,36 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
       {/* Mobile Animated Drawer with Drag-to-Dismiss */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Smooth Backdrop with Blur */}
-            <motion.div
-              key="mobile-drawer-backdrop"
-              variants={backdropVariants}
-              initial="closed"
-              animate="open"
-              exit="closed"
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 lg:hidden cursor-pointer will-change-[opacity]"
-            />
+          <motion.div
+            key="mobile-drawer-backdrop"
+            variants={backdropVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 lg:hidden cursor-pointer will-change-[opacity]"
+          />
+        )}
 
-            {/* Mobile Drawer with Ultra-Smooth Dismissal */}
-            <motion.div
-              key="mobile-drawer-panel"
-              variants={drawerVariants}
-              initial="closed"
-              animate="open"
-              exit="closed"
-              drag="x"
-              dragConstraints={{ left: -320, right: 0 }}
-              dragElastic={0.05}
-              onDragEnd={(_e, info) => {
-                if (info.offset.x < -60 || info.velocity.x < -200) {
-                  setIsOpen(false);
-                }
-              }}
-              className="fixed left-0 top-0 bottom-0 z-50 h-full w-[84vw] max-w-[310px] lg:hidden shadow-2xl shadow-black/95 focus:outline-none will-change-transform"
-            >
-              {SidebarContent}
-            </motion.div>
-          </>
+        {isOpen && (
+          <motion.div
+            key="mobile-drawer-panel"
+            variants={drawerVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            drag="x"
+            dragConstraints={{ left: -320, right: 0 }}
+            dragElastic={0.05}
+            onDragEnd={(_e, info) => {
+              if (info.offset.x < -60 || info.velocity.x < -200) {
+                setIsOpen(false);
+              }
+            }}
+            className="fixed left-0 top-0 bottom-0 z-50 h-full w-[84vw] max-w-[310px] lg:hidden shadow-2xl shadow-black/95 focus:outline-none will-change-transform"
+          >
+            {SidebarContent}
+          </motion.div>
         )}
       </AnimatePresence>
 
