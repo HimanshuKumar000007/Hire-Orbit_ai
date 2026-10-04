@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   LayoutDashboard,
   FileText,
@@ -61,6 +61,35 @@ interface SidebarProps {
   onItemClick?: (id: string) => void;
   user?: User;
 }
+
+// Cubic-bezier physics for iOS-grade smooth drawer motion
+const drawerVariants: Variants = {
+  closed: {
+    x: "-100%",
+    transition: {
+      duration: 0.24,
+      ease: [0.32, 0.72, 0, 1], // Smooth immediate exit with no spring tail delay
+    },
+  },
+  open: {
+    x: "0%",
+    transition: {
+      duration: 0.3,
+      ease: [0.16, 1, 0.3, 1], // Decelerated fluid entry
+    },
+  },
+};
+
+const backdropVariants: Variants = {
+  closed: {
+    opacity: 0,
+    transition: { duration: 0.2, ease: "easeOut" },
+  },
+  open: {
+    opacity: 1,
+    transition: { duration: 0.25, ease: "easeOut" },
+  },
+};
 
 export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -123,14 +152,21 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
           </div>
         </Link>
 
-        {/* Polished Mobile Close Button */}
-        <button
-          onClick={() => setIsOpen(false)}
+        {/* Sleek Minimalist Close Button (matching reference) */}
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.88 }}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsOpen(false);
+          }}
           aria-label="Close Navigation"
-          className="lg:hidden p-2 rounded-xl bg-white/5 hover:bg-white/10 active:scale-95 text-zinc-400 hover:text-white border border-white/10 transition-all cursor-pointer"
+          className="lg:hidden w-8 h-8 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-all cursor-pointer shrink-0"
         >
           <X className="w-5 h-5" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Mobile Swipe-to-close hint */}
@@ -276,20 +312,22 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
           <>
             {/* Smooth Backdrop with Blur */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              key="mobile-drawer-backdrop"
+              variants={backdropVariants}
+              initial="closed"
+              animate="open"
+              exit="closed"
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 lg:hidden"
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 lg:hidden cursor-pointer will-change-[opacity]"
             />
 
-            {/* Mobile Drawer with Swipe Left Gesture */}
+            {/* Mobile Drawer with Ultra-Smooth Dismissal */}
             <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 280, mass: 0.8 }}
+              key="mobile-drawer-panel"
+              variants={drawerVariants}
+              initial="closed"
+              animate="open"
+              exit="closed"
               drag="x"
               dragConstraints={{ left: -320, right: 0 }}
               dragElastic={0.05}
@@ -298,7 +336,7 @@ export function Sidebar({ activeItem = 'dashboard', onItemClick, user }: Sidebar
                   setIsOpen(false);
                 }
               }}
-              className="fixed left-0 top-0 bottom-0 z-50 h-full w-[84vw] max-w-[310px] lg:hidden shadow-2xl shadow-black/90 focus:outline-none"
+              className="fixed left-0 top-0 bottom-0 z-50 h-full w-[84vw] max-w-[310px] lg:hidden shadow-2xl shadow-black/95 focus:outline-none will-change-transform"
             >
               {SidebarContent}
             </motion.div>
