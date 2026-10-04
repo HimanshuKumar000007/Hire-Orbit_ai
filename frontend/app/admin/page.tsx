@@ -62,6 +62,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [resumeFilter, setResumeFilter] = useState<"all" | "with_resume" | "no_resume">("all");
+  const [timeRange, setTimeRange] = useState<"today" | "7d" | "30d" | "all">("all");
   const [activeTab, setActiveTab] = useState<"users" | "analytics" | "content" | "skills" | "utm_builder">("users");
 
   // UTM Generator tool state
@@ -143,9 +144,52 @@ export default function AdminDashboardPage() {
     toast.info("Logged out of Admin Console");
   };
 
-  // Filtered profiles based on search and resume upload status
+  const timeRangeLabels: Record<"today" | "7d" | "30d" | "all", string> = {
+    today: "Today (Last 24 Hours)",
+    "7d": "Last 7 Days",
+    "30d": "Last 30 Days (1 Month)",
+    all: "All Time",
+  };
+
+  const isWithinTimeRange = (dateStr: string | null | undefined, range: "today" | "7d" | "30d" | "all") => {
+    if (range === "all") return true;
+    if (!dateStr) return false;
+    const itemDate = new Date(dateStr).getTime();
+    if (isNaN(itemDate)) return false;
+    const now = Date.now();
+    const diffMs = now - itemDate;
+
+    if (range === "today") {
+      const oneDayMs = 24 * 60 * 60 * 1000;
+      return diffMs >= 0 && diffMs <= oneDayMs;
+    }
+    if (range === "7d") {
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      return diffMs >= 0 && diffMs <= sevenDaysMs;
+    }
+    if (range === "30d") {
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+      return diffMs >= 0 && diffMs <= thirtyDaysMs;
+    }
+    return true;
+  };
+
+  // Time-scoped profiles for KPI metrics
+  const timeScopedProfiles = useMemo(() => {
+    return profiles.filter((p) => isWithinTimeRange(p.created_at, timeRange));
+  }, [profiles, timeRange]);
+
+  const scopedTotalUsers = timeScopedProfiles.length;
+  const scopedUsersWithResumes = timeScopedProfiles.filter((p) => p.resume_url).length;
+  const scopedResumeConversionRate =
+    scopedTotalUsers > 0 ? Math.round((scopedUsersWithResumes / scopedTotalUsers) * 100) : 0;
+
+  // Filtered profiles based on search, resume upload status, and time range
   const filteredProfiles = useMemo(() => {
     return profiles.filter((p) => {
+      // Time filter
+      if (!isWithinTimeRange(p.created_at, timeRange)) return false;
+
       // Resume filter
       if (resumeFilter === "with_resume" && !p.resume_url) return false;
       if (resumeFilter === "no_resume" && p.resume_url) return false;
@@ -160,12 +204,12 @@ export default function AdminDashboardPage() {
 
       return name.includes(q) || email.includes(q) || role.includes(q) || skills.includes(q);
     });
-  }, [profiles, searchQuery, resumeFilter]);
+  }, [profiles, searchQuery, resumeFilter, timeRange]);
 
-  // Aggregated Skills Count
+  // Aggregated Skills Count (based on active time window)
   const topSkills = useMemo(() => {
     const counts: Record<string, number> = {};
-    profiles.forEach((p) => {
+    timeScopedProfiles.forEach((p) => {
       (p.skills || []).forEach((skill) => {
         const cleaned = skill.trim();
         if (cleaned) {
@@ -177,7 +221,7 @@ export default function AdminDashboardPage() {
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 20);
-  }, [profiles]);
+  }, [timeScopedProfiles]);
 
   // Derived metrics
   const totalUsers = profiles.length;
@@ -187,13 +231,14 @@ export default function AdminDashboardPage() {
 
   // Export Users to CSV
   const exportUsersToCSV = () => {
-    if (profiles.length === 0) {
+    const listToExport = filteredProfiles.length > 0 ? filteredProfiles : profiles;
+    if (listToExport.length === 0) {
       toast.error("No user records available to export");
       return;
     }
 
     const headers = ["User ID", "Full Name", "Email", "Role", "Skills", "Has Resume", "Resume URL", "Joined At"];
-    const rows = profiles.map((p) => [
+    const rows = listToExport.map((p) => [
       p.user_id,
       `"${p.full_name || p.name || "N/A"}"`,
       `"${p.email || "N/A"}"`,
@@ -208,11 +253,11 @@ export default function AdminDashboardPage() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `hireorbit_users_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `hireorbit_users_${timeRange}_${new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Exported users to CSV successfully!");
+    toast.success(`Exported ${listToExport.length} candidate records to CSV successfully!`);
   };
 
   // Generate UTM link
@@ -348,33 +393,115 @@ export default function AdminDashboardPage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Time Horizon Filter Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 backdrop-blur-sm shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-white flex items-center gap-2">
+                <span>Timeframe Horizon</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {timeRangeLabels[timeRange]}
+                </span>
+              </div>
+              <div className="text-[11px] text-zinc-400">
+                Filter candidate registrations, resume conversion rates, and talent metrics
+              </div>
+            </div>
+          </div>
+
+          {/* Time range pills */}
+          <div className="flex items-center bg-zinc-950 border border-zinc-800 p-1 rounded-xl gap-1 shrink-0">
+            <button
+              onClick={() => setTimeRange("today")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                timeRange === "today"
+                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => setTimeRange("7d")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                timeRange === "7d"
+                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+              }`}
+            >
+              7 Days
+            </button>
+            <button
+              onClick={() => setTimeRange("30d")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                timeRange === "30d"
+                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+              }`}
+            >
+              1 Month
+            </button>
+            <button
+              onClick={() => setTimeRange("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                timeRange === "all"
+                  ? "bg-emerald-500 text-zinc-950 font-bold shadow-sm"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-900"
+              }`}
+            >
+              All Time
+            </button>
+          </div>
+        </div>
+
         {/* KPI Cards Grid */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* Card 1: Total Users */}
+          {/* Card 1: Registered Users */}
           <div className="p-5 rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm">
             <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Total Registered Users</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                {timeRange === "all" ? "Total Registered Users" : `Users (${timeRange === "today" ? "Today" : timeRange === "7d" ? "7 Days" : "1 Month"})`}
+              </span>
               <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
                 <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-white tracking-tight">{loading ? "..." : totalUsers}</div>
-            <div className="text-xs text-zinc-400 mt-2 flex items-center gap-1">
-              <span className="text-emerald-400 font-medium">100% Verified</span> in Supabase Auth
+            <div className="text-3xl font-extrabold text-white tracking-tight">
+              {loading ? "..." : scopedTotalUsers}
+            </div>
+            <div className="text-xs text-zinc-400 mt-2 flex items-center justify-between">
+              <span className="text-emerald-400 font-medium">
+                {timeRange === "all" ? "100% Verified" : "Active in window"}
+              </span>
+              {timeRange !== "all" && (
+                <span className="text-zinc-500 text-[11px]">All-time: {totalUsers}</span>
+              )}
             </div>
           </div>
 
           {/* Card 2: Resumes Uploaded */}
           <div className="p-5 rounded-2xl bg-zinc-900/70 border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm">
             <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider">Resumes Uploaded</span>
+              <span className="text-xs font-semibold uppercase tracking-wider">
+                {timeRange === "all" ? "Resumes Uploaded" : `Resumes (${timeRange === "today" ? "Today" : timeRange === "7d" ? "7 Days" : "1 Month"})`}
+              </span>
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <FileText className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-3xl font-extrabold text-emerald-400 tracking-tight">{loading ? "..." : usersWithResumes}</div>
-            <div className="text-xs text-zinc-400 mt-2 flex items-center gap-1">
-              <span className="text-white font-medium">{resumeConversionRate}%</span> upload conversion rate
+            <div className="text-3xl font-extrabold text-emerald-400 tracking-tight">
+              {loading ? "..." : scopedUsersWithResumes}
+            </div>
+            <div className="text-xs text-zinc-400 mt-2 flex items-center justify-between">
+              <span className="text-white font-medium">
+                {scopedResumeConversionRate}% conversion
+              </span>
+              {timeRange !== "all" && (
+                <span className="text-zinc-500 text-[11px]">All-time: {usersWithResumes}</span>
+              )}
             </div>
           </div>
 
@@ -418,7 +545,7 @@ export default function AdminDashboardPage() {
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            Candidate Intelligence ({profiles.length})
+            Candidate Intelligence ({timeRange === "all" ? profiles.length : `${filteredProfiles.length} of ${profiles.length}`})
           </button>
 
           <button
@@ -495,7 +622,7 @@ export default function AdminDashboardPage() {
                       resumeFilter === "all" ? "bg-zinc-800 text-white font-medium" : "text-zinc-400 hover:text-white"
                     }`}
                   >
-                    All ({profiles.length})
+                    All ({timeScopedProfiles.length})
                   </button>
                   <button
                     onClick={() => setResumeFilter("with_resume")}
@@ -503,7 +630,7 @@ export default function AdminDashboardPage() {
                       resumeFilter === "with_resume" ? "bg-emerald-500/20 text-emerald-400 font-medium" : "text-zinc-400 hover:text-white"
                     }`}
                   >
-                    With Resume ({usersWithResumes})
+                    With Resume ({scopedUsersWithResumes})
                   </button>
                   <button
                     onClick={() => setResumeFilter("no_resume")}
@@ -511,7 +638,7 @@ export default function AdminDashboardPage() {
                       resumeFilter === "no_resume" ? "bg-zinc-800 text-white font-medium" : "text-zinc-400 hover:text-white"
                     }`}
                   >
-                    No Resume ({totalUsers - usersWithResumes})
+                    No Resume ({scopedTotalUsers - scopedUsersWithResumes})
                   </button>
                 </div>
 
@@ -525,6 +652,24 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </div>
+
+            {/* Active Time Horizon Filter Banner */}
+            {timeRange !== "all" && (
+              <div className="mb-4 flex items-center justify-between px-4 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    Filtered by <strong>{timeRangeLabels[timeRange]}</strong>: Showing <strong>{filteredProfiles.length}</strong> of {profiles.length} total candidates.
+                  </span>
+                </div>
+                <button
+                  onClick={() => setTimeRange("all")}
+                  className="text-xs text-zinc-300 hover:text-white underline cursor-pointer shrink-0 ml-2 font-medium"
+                >
+                  Reset to All Time
+                </button>
+              </div>
+            )}
 
             {/* User List Table */}
             <div className="overflow-x-auto rounded-xl border border-zinc-800/80">
@@ -897,7 +1042,7 @@ export default function AdminDashboardPage() {
                 <Layers className="w-4 h-4 text-emerald-400" /> Candidate Talent Pool Skills Distribution
               </h2>
               <p className="text-xs text-zinc-400 mt-1">
-                Aggregated skill entities extracted across all candidate resumes and profiles.
+                Aggregated skill entities extracted from candidate profiles ({timeRangeLabels[timeRange]}).
               </p>
             </div>
 
