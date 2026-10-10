@@ -16,6 +16,7 @@ import { CareerSuggestions } from "@/components/dashboard/CareerSuggestions";
 import { mockDashboardData, getMatchLabel } from "@/lib/mock-data";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 // 🔥 CORE SKILLS DATABASE FOR MATCHING
 const TECH_SKILLS = [
@@ -489,11 +490,11 @@ export default function Dashboard() {
 
             <footer className="pt-8 pb-4 border-t border-white/5">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <span className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2024 HireOrbitAI </span>
+                <span className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em]">© 2026 HireOrbitAI</span>
                 <div className="flex gap-6 uppercase tracking-[0.1em] text-[10px] font-black text-zinc-600">
-                  <a href="#" className="hover:text-emerald-400 transition-colors">Privacy</a>
-                  <a href="#" className="hover:text-emerald-400 transition-colors">Terms</a>
-                  <a href="#" className="hover:text-emerald-400 transition-colors">Support</a>
+                  <Link href="/privacy" className="hover:text-emerald-400 transition-colors">Privacy</Link>
+                  <Link href="/terms" className="hover:text-emerald-400 transition-colors">Terms</Link>
+                  <Link href="/contact" className="hover:text-emerald-400 transition-colors">Support</Link>
                 </div>
               </div>
             </footer>

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Navigation } from "@/components/home/Navigation";
 import { Footer } from "@/components/home/Footer";
 import { FileText, Scale, UserCheck, AlertCircle, ChevronRight, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TermsPage() {
   return (
@@ -41,7 +42,7 @@ export default function TermsPage() {
           >
             <div className="flex items-center gap-1.5 font-medium">
                <Clock className="w-4 h-4" />
-               Effective Date: April 22, 2024
+               Effective Date: October 10, 2026
             </div>
             <div className="w-1 h-1 rounded-full bg-zinc-800" />
             <div className="text-blue-500/80 font-bold uppercase tracking-widest text-[10px]">Legal</div>
@@ -145,13 +146,28 @@ export default function TermsPage() {
            </div>
 
            {/* Legal Note */}
-           <div className="mt-32 p-12 text-center">
-              <FileText className="w-12 h-12 text-zinc-800 mx-auto mb-6" />
-              <p className="text-zinc-500 text-sm italic max-w-lg mx-auto">
-                These terms are governed by global trade laws and the jurisdiction 
-                where HireOrbitAI operates. For specific legal inquiries, please contact 
-                our legal department at legal@hireorbitai.com.
+           <div className="mt-32 p-12 text-center glass rounded-3xl border border-white/5 max-w-2xl mx-auto">
+              <FileText className="w-10 h-10 text-blue-400 mx-auto mb-4 opacity-50" />
+              <h3 className="text-white font-bold text-lg mb-2">Legal Compliance & Contact</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                These terms are governed by the applicable laws of India. For specific legal inquiries, statutory notices, or terms clarification, please contact our compliance desk at{" "}
+                <a href="mailto:hireorbitai@gmail.com" className="text-blue-400 underline underline-offset-4 font-semibold">
+                  hireorbitai@gmail.com
+                </a>.
               </p>
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+                <Link href="/privacy" className="text-zinc-400 hover:text-white underline">
+                  Privacy Policy
+                </Link>
+                <span className="text-zinc-600">•</span>
+                <Link href="/disclaimer" className="text-zinc-400 hover:text-white underline">
+                  Platform Disclaimer
+                </Link>
+                <span className="text-zinc-600">•</span>
+                <Link href="/contact" className="text-zinc-400 hover:text-white underline">
+                  Contact Us
+                </Link>
+              </div>
            </div>
         </div>
       </section>

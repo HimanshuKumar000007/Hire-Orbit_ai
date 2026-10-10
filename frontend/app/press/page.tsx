@@ -21,21 +21,21 @@ import Link from 'next/link';
 const pressReleases = [
   {
     date: "April 18, 2024",
-    title: "HireOrbitAI Raises $5M Seed Round to Accelerate Career Intelligence",
-    excerpt: "The funding will be used to expand the engineering team and scale the proprietary AI matching engine globally.",
-    link: "#"
+    title: "HireOrbitAI Raises Seed Round to Accelerate Career Intelligence",
+    excerpt: "The funding is used to expand the engineering team and scale the proprietary AI matching engine globally.",
+    link: "/about"
   },
   {
     date: "March 25, 2024",
     title: "Introducing Real-time Skill Gap Analysis: A New Era of Personal Growth",
     excerpt: "HireOrbitAI launches a revolutionary tool that maps candidate skills against live market demand in real-time.",
-    link: "#"
+    link: "/features"
   },
   {
     date: "February 12, 2024",
     title: "HireOrbitAI Reaches 50,000 Active Users Milestone",
     excerpt: "The platform sees rapid adoption among tech professionals seeking more meaningful career advancements.",
-    link: "#"
+    link: "/roadmap"
   }
 ];
 
@@ -151,9 +151,12 @@ export default function PressPage() {
                     </p>
                   </div>
                   <div className="flex gap-4 w-full md:w-auto">
-                    <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-white text-sm font-bold border border-white/10 hover:bg-white/10 transition-all">
+                    <Link 
+                      href={release.link}
+                      className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-white text-sm font-bold border border-white/10 hover:bg-white/10 transition-all"
+                    >
                       Read More
-                    </button>
+                    </Link>
                     <button className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 text-zinc-400 hover:text-white border border-white/10 transition-all">
                       <Share2 className="w-4 h-4" />
                     </button>

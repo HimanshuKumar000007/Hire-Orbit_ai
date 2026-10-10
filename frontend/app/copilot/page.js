@@ -419,7 +419,7 @@ function CopilotContent() {
 
       <main className="lg:ml-72 flex-1 flex flex-col h-screen relative overflow-hidden">
         {/* Header */}
-        <header className="p-4 pl-24 sm:p-6 sm:pl-6 lg:pl-6 border-b border-white/5 flex items-center justify-between bg-zinc-950/50 backdrop-blur-md z-10">
+        <header className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between bg-zinc-950/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
               <MessageSquareCode className="w-5 h-5 text-emerald-400" />

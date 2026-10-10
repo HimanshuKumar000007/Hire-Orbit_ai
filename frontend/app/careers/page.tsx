@@ -232,20 +232,26 @@ export default function CareersPage() {
                             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{role.type}</span>
                          </div>
                       </div>
-                      <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-white font-bold text-sm border border-white/10 group-hover:bg-emerald-500 group-hover:text-black group-hover:border-emerald-500 transition-all">
+                      <a 
+                        href={`mailto:hireorbitai@gmail.com?subject=Application for ${encodeURIComponent(role.title)}`}
+                        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-white font-bold text-sm border border-white/10 group-hover:bg-emerald-500 group-hover:text-black group-hover:border-emerald-500 transition-all"
+                      >
                          Apply Now
                          <ArrowRight className="w-4 h-4" />
-                      </button>
+                      </a>
                    </div>
                 </motion.div>
               ))}
            </div>
 
            <div className="mt-16 text-center">
-              <p className="text-zinc-500 mb-6 font-medium">Don't see a role that fits? We're always looking for talent.</p>
-              <button className="text-emerald-400 font-bold hover:text-emerald-300 transition-colors underline underline-offset-8">
+              <p className="text-zinc-500 mb-6 font-medium">Don&apos;t see a role that fits? We&apos;re always looking for talent.</p>
+              <a 
+                href="mailto:hireorbitai@gmail.com?subject=Open Career Application at HireOrbitAI"
+                className="text-emerald-400 font-bold hover:text-emerald-300 transition-colors underline underline-offset-8"
+              >
                  Send us an Open Application
-              </button>
+              </a>
            </div>
         </div>
       </section>
@@ -257,12 +263,15 @@ export default function CareersPage() {
              <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 to-indigo-500/5" />
              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-8">Ready to Scale the Orbit?</h2>
              <p className="text-zinc-400 text-lg mb-10 max-w-2xl mx-auto">
-                Join Himanshu and the rest of the team in solving the world's most 
-                complex career challenges. Let's build together.
+                Join Himanshu and the rest of the team in solving the world&apos;s most 
+                complex career challenges. Let&apos;s build together.
              </p>
-             <button className="bg-emerald-500 text-black font-bold px-12 py-5 rounded-full hover:bg-emerald-400 transition-all hover:scale-105">
+             <a 
+               href="mailto:hireorbitai@gmail.com?subject=Joining HireOrbitAI Team"
+               className="inline-block bg-emerald-500 text-black font-bold px-12 py-5 rounded-full hover:bg-emerald-400 transition-all hover:scale-105"
+             >
                 Join the Team
-             </button>
+             </a>
           </div>
         </div>
       </section>

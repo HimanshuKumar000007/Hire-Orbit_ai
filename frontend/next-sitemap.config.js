@@ -24,6 +24,9 @@ module.exports = {
     paths.push(await config.transform(config, '/frontend-frameworks'));
     paths.push(await config.transform(config, '/gov'));
     paths.push(await config.transform(config, '/gov/jobs'));
+    paths.push(await config.transform(config, '/contact'));
+    paths.push(await config.transform(config, '/disclaimer'));
+    paths.push(await config.transform(config, '/roadmap'));
 
     // ── Blog posts from lib/blog-content ──
     const blogDir = path.join(__dirname, 'lib', 'blog-content');
@@ -44,6 +47,10 @@ module.exports = {
   // It is auto-referenced by Next.js as a sub-sitemap at /gov-sitemap.xml
   robotsTxtOptions: {
     policies: [
+      {
+        userAgent: 'Mediapartners-Google',
+        allow: '/',
+      },
       {
         userAgent: '*',
         allow: '/',

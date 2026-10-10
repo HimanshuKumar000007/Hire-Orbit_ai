@@ -22,12 +22,12 @@ import Link from 'next/link';
 
 const socialHubs = [
   {
-    name: "Discord",
-    icon: MessageSquare,
-    color: "bg-indigo-500",
+    name: "GitHub Community",
+    icon: Github,
+    color: "bg-zinc-800",
     members: "10k+",
-    desc: "Real-time discussions, technical help, and career networking.",
-    link: "#"
+    desc: "Open source discussions, career scripts, and feature requests.",
+    link: "https://github.com/HimanshuKumar000007"
   },
   {
     name: "LinkedIn",
@@ -35,7 +35,7 @@ const socialHubs = [
     color: "bg-blue-600",
     members: "25k+",
     desc: "Professional insights, hiring news, and industry partnerships.",
-    link: "#"
+    link: "https://linkedin.com/company/hireorbitai"
   },
   {
     name: "Twitter",
@@ -43,7 +43,7 @@ const socialHubs = [
     color: "bg-zinc-800",
     members: "15k+",
     desc: "Latest product updates, AI trends, and community highlights.",
-    link: "#"
+    link: "https://twitter.com/hireorbitai"
   }
 ];
 

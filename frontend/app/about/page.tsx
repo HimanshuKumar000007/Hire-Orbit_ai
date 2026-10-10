@@ -272,7 +272,9 @@ export default function AboutPage() {
             </a>
             
             <a 
-              href="#"
+              href="https://linkedin.com/company/hireorbitai"
+              target="_blank"
+              rel="noopener noreferrer"
               className="glass p-8 rounded-3xl border border-white/5 hover:border-blue-500/20 transition-all group"
             >
               <Linkedin className="w-8 h-8 text-blue-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -281,7 +283,9 @@ export default function AboutPage() {
             </a>
 
             <a 
-              href="#"
+              href="https://twitter.com/hireorbitai"
+              target="_blank"
+              rel="noopener noreferrer"
               className="glass p-8 rounded-3xl border border-white/5 hover:border-white/20 transition-all group"
             >
               <Twitter className="w-8 h-8 text-white mx-auto mb-4 group-hover:scale-110 transition-transform" />
@@ -290,13 +294,21 @@ export default function AboutPage() {
             </a>
           </div>
 
-          <Link 
-            href="/signup"
-            className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-all hover:scale-105"
-          >
-            Start Your Journey Today
-            <ArrowRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link 
+              href="/signup"
+              className="inline-flex items-center gap-2 px-10 py-5 rounded-full bg-emerald-500 text-black font-bold hover:bg-emerald-400 transition-all hover:scale-105"
+            >
+              Start Your Journey Today
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+            <Link 
+              href="/contact"
+              className="inline-flex items-center gap-2 px-8 py-5 rounded-full bg-white/5 text-white font-bold hover:bg-white/10 border border-white/10 transition-all"
+            >
+              Contact Our Team
+            </Link>
+          </div>
         </div>
       </section>
 

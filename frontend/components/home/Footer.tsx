@@ -2,12 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { Orbit, Twitter, Linkedin, Github, Mail } from 'lucide-react';
+import Link from 'next/link';
 
 const footerLinks = {
-  Product: ['Features', 'Govt Jobs Desk', 'Frontend Frameworks', 'Pricing', 'Integrations', 'Changelog'],
+  Product: ['Features', 'Govt Jobs Desk', 'Frontend Frameworks', 'Pricing', 'Integrations', 'Roadmap'],
   Company: ['About', 'Founder', 'Blog', 'Careers', 'Press', 'Partners'],
-  Resources: ['Documentation', 'Help Center', 'Community', 'Templates', 'Webinars'],
-  Legal: ['Privacy', 'Terms', 'Security', 'Cookies'],
+  Resources: ['Documentation', 'Help Center', 'Community', 'Templates', 'Contact Us'],
+  Legal: ['Privacy', 'Terms', 'Security', 'Cookies', 'Disclaimer'],
 };
 
 const socialLinks = [
@@ -67,38 +68,43 @@ export function Footer() {
             <div key={category}>
               <h3 className="text-white font-semibold mb-4">{category}</h3>
               <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href={
-                        link === 'Features' ? '/features' : 
-                        link === 'Govt Jobs Desk' ? '/gov' : 
-                        link === 'Frontend Frameworks' ? '/frontend-frameworks' :
-                        link === 'Pricing' ? '/pricing' : 
-                        link === 'Integrations' ? '/integrations' : 
-                        link === 'Roadmap' ? '/roadmap' : 
-                        link === 'About' ? '/about' : 
-                        link === 'Founder' ? '/founder' : 
-                        link === 'Blog' ? '/blog' : 
-                        link === 'Careers' ? '/careers' : 
-                        link === 'Press' ? '/press' : 
-                        link === 'Partners' ? '/partners' : 
-                        link === 'Documentation' ? '/docs' : 
-                        link === 'Help Center' ? '/help' : 
-                        link === 'Community' ? '/community' : 
-                        link === 'Templates' ? '/templates' : 
-                        link === 'Privacy' ? '/privacy' : 
-                        link === 'Terms' ? '/terms' : 
-                        link === 'Security' ? '/security' : 
-                        link === 'Cookies' ? '/cookies' : 
-                        '#'
-                      }
-                      className="text-sm text-zinc-400 hover:text-white transition-colors"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                {links.map((link) => {
+                  const href = 
+                    link === 'Features' ? '/features' : 
+                    link === 'Govt Jobs Desk' ? '/gov' : 
+                    link === 'Frontend Frameworks' ? '/frontend-frameworks' :
+                    link === 'Pricing' ? '/pricing' : 
+                    link === 'Integrations' ? '/integrations' : 
+                    link === 'Roadmap' ? '/roadmap' : 
+                    link === 'About' ? '/about' : 
+                    link === 'Founder' ? '/founder' : 
+                    link === 'Blog' ? '/blog' : 
+                    link === 'Careers' ? '/careers' : 
+                    link === 'Press' ? '/press' : 
+                    link === 'Partners' ? '/partners' : 
+                    link === 'Documentation' ? '/docs' : 
+                    link === 'Help Center' ? '/help' : 
+                    link === 'Community' ? '/community' : 
+                    link === 'Templates' ? '/templates' : 
+                    link === 'Contact Us' ? '/contact' :
+                    link === 'Privacy' ? '/privacy' : 
+                    link === 'Terms' ? '/terms' : 
+                    link === 'Security' ? '/security' : 
+                    link === 'Cookies' ? '/cookies' : 
+                    link === 'Disclaimer' ? '/disclaimer' : 
+                    '/';
+
+                  return (
+                    <li key={link}>
+                      <Link
+                        href={href}
+                        className="text-sm text-zinc-400 hover:text-white transition-colors"
+                      >
+                        {link}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -107,18 +113,24 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-zinc-500">
-            © 2024 HireOrbitAI. All rights reserved.
+            © 2026 HireOrbitAI. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
-            <a href="/privacy" className="text-sm text-zinc-500 hover:text-white transition-colors">
+          <div className="flex flex-wrap items-center gap-6">
+            <Link href="/privacy" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Privacy Policy
-            </a>
-            <a href="/terms" className="text-sm text-zinc-500 hover:text-white transition-colors">
+            </Link>
+            <Link href="/terms" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Terms of Service
-            </a>
-            <a href="/cookies" className="text-sm text-zinc-500 hover:text-white transition-colors">
+            </Link>
+            <Link href="/disclaimer" className="text-sm text-zinc-500 hover:text-white transition-colors">
+              Platform Disclaimer
+            </Link>
+            <Link href="/cookies" className="text-sm text-zinc-500 hover:text-white transition-colors">
               Cookie Settings
-            </a>
+            </Link>
+            <Link href="/contact" className="text-sm text-zinc-500 hover:text-white transition-colors">
+              Contact Desk
+            </Link>
           </div>
         </div>
       </div>
