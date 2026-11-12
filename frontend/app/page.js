@@ -8,6 +8,7 @@ import { Notifications } from "@/components/sections/Notifications";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { ProductPreview } from "@/components/sections/ProductPreview";
 import { Comparison } from "@/components/sections/Comparison";
+import { FeaturedArticles } from "@/components/sections/FeaturedArticles";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 
 export default function Home() {
@@ -21,6 +22,7 @@ export default function Home() {
       <HowItWorks />
       <ProductPreview />
       <Comparison />
+      <FeaturedArticles />
       <FinalCTA />
       <Footer />
     </main>

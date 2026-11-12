@@ -183,3 +183,22 @@ export function getRelatedPosts(currentSlug: string, category: string, limit = 3
 export function getAllPosts(): BlogPost[] {
   return [...BLOG_POSTS];
 }
+
+/**
+ * Retrieve curated high-impact articles to feature on the homepage
+ * for readers and search engine indexation.
+ */
+export function getFeaturedHomepagePosts(): BlogPost[] {
+  const featuredSlugs = [
+    "best-resume-format-2026-ats-guide-templates",
+    "how-to-get-a-tech-job-in-30-days-using-ai-2026",
+    "ats-resume-scanner-secrets-how-recruiters-filter-you",
+    "ai-engineer-roadmap-2026-complete-guide",
+    "crush-the-tell-me-about-yourself-interview-script-2026",
+    "govt-jobs-vs-private-it-jobs-salary-security-reality-2026",
+  ];
+
+  return featuredSlugs
+    .map((slug) => BLOG_POSTS.find((p) => p.slug === slug))
+    .filter((p): p is BlogPost => Boolean(p));
+}
